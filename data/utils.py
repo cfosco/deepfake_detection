@@ -135,27 +135,28 @@ def extract_face_frame(image_file, v_margin=30, h_margin=15):
     return face_image
 
 
-def extract_faces(video, v_margin=100, h_margin=100, batch_size=64, fps=30, device_id=0, imsize=360):
+def crop_face_location(frame, face_location, v_margin, h_margin, imsize):
+    top, right, bottom, left = face_location
+    mtop = max(top - v_margin, 0)
+    mbottom = min(bottom + v_margin, frame.shape[0])
+    mleft = max(left - h_margin, 0)
+    mright = min(right + h_margin, frame.shape[1])
+    face_image = frame[mtop:mbottom, mleft:mright]
+    return Image.fromarray(face_image).resize((imsize, imsize))
 
-    # dlib.cuda.set_device(device_id)
+
+def extract_faces(video, v_margin=100, h_margin=100, batch_size=32, fps=30, imsize=360):
 
     def process_batch(frames, imsize):
         face_batch = []
-        batch_of_face_locations = face_recognition.batch_face_locations(frames, number_of_times_to_upsample=0)
+        batched_face_locations = face_recognition.batch_face_locations(frames, number_of_times_to_upsample=0)
 
-        for frame_number_in_batch, face_locations in enumerate(batch_of_face_locations):
-            number_of_faces_in_frame = len(face_locations)
+        for frameno, (frame, face_locations) in enumerate(zip(frames, batched_face_locations)):
+            num_faces = len(face_locations)
 
-            for frame, face_location in zip(frames, face_locations):
-                # Print the location of each face in this frame
-                top, right, bottom, left = face_location
-                mtop = max(top - v_margin, 0)
-                mbottom = min(bottom + v_margin, frame.shape[0])
-                mleft = max(left - h_margin, 0)
-                mright = min(right + h_margin, frame.shape[1])
-                # face_image = frame[top - v_margin:bottom + v_margin, left - h_margin:right + h_margin]
-                face_image = frame[mtop:mbottom , mleft:mright]
-                face_batch.append(Image.fromarray(face_image).resize((imsize, imsize)))
+            for face_location in face_locations:
+                face_image = crop_face_location(frame, face_location, v_margin, h_margin, imsize)
+                face_batch.append(face_image)
         return face_batch
 
     # Open video file
@@ -202,6 +203,7 @@ def process_faces(video, video_root='', faces_root='', tmpl='{:06d}.jpg', fps=30
     frame_dir = os.path.join(faces_root, name)
     if os.path.exists(frame_dir):
         if os.listdir(frame_dir):
+            print(f'Skipping {frame_dir}')
             return
     out_filename = os.path.join(frame_dir, tmpl)
     faces = extract_faces(video, v_margin=100, h_margin=100, batch_size=64, fps=fps, device_id=0, imsize=360)
@@ -225,7 +227,59 @@ def videos_to_faces(video_root, faces_root):
     func = functools.partial(process_faces, video_root=video_root, faces_root=faces_root)
     for video in videos:
         func(video)
-    # with Pool(1) as pool:
-        # list(tqdm(pool.imap(func, videos), total=len(videos)))
-    #     pool.close()
-    #     pool.join()
+
+
+def extract_multi_faces(video, v_margin=100, h_margin=100, batch_size=64, fps=30, device_id=0, imsize=360):
+
+    # dlib.cuda.set_device(device_id)
+
+    def process_batch(frames, imsize):
+        face_batch = []
+        batch_of_face_locations = face_recognition.batch_face_locations(frames, number_of_times_to_upsample=0)
+
+        for frame_number_in_batch, face_locations in enumerate(batch_of_face_locations):
+            number_of_faces_in_frame = len(face_locations)
+
+            for frame, face_location in zip(frames, face_locations):
+                # Print the location of each face in this frame
+                top, right, bottom, left = face_location
+                mtop = max(top - v_margin, 0)
+                mbottom = min(bottom + v_margin, frame.shape[0])
+                mleft = max(left - h_margin, 0)
+                mright = min(right + h_margin, frame.shape[1])
+                # face_image = frame[top - v_margin:bottom + v_margin, left - h_margin:right + h_margin]
+                face_image = frame[mtop:mbottom, mleft:mright]
+                face_batch.append(Image.fromarray(face_image).resize((imsize, imsize)))
+        return face_batch
+
+    # Open video file
+    video_capture = cv2.VideoCapture(video)
+    video_capture.set(cv2.CAP_PROP_FPS, fps)
+    faces = []
+    frames = []
+    frame_count = 0
+
+    while video_capture.isOpened():
+        # Grab a single frame of video
+        ret, frame = video_capture.read()
+
+        # Bail out when the video file ends
+        if not ret:
+            break
+
+        # Convert the image from BGR color (which OpenCV uses) to RGB color (which face_recognition uses)
+        frame = frame[:, :, ::-1]
+
+        # Save each frame of the video to a list
+        frame_count += 1
+        frames.append(frame)
+
+        if len(frames) == batch_size:
+            # faces.extend(process_batch(frames, frame_count, batch_size))
+            faces.extend(process_batch(frames, imsize))
+
+            # Clear the frames array to start the next batch
+            frames = []
+    if frames:
+        faces.extend(process_batch(frames, imsize))
+    return faces
