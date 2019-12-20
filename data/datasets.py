@@ -1,10 +1,150 @@
+import json
 import os
-import os.path
+from collections import defaultdict
+from pathlib import Path
+from typing import Tuple, Union
 
 import numpy as np
+import torch
 import torch.utils.data as data
 from numpy.random import randint
 from PIL import Image
+
+from torchvideo.samplers import FrameSampler, _default_sampler
+from torchvideo.transforms import PILVideoToTensor
+
+
+class DeepfakeRecord:
+    """Represents a video record.
+    A video record has the following properties:
+        path (str): path to directory containing frames.
+        num_frames (int): number of frames in path dir.
+        label (int): primary label associated with video.
+        labels (list[int]): all labels associated with video.
+    """
+
+    label_mapping = {'FAKE': 1, 'REAL': 0}
+
+    def __init__(self, part, name, data):
+        self.part = part
+        self.name = name
+        self.data = data
+
+    @property
+    def path(self):
+        return self.data['path']
+
+    @property
+    def filename(self):
+        return self.data['filename']
+
+    @property
+    def num_frames(self):
+        return int(self.data['num_frames'])
+
+    @property
+    def label_name(self):
+        return self.data['label']
+
+    @property
+    def label(self):
+        return int(self.label_mapping[self.label_name])
+
+    def todict(self):
+        return self.data
+
+    def __hash__(self):
+        return hash(self.data.values())
+
+    def __eq__(self, other):
+        if isinstance(other, self.__class__):
+            return self.path == other.path
+        else:
+            return False
+
+
+class DeepfakeSet:
+
+    def __init__(self, filename, blacklist_file=None):
+        self.records = []
+        self.filename = filename
+        with open(filename) as f:
+            self.data = json.load(f)
+
+        self.blacklist = []
+        if blacklist_file is not None:
+            with open(blacklist_file) as f:
+                self.blacklist.extend(json.load(f))
+
+        self.records = []
+        self.records_dict = defaultdict(list)
+        self.blacklist_records = []
+        for part, part_data in self.data:
+            for name, rec in part_data.items():
+                record = DeepfakeRecord(part, name, rec)
+
+                if name not in self.blacklist:
+                    self.records.append(record)
+                    self.records_dict[part].append(record)
+                else:
+                    self.blacklist_records.append(record)
+
+    def __getitem__(self, idx: int) -> DeepfakeRecord:
+        return self.records[idx]
+
+    def __len__(self):
+        return len(self.records)
+
+
+class DeepfakeDataset(data.Dataset):
+    def __init__(
+            self,
+            root: Union[str, Path],
+            record_set: DeepfakeSet,
+            sampler: FrameSampler = _default_sampler(),
+            image_tmpl: str = 'img_{:06d}.jpg',
+            transform=None, target_transform=None):
+
+        self.root = root
+        self.sampler = sampler
+        self.record_set = record_set
+        self.image_tmpl = image_tmpl
+
+        if transform is None:
+            transform = PILVideoToTensor()
+        self.transform = transform
+
+        if target_transform is None:
+            target_transform = int
+        self.target_transform = target_transform
+
+    def _load_image(self, directory, idx):
+        filename_tmpl = os.path.join(self.root, directory, self.image_tmpl)
+        try:
+            return Image.open(filename_tmpl.format(idx)).convert('RGB')
+        except Exception:
+            print('Error loading image:', filename_tmpl.format(idx))
+            return Image.open(filename_tmpl.format(1)).convert('RGB')
+
+    def _load_frames(self, frame_dir, frame_idx):
+        return [self._load_image(frame_dir, idx) for idx in frame_idx]
+
+    def __getitem__(self, index: int) -> Union[torch.Tensor, Tuple[torch.Tensor, int]]:
+        record = self.record_set[index]
+        frame_path = os.path.join(self.root, record.path)
+        frames_idx = self.sampler.sample(record.num_frames)
+        frames = self._load_frames(frame_path, frames_idx)
+        label = record.label
+
+        if self.transform is not None:
+            frames = self.transform(frames)
+        if self.target_transform is not None:
+            label = self.target_transform(label)
+
+        return frames, label
+
+    def __len__(self):
+        return len(self.record_set)
 
 
 class Record(object):
@@ -83,10 +223,10 @@ class VideoRecord(object):
 
 
 class VideoDataset(data.Dataset):
-    def __init__(self, root, list_file, num_frames=1, image_tmpl='img_{:06d}.jpg',
+    def __init__(self, root, metadata_file, num_frames=1, image_tmpl='img_{:06d}.jpg',
                  sampler=None, transform=None, target_transform=None):
         self.root = root
-        self.list_file = list_file
+        self.metadata_file = metadata_file
         self.num_frames = num_frames
         self.sampler = sampler
         self.image_tmpl = image_tmpl
@@ -106,7 +246,7 @@ class VideoDataset(data.Dataset):
     def _parse_list(self):
         # check the frame number is large >3:
         # usualy it is [video_id, num_frames, class_idx]
-        tmp = [x.strip().split(' ') for x in open(self.list_file)]
+        tmp = [x.strip().split(' ') for x in open(self.metadata_file)]
         tmp = [item for item in tmp if int(item[1]) >= 3]
         self.video_list = [VideoRecord(item) for item in tmp]
         print('Video number: {}'.format(len(self.video_list)))
@@ -181,15 +321,3 @@ class VideoDataset(data.Dataset):
 
     def __len__(self):
         return len(self.video_list)
-
-
-if __name__ == '__main__':
-
-    # TODO: Finish implementing this!
-    root = ''
-    list_file = ''
-    transform = None
-    dataset = VideoDataset(root, list_file, transform=transform)
-
-    for i, (frames, label) in enumerate(dataset):
-        print(i, frames.shape, label)
