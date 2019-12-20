@@ -198,7 +198,8 @@ def save_image(args):
     image.save(filename)
 
 
-def process_faces(video, video_root='', faces_root='', tmpl='{:06d}.jpg', fps=30, num_pdirs=1):
+def process_faces(video, video_root='', faces_root='', tmpl='{:06d}.jpg',
+                  fps=30, num_pdirs=1, batch_size=64, margin=100, imsize=360):
     name = get_framedir_name(video, num_pdirs=num_pdirs)
     frame_dir = os.path.join(faces_root, name)
     if os.path.exists(frame_dir):
@@ -206,7 +207,8 @@ def process_faces(video, video_root='', faces_root='', tmpl='{:06d}.jpg', fps=30
             print(f'Skipping {frame_dir}')
             return
     out_filename = os.path.join(frame_dir, tmpl)
-    faces = extract_faces(video, v_margin=100, h_margin=100, batch_size=64, fps=fps, device_id=0, imsize=360)
+    faces = extract_faces(video, v_margin=margin, h_margin=margin,
+                          batch_size=batch_size, fps=fps, imsize=imsize)
     num_images = len(faces)
     with ThreadPool(num_images) as pool:
         names = (out_filename.format(i) for i in range(1, num_images + 1))
