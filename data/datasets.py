@@ -65,10 +65,10 @@ class DeepfakeRecord:
 
 class DeepfakeSet:
 
-    def __init__(self, filename, blacklist_file=None):
+    def __init__(self, metafile, blacklist_file=None):
         self.records = []
-        self.filename = filename
-        with open(filename) as f:
+        self.metafile = metafile
+        with open(metafile) as f:
             self.data = json.load(f)
 
         self.blacklist = []
@@ -79,7 +79,7 @@ class DeepfakeSet:
         self.records = []
         self.records_dict = defaultdict(list)
         self.blacklist_records = []
-        for part, part_data in self.data:
+        for part, part_data in self.data.items():
             for name, rec in part_data.items():
                 record = DeepfakeRecord(part, name, rec)
 
@@ -96,13 +96,13 @@ class DeepfakeSet:
         return len(self.records)
 
 
-class DeepfakeDataset(data.Dataset):
+class DeepfakeFrame(data.Dataset):
     def __init__(
             self,
             root: Union[str, Path],
             record_set: DeepfakeSet,
             sampler: FrameSampler = _default_sampler(),
-            image_tmpl: str = 'img_{:06d}.jpg',
+            image_tmpl: str = '{:06d}.jpg',
             transform=None, target_transform=None):
 
         self.root = root
@@ -126,14 +126,14 @@ class DeepfakeDataset(data.Dataset):
             print('Error loading image:', filename_tmpl.format(idx))
             return Image.open(filename_tmpl.format(1)).convert('RGB')
 
-    def _load_frames(self, frame_dir, frame_idx):
-        return [self._load_image(frame_dir, idx) for idx in frame_idx]
+    def _load_frames(self, frame_dir, frame_inds):
+        return [self._load_image(frame_dir, idx) for idx in frame_inds]
 
     def __getitem__(self, index: int) -> Union[torch.Tensor, Tuple[torch.Tensor, int]]:
         record = self.record_set[index]
         frame_path = os.path.join(self.root, record.path)
-        frames_idx = self.sampler.sample(record.num_frames)
-        frames = self._load_frames(frame_path, frames_idx)
+        frame_inds = self.sampler.sample(record.num_frames)
+        frames = self._load_frames(frame_path, frame_inds)
         label = record.label
 
         if self.transform is not None:
