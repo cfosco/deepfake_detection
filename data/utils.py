@@ -82,7 +82,7 @@ def generate_metadata(video_root, frame_root, filename='metadata.json'):
 
 def generate_test_metadata(test_list_file, video_root, frame_root, train_metadata_file='metadata.json'):
     with open(test_list_file) as f:
-        test_videos = [x.strip() for x in f]
+        test_videos = json.load(f)
 
     with open(train_metadata_file) as f:
         train_metadata = json.load(f)
@@ -100,6 +100,8 @@ def generate_test_metadata(test_list_file, video_root, frame_root, train_metadat
         else:
             missing.append(test_video)
 
+    with open(os.path.join(video_root, 'test_metadata.json'), 'w') as f:
+        json.dump(test_metadata, f, indent=4)
     print(len(missing))
     print(missing)
 
