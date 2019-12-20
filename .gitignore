@@ -127,3 +127,9 @@ dmypy.json
 
 # Pyre type checker
 .pyre/
+
+# Project Specific
+logs
+weights
+notebooks/data
+notebooks/models
