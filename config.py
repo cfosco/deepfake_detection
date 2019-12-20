@@ -14,6 +14,7 @@ num_classes_dict = {
     'ImageNet': 1000,
     'Places365': 365,
     'Hybrid1365': 1365,
+    'Moments': 339,
     'DFDC': 2,
 }
 
