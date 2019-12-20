@@ -13,8 +13,11 @@ from torch.utils.data.distributed import DistributedSampler
 from pretorched import models, optim, utils
 from pretorched.data import transforms, samplers
 
-from . import data
-from . import config as cfg
+# from . import data
+# from . import config as cfg
+
+import data
+import config as cfg
 
 
 def get_optimizer(model, optimizer_name='SGD', lr=0.001, **kwargs):
