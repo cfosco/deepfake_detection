@@ -1,6 +1,7 @@
 import functools
 import json
 import os
+from collections import defaultdict
 from multiprocessing import Pool
 
 import ffmpeg
@@ -60,6 +61,50 @@ def process_video(video, video_root='', frame_root='', tmpl='%06d.jpg', fps=30, 
     _extract_frames(video, out_filename, tmpl=tmpl, fps=fps)
 
 
+def generate_metadata(video_root, frame_root, filename='metadata.json'):
+    metadata = {}
+    for root, dirs, files in os.walk(video_root):
+        for d in dirs:
+            fname = os.path.join(root, d, filename)
+            with open(fname, 'r') as f:
+                data = json.load(f)
+                for name, info in data.items():
+                    frame_dir = os.path.join(frame_root, d, name)
+                    num_frames = len(os.listdir(frame_dir))
+                    data[name]['filename'] = name
+                    data[name]['num_frames'] = num_frames
+                    data[name]['path'] = os.path.join(d, name)
+                metadata[d] = data
+    with open(os.path.join(video_root, filename), 'w') as f:
+        # json.dump(metadata, f)
+        json.dump(metadata, f, indent=4)
+
+
+def generate_test_metadata(test_list_file, video_root, frame_root, train_metadata_file='metadata.json'):
+    with open(test_list_file) as f:
+        test_videos = [x.strip() for x in f]
+
+    with open(train_metadata_file) as f:
+        train_metadata = json.load(f)
+    missing = []
+    test_metadata = defaultdict(dict)
+    for test_video in test_videos:
+        for part, data in train_metadata.items():
+            try:
+                rec = data[test_video]
+            except KeyError:
+                pass
+            else:
+                test_metadata[part][test_video] = rec
+                break
+        else:
+            missing.append(test_video)
+
+    print(len(missing))
+    print(missing)
+
+
+
 
 
 def verify_frames(video_dir, frame_root):
@@ -69,14 +114,3 @@ def verify_frames(video_dir, frame_root):
     missing = videos.difference(frame_dirs)
     for m in missing:
         print(missing)
-
-
-def generate_metadata(video_root, filename='metadata.json'):
-    metadata = {}
-    for root, dirs, files in os.walk(video_root):
-        for d in dirs:
-            fname = os.path.join(root, d, filename)
-            with open(fname, 'r') as f:
-                metadata = {**metadata, **json.load(f)}
-    with open(os.path.join(video_root, filename), 'w') as f:
-        json.dump(metadata, f)
