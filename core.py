@@ -195,6 +195,7 @@ def get_dataloader(name, data_root=None, split='train', num_frames=16, size=224,
     segment_count = num_frames if segment_count is None else segment_count
 
     metadata = cfg.get_metadata(name,
+                                split=split,
                                 dataset_type=dataset_type,
                                 record_set_type=record_set_type,
                                 data_root=data_root)
