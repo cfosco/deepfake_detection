@@ -57,7 +57,7 @@ def get_root_dirs(name, dataset_type='DeepfakeFrame', resolution=224, data_root=
     return root_dirs[name][dataset_type][resolution]
 
 
-def get_metadata(name, dataset_type='DeepfakeFrame', record_set_type='DeepfakeSet', resolution=224, data_root=DATA_ROOT):
+def get_metadata(name, split='train', dataset_type='DeepfakeFrame', record_set_type='DeepfakeSet', resolution=224, data_root=DATA_ROOT):
     root_dirs = {
         'DFDC': {
             'DeepfakeFrame': defaultdict(lambda: os.path.join(data_root, 'DeepfakeDetection/frames'), {}),
@@ -76,25 +76,35 @@ def get_metadata(name, dataset_type='DeepfakeFrame', record_set_type='DeepfakeSe
         }
     }
     root = root_dirs[name][dataset_type][resolution]
+    fname = {
+        'train': 'metadata.json',
+        'val': 'test_metadata.json'
+    }.get(split, 'train')
     metafiles = {
         'DFDC': {
-            'DeepfakeSet': defaultdict(lambda: os.path.join(root, 'metadata.json'), {}),
+            'DeepfakeSet': defaultdict(lambda: os.path.join(root, fname), {}),
         },
     }
     metafile = metafiles[name][record_set_type][resolution]
-    return {'root': root, 'metafile': metafile}
+    blacklist_file = os.path.join(root, 'test_videos.json') if split == 'train' else None
+
+    return {'root': root, 'metafile': metafile, 'blacklist_file': blacklist_file}
 
 
 def parse_args():
     parser = argparse.ArgumentParser(description='PyTorch Training')
-    parser.add_argument('--dataset', type=str, default='ImageNet')
+    parser.add_argument('--dataset', type=str, default='DFDC')
     parser.add_argument('--data_root', metavar='DIR', default=None,
                         help='path to data_root containing all datasets')
-    parser.add_argument('-a', '--arch', metavar='ARCH', default='resnet18',
+    parser.add_argument('-a', '--arch', metavar='ARCH', default='resnet3d18',
                         choices=model_names,
                         help='model architecture: ' +
                         ' | '.join(model_names) +
                         ' (default: resnet18)')
+    parser.add_argument('--segment_count', type=int, default=16)
+    parser.add_argument('--dataset_type', type=str, default='DeepfakeFrame')
+    parser.add_argument('--record_set_type', type=str, default='DeepfakeSet')
+    parser.add_argument('--sampler_type', type=str, default='TSNFrameSampler')
     parser.add_argument('--pretrained', type=str, default=None, dest='pretrained',
                         help='use a pre-trained model')
     parser.add_argument('--optimizer', type=str, default='Adam')
@@ -107,9 +117,9 @@ def parse_args():
                         help='number of total epochs to run')
     parser.add_argument('--start-epoch', default=0, type=int, metavar='N',
                         help='manual epoch number (useful on restarts)')
-    parser.add_argument('-b', '--batch-size', default=256, type=int,
+    parser.add_argument('-b', '--batch-size', default=64, type=int,
                         metavar='N',
-                        help='mini-batch size (default: 256), this is the total '
+                        help='mini-batch size (default: 64), this is the total '
                         'batch size of all GPUs on the current node when '
                         'using Data Parallel or Distributed Data Parallel')
     parser.add_argument('--lr', '--learning-rate', default=0.001, type=float,
@@ -127,9 +137,9 @@ def parse_args():
     parser.add_argument('--logs_dir', default='logs', type=str, metavar='PATH')
     parser.add_argument('-e', '--evaluate', dest='evaluate', action='store_true',
                         help='evaluate model on validation set')
-    parser.add_argument('--world-size', default=-1, type=int,
+    parser.add_argument('--world-size', '-w', default=-1, type=int,
                         help='number of nodes for distributed training')
-    parser.add_argument('--rank', default=-1, type=int,
+    parser.add_argument('--rank', '-r', default=-1, type=int,
                         help='node rank for distributed training')
     parser.add_argument('--dist-url', default='tcp://localhost:23456', type=str,
                         help='url used to set up distributed training')
