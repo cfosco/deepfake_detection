@@ -5,11 +5,10 @@ from collections import defaultdict
 from multiprocessing import Pool
 from multiprocessing.pool import ThreadPool
 
-from PIL import Image
-
 import cv2
-import dlib
 import ffmpeg
+import numpy as np
+from PIL import Image
 from tqdm import tqdm
 
 import face_recognition
@@ -126,9 +125,9 @@ def verify_frames(video_dir, frame_root):
         print(missing)
 
 
-def extract_face_frame(image_file, v_margin=30, h_margin=15):
+def extract_face_frame(image_file, model='hog', v_margin=30, h_margin=15):
     frame = face_recognition.load_image_file(image_file)
-    face_location = face_recognition.face_locations(frame)[0]
+    face_location = face_recognition.face_locations(frame, model=model)[0]
     top, right, bottom, left = face_location
     face_image = frame[top - v_margin:bottom + v_margin,
                        left - h_margin:right + h_margin]
@@ -274,6 +273,24 @@ def get_face_match(known_faces, face_encoding, tolerance=0.50):
         return get_face_match(known_faces, face_encoding, tolerance + 0.01)
 
 
+def interp_face_locations(coords):
+    n = len(coords)
+    coords = np.array(coords)
+    missing = coords is None
+    inds = np.arange(n)[missing]
+    x = np.arange(n)[~missing]
+    y = coords[x]
+    interps = []
+    for dim in range(4):
+        origin = np.array([e[dim] for e in y])
+        out = np.interp(inds, x, origin).astype(int)
+        interps.append(out)
+    interps = np.stack(interps, axis=-1)
+    for i, ind in enumerate(inds):
+        coords[ind] = interps[i]
+    return coords
+
+
 def extract_multi_faces(video, v_margin=100, h_margin=100, batch_size=32, fps=30, imsize=360):
 
     def process_multi_batch(frames, known_faces, face_images, imsize):
@@ -283,8 +300,7 @@ def extract_multi_faces(video, v_margin=100, h_margin=100, batch_size=32, fps=30
             num_faces = len(face_locations)
 
             if num_faces < 1:
-                # raise ValueError('WARNING TODO: NEED TO TRY ANOTHER METHOD')
-                print('WARNING TODO: NEED TO TRY ANOTHER METHOD')
+                print('WARNING: NEED TO TRY ANOTHER METHOD')
             elif num_faces > 1:
                 print('MORE THAN ONE FACE')
 
