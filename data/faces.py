@@ -82,9 +82,14 @@ def get_face_match(known_faces, face_encoding, tolerance=0.50):
 
 
 def interp_face_locations(coords):
-    coords = np.array(coords)
+    coords = np.array(coords).ravel()
+    print(f'coords: {coords.shape}')
     n = len(coords)
-    missing = coords.__eq__(None)
+    missing = coords.__eq__(None).ravel()
+    if sum(missing) == 0:
+        return coords
+    print(f'missing.shape: {missing.shape}')
+    print(f'missing sum: {sum(missing)}')
     inds = np.arange(n)[missing]
     x = np.arange(n)[~missing]
     y = coords[x]
@@ -116,10 +121,7 @@ def extract_faces(video, v_margin=100, h_margin=100, batch_size=32, fps=30, imsi
                 interp_inds.append(frameno)
             else:
 
-                # if num_faces > 1:
                 face_encodings = face_recognition.face_encodings(frame, face_locations)
-                # else:
-                    # face_encodings = num_faces * [None]
 
                 if not known_faces:
                     known_faces = face_encodings
@@ -129,8 +131,6 @@ def extract_faces(video, v_margin=100, h_margin=100, batch_size=32, fps=30, imsi
 
                     # See if the face is a match for the known face(s)
                     if face_encoding is not None:
-                        # print('known_faces', known_faces)
-                        # print('face_encoding', face_encoding)
                         face_idx = get_face_match(known_faces, face_encoding)
                     else:
                         face_idx = i
@@ -143,11 +143,12 @@ def extract_faces(video, v_margin=100, h_margin=100, batch_size=32, fps=30, imsi
                         added.append(face_idx)
 
         if interp_inds:
-            frame_count = len(face_coords[0])
-            interped_face_locations = [interp_face_locations(fl) for fl in face_coords.values()]
 
             for face_num, fls in face_coords.items():
-                interped_fls = interped_face_locations[face_num]
+                if None not in fls:
+                    break
+                frame_count = len(fls)
+                interped_fls = interp_face_locations(fls)
                 face_coords[face_num] = interped_fls.tolist()
 
                 for batch_idx in interp_inds:
@@ -186,7 +187,6 @@ def extract_faces(video, v_margin=100, h_margin=100, batch_size=32, fps=30, imsi
         frames.append(frame)
 
         if len(frames) == batch_size:
-            # faces.extend(process_batch(frames, frame_count, batch_size))
             known_faces, face_coords, face_images = process_multi_batch(frames, known_faces, face_coords, face_images, imsize)
 
             # Clear the frames array to start the next batch
