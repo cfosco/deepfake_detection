@@ -304,6 +304,7 @@ def extract_multi_faces(video, v_margin=100, h_margin=100, batch_size=32, fps=30
 
     def process_multi_batch(frames, known_faces, face_coords, face_images, imsize):
 
+        do_interp = False
         batched_face_locations = face_recognition.batch_face_locations(frames, number_of_times_to_upsample=0)
 
         for frameno, (frame, face_locations) in enumerate(zip(frames, batched_face_locations)):
@@ -312,31 +313,41 @@ def extract_multi_faces(video, v_margin=100, h_margin=100, batch_size=32, fps=30
             if num_faces < 1:
                 face_coords[0].append(None)
                 face_images[0].append(None)
-                print('WARNING: NEED TO TRY ANOTHER METHOD')
-            elif num_faces > 1:
-                print('MORE THAN ONE FACE')
+                do_interp = True
+            else:
 
-                face_encodings = face_recognition.face_encodings(frame, face_locations)
+                if num_faces > 1:
+                    face_encodings = face_recognition.face_encodings(frame, face_locations)
+                else:
+                    face_encodings = num_faces * [None]
 
                 if not known_faces:
                     known_faces = face_encodings
 
-                for face_encoding, face_location in zip(face_encodings, face_locations):
+                for i, (face_encoding, face_location) in enumerate(zip(face_encodings, face_locations)):
+
                     # See if the face is a match for the known face(s)
-                    face_idx = get_face_match(known_faces, face_encoding)
+                    if face_encoding is not None:
+                        face_idx = get_face_match(known_faces, face_encoding)
+                    else:
+                        face_idx = i
+
                     face_image = crop_face_location(frame, face_location, v_margin, h_margin, imsize)
 
-                    face_coords[face_idx].append(face_location)
                     face_images[face_idx].append(face_image)
+                    face_coords[face_idx].append(face_location)
                     known_faces[face_idx] = face_encoding
-            else:
-                for i, face_location in enumerate(face_locations):
-                    # Print the location of each face in this frame
-                    face_image = crop_face_location(frame, face_location, v_margin, h_margin, imsize)
-                    face_coords[i].append(face_location)
-                    face_images[i].append(face_image)
 
-        return known_faces, face_images
+        if do_interp:
+            interped_face_locations = [interp_face_locations(fl) for fl in face_coords.values()]
+            for face_num, fls in face_coords.items():
+                interped_fls = interped_face_locations[face_num]
+                for i, ifl in enumerate(interped_fls):
+                    if fls[i] is None:
+                        face_image = crop_face_location(frames[i], ifl, v_margin, h_margin, imsize)
+                        face_images[face_num][i] = face_image
+
+        return known_faces, face_coords, face_images
 
     # Open video file
     video_capture = cv2.VideoCapture(video)
