@@ -218,8 +218,9 @@ def _process_faces(video, video_root='', faces_root='', tmpl='{:06d}.jpg',
         pool.join()
 
 
-def process_faces(video, video_root='', faces_root='', tmpl='{:06d}.jpg',
-                  fps=30, num_pdirs=1, batch_size=64, margin=100, imsize=360):
+def process_faces(video, video_root='', faces_root='', fdir_tmpl='face_{}', tmpl='{:06d}.jpg',
+                  fps=30, num_pdirs=1, batch_size=64, margin=100, imsize=360,
+                  metadata_fname='face_metadata.json'):
     name = get_framedir_name(video, num_pdirs=num_pdirs)
     frame_dir = os.path.join(faces_root, name)
     if os.path.exists(frame_dir):
@@ -228,9 +229,28 @@ def process_faces(video, video_root='', faces_root='', tmpl='{:06d}.jpg',
             return
     face_images, face_coords = extract_multi_faces(video, v_margin=margin, h_margin=margin,
                                                    batch_size=batch_size, fps=fps, imsize=imsize)
+    metadata = {
+        'filename': os.path.basename(name),
+        'num_faces': len(face_coords),
+        'num_frames': [len(f) for f in face_images.values()],
+        'face_coords': face_coords,
+        'dir_tmpl': fdir_tmpl,
+        'im_tmpl': tmpl,
+        'full_tmpl': os.path.join(fdir_tmpl, tmpl),
+        'face_names': [fdir_tmpl.format(k) for k in face_coords],
+        'face_nums': list(face_coords.keys()),
+        'margin': margin,
+        'size': imsize,
+        'fps': fps,
+    }
+
+    os.makedirs(frame_dir, exist_ok=True)
+    with open(os.path.join(frame_dir, metadata_fname), 'w') as f:
+        json.dump(metadata, f)
+
     for face_num, faces in face_images.items():
         num_images = len(faces)
-        out_filename = os.path.join(frame_dir, f'face_{face_num}', tmpl)
+        out_filename = os.path.join(frame_dir, fdir_tmpl.format(face_num), tmpl)
         with ThreadPool(num_images) as pool:
             names = (out_filename.format(i) for i in range(1, num_images + 1))
             list(tqdm(pool.imap(save_image, zip(faces, names)), total=num_images))
