@@ -351,12 +351,6 @@ def extract_multi_faces(video, v_margin=100, h_margin=100, batch_size=32, fps=30
                     face_image = crop_face_location(frames[batch_idx], interped_fls[idx], v_margin, h_margin, imsize)
                     face_images[face_num][idx] = face_image
 
-                # for i, ifl in enumerate(interped_fls):
-                #     if fls[i] is None:
-                #         print('fls is none', i)
-                #         face_image = crop_face_location(frames[i % batch_size], ifl, v_margin, h_margin, imsize)
-                #         face_images[face_num][i] = face_image
-
         return known_faces, face_coords, face_images
 
     # Open video file
