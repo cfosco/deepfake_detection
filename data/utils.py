@@ -66,26 +66,59 @@ def process_video(video, video_root='', frame_root='', tmpl='%06d.jpg', fps=30, 
     _extract_frames(video, out_filename, tmpl=tmpl, fps=fps)
 
 
-def generate_metadata(video_root, frame_root, filename='metadata.json'):
+def generate_metadata(data_root, video_dir='videos', frames_dir='frames', faces_dir='face_frames', filename='metadata.json',
+                      face_metadata_fname='face_metadata.json'):
     metadata = {}
+    video_root = os.path.join(data_root, video_dir)
+    frame_root = os.path.join(data_root, frames_dir)
+    faces_root = os.path.join(data_root, faces_dir)
+
+    missing_frames = []
+    missing_faces = []
+
     for root, dirs, files in os.walk(video_root):
         for d in dirs:
             fname = os.path.join(root, d, filename)
             with open(fname, 'r') as f:
                 data = json.load(f)
                 for name, info in data.items():
+                    # Frame metadata
                     frame_dir = os.path.join(frame_root, d, name)
-                    num_frames = len(os.listdir(frame_dir))
-                    data[name]['filename'] = name
-                    data[name]['num_frames'] = num_frames
-                    data[name]['path'] = os.path.join(d, name)
+                    try:
+                        num_frames = len(os.listdir(frame_dir))
+                    except Exception:
+                        missing_frames.append(name)
+                    else:
+                        data[name]['filename'] = name
+                        data[name]['num_frames'] = num_frames
+                        data[name]['path'] = os.path.join(d, name)
+
+                    # Face frame metadata
+                    face_dir = os.path.join(faces_root, d, name)
+                    try:
+                        with open(os.path.join(face_dir, face_metadata_fname)) as f:
+                            fdata = json.load(f)
+                        data[name]['face_data'] = fdata
+                    except Exception:
+                        print(f'Could not find face_data for {name}')
+                        missing_faces.append(name)
+
                 metadata[d] = data
-    with open(os.path.join(video_root, filename), 'w') as f:
+    with open(os.path.join(data_root, filename), 'w') as f:
         # json.dump(metadata, f)
         json.dump(metadata, f, indent=4)
 
+    print(f'Videos missing frames ({len(missing_frames)}): {missing_frames}')
+    print(f'Videos missing face frames ({len(missing_faces)}): {missing_faces if len(missing_faces) < 50 else "Too long..."}')
 
-def generate_test_metadata(test_list_file, video_root, frame_root, train_metadata_file='metadata.json'):
+
+def generate_test_metadata(data_root, test_list_file='test_videos.json', video_dir='videos',
+                           frames_dir='frames', train_metadata_file='metadata.json',
+                           test_metadata_file='test_metadata.json'):
+    video_root = os.path.join(data_root, video_dir)
+    frame_root = os.path.join(data_root, frames_dir)
+    test_list_file = os.path.join(data_root, test_list_file)
+    train_metadata_file = os.path.join(data_root, train_metadata_file)
     with open(test_list_file) as f:
         test_videos = json.load(f)
 
@@ -105,10 +138,10 @@ def generate_test_metadata(test_list_file, video_root, frame_root, train_metadat
         else:
             missing.append(test_video)
 
-    with open(os.path.join(video_root, 'test_metadata.json'), 'w') as f:
+    with open(os.path.join(data_root, test_metadata_file), 'w') as f:
         json.dump(test_metadata, f, indent=4)
-    print(len(missing))
-    print(missing)
+
+    print(f'Missing test vides ({len(missing)}): {missing}')
 
 
 def verify_frames(video_dir, frame_root):
