@@ -11,7 +11,7 @@ FACES_ROOT = os.path.join(DATA_ROOT, 'DeepfakeDetection', 'face_frames')
 
 num_gpus = torch.cuda.device_count()
 
-cmd = ' '.join(['CUDA_VISIBLE_DEVICES={} python -m fire data.utils videos_to_multi_faces', VIDEO_ROOT, FACES_ROOT])
+cmd = ' '.join(['CUDA_VISIBLE_DEVICES={} python -m fire data.utils videos_to_faces', VIDEO_ROOT, FACES_ROOT])
 
 
 def run(device):

@@ -144,7 +144,8 @@ def crop_face_location(frame, face_location, v_margin, h_margin, imsize):
     return Image.fromarray(face_image).resize((imsize, imsize))
 
 
-def extract_faces(video, v_margin=100, h_margin=100, batch_size=32, fps=30, imsize=360):
+def _extract_faces(video, v_margin=100, h_margin=100, batch_size=32, fps=30, imsize=360):
+    """DEPRECATED: TO BE REMOVED."""
 
     def process_batch(frames, imsize):
         face_batch = []
@@ -197,8 +198,9 @@ def save_image(args):
     image.save(filename)
 
 
-def process_faces(video, video_root='', faces_root='', tmpl='{:06d}.jpg',
-                  fps=30, num_pdirs=1, batch_size=64, margin=100, imsize=360):
+def _process_faces(video, video_root='', faces_root='', tmpl='{:06d}.jpg',
+                   fps=30, num_pdirs=1, batch_size=64, margin=100, imsize=360):
+    """DEPRECATED: TO BE REMOVED."""
     name = get_framedir_name(video, num_pdirs=num_pdirs)
     frame_dir = os.path.join(faces_root, name)
     if os.path.exists(frame_dir):
@@ -206,8 +208,8 @@ def process_faces(video, video_root='', faces_root='', tmpl='{:06d}.jpg',
             print(f'Skipping {frame_dir}')
             return
     out_filename = os.path.join(frame_dir, tmpl)
-    faces = extract_faces(video, v_margin=margin, h_margin=margin,
-                          batch_size=batch_size, fps=fps, imsize=imsize)
+    faces = _extract_faces(video, v_margin=margin, h_margin=margin,
+                           batch_size=batch_size, fps=fps, imsize=imsize)
     num_images = len(faces)
     with ThreadPool(num_images) as pool:
         names = (out_filename.format(i) for i in range(1, num_images + 1))
@@ -216,16 +218,16 @@ def process_faces(video, video_root='', faces_root='', tmpl='{:06d}.jpg',
         pool.join()
 
 
-def process_multi_faces(video, video_root='', faces_root='', tmpl='{:06d}.jpg',
-                        fps=30, num_pdirs=1, batch_size=64, margin=100, imsize=360):
+def process_faces(video, video_root='', faces_root='', tmpl='{:06d}.jpg',
+                  fps=30, num_pdirs=1, batch_size=64, margin=100, imsize=360):
     name = get_framedir_name(video, num_pdirs=num_pdirs)
     frame_dir = os.path.join(faces_root, name)
     if os.path.exists(frame_dir):
         if os.listdir(frame_dir):
             print(f'Skipping {frame_dir}')
             return
-    face_images = extract_multi_faces(video, v_margin=margin, h_margin=margin,
-                                      batch_size=batch_size, fps=fps, imsize=imsize)
+    face_images, face_coords = extract_multi_faces(video, v_margin=margin, h_margin=margin,
+                                                   batch_size=batch_size, fps=fps, imsize=imsize)
     for face_num, faces in face_images.items():
         num_images = len(faces)
         out_filename = os.path.join(frame_dir, f'face_{face_num}', tmpl)
@@ -234,6 +236,20 @@ def process_multi_faces(video, video_root='', faces_root='', tmpl='{:06d}.jpg',
             list(tqdm(pool.imap(save_image, zip(faces, names)), total=num_images))
             pool.close()
             pool.join()
+
+
+def __videos_to_faces(video_root, faces_root):
+    """DEPRECATED: TO BE REMOVED."""
+
+    videos = []
+    for r, d, f in os.walk(video_root):
+        for file in f:
+            if '.mp4' in file:
+                videos.append(os.path.join(r, file))
+
+    func = functools.partial(_process_faces, video_root=video_root, faces_root=faces_root)
+    for video in videos:
+        func(video)
 
 
 def videos_to_faces(video_root, faces_root):
@@ -246,20 +262,6 @@ def videos_to_faces(video_root, faces_root):
                 videos.append(os.path.join(r, file))
 
     func = functools.partial(process_faces, video_root=video_root, faces_root=faces_root)
-    for video in videos:
-        func(video)
-
-
-def videos_to_multi_faces(video_root, faces_root):
-    """videos_to_faces."""
-
-    videos = []
-    for r, d, f in os.walk(video_root):
-        for file in f:
-            if '.mp4' in file:
-                videos.append(os.path.join(r, file))
-
-    func = functools.partial(process_multi_faces, video_root=video_root, faces_root=faces_root)
     for video in videos:
         func(video)
 
@@ -287,7 +289,7 @@ def interp_face_locations(coords):
         interps.append(out)
     interps = np.stack(interps, axis=-1)
     for i, ind in enumerate(inds):
-        coords[ind] = interps[i]
+        coords[ind] = tuple(interps[i])
     return coords
 
 
@@ -345,10 +347,13 @@ def extract_multi_faces(video, v_margin=100, h_margin=100, batch_size=32, fps=30
 
             for face_num, fls in face_coords.items():
                 interped_fls = interped_face_locations[face_num]
+                face_coords[face_num] = interped_fls.tolist()
 
                 for batch_idx in interp_inds:
                     idx = (frame_count - batch_size) + batch_idx
-                    face_image = crop_face_location(frames[batch_idx], interped_fls[idx], v_margin, h_margin, imsize)
+                    interped_coords = interped_fls[idx]
+                    face_image = crop_face_location(frames[batch_idx], interped_coords, v_margin, h_margin, imsize)
+
                     face_images[face_num][idx] = face_image
 
         return known_faces, face_coords, face_images
@@ -387,4 +392,4 @@ def extract_multi_faces(video, v_margin=100, h_margin=100, batch_size=32, fps=30
             frames = []
     if frames:
         known_faces, face_coords, face_images = process_multi_batch(frames, known_faces, face_coords, face_images, imsize)
-    return face_images
+    return face_images, face_coords
