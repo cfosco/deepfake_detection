@@ -42,7 +42,7 @@ def process_faces(video, video_root='', faces_root='', fdir_tmpl='face_{}', tmpl
                   metadata_fname='face_metadata.json'):
     name = get_framedir_name(video, num_pdirs=num_pdirs)
     with suppress(filelock.FileLockException):
-        with filelock.FileLock(f'.{os.path.basename(name)}'):
+        with filelock.FileLock(f'.{os.path.basename(name)}', timeout=0.5):
             print(f'Processing: {name}')
             frame_dir = os.path.join(faces_root, name)
             if os.path.exists(frame_dir):
