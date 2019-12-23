@@ -95,7 +95,7 @@ def interp_face_locations(coords):
         interps.append(out)
     interps = np.stack(interps, axis=-1)
     for i, ind in enumerate(inds):
-        coords[ind] = tuple(interps[i])
+        coords[ind] = tuple([int(x) for x in interps[i]])
     return coords
 
 
@@ -116,27 +116,31 @@ def extract_faces(video, v_margin=100, h_margin=100, batch_size=32, fps=30, imsi
                 interp_inds.append(frameno)
             else:
 
-                if num_faces > 1:
-                    face_encodings = face_recognition.face_encodings(frame, face_locations)
-                else:
-                    face_encodings = num_faces * [None]
+                # if num_faces > 1:
+                face_encodings = face_recognition.face_encodings(frame, face_locations)
+                # else:
+                    # face_encodings = num_faces * [None]
 
                 if not known_faces:
                     known_faces = face_encodings
 
+                added = []
                 for i, (face_encoding, face_location) in enumerate(zip(face_encodings, face_locations)):
 
                     # See if the face is a match for the known face(s)
                     if face_encoding is not None:
+                        # print('known_faces', known_faces)
+                        # print('face_encoding', face_encoding)
                         face_idx = get_face_match(known_faces, face_encoding)
                     else:
                         face_idx = i
+                    if face_idx not in added:
+                        face_image = crop_face_location(frame, face_location, v_margin, h_margin, imsize)
 
-                    face_image = crop_face_location(frame, face_location, v_margin, h_margin, imsize)
-
-                    known_faces[face_idx] = face_encoding
-                    face_images[face_idx].append(face_image)
-                    face_coords[face_idx].append(face_location)
+                        known_faces[face_idx] = face_encoding
+                        face_images[face_idx].append(face_image)
+                        face_coords[face_idx].append(face_location)
+                        added.append(face_idx)
 
         if interp_inds:
             frame_count = len(face_coords[0])
