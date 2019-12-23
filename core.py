@@ -87,6 +87,7 @@ def init_weights(model, init_name='ortho'):
 
 def get_model(model_name, num_classes, pretrained='imagenet', init_name=None, **kwargs):
     model_func = getattr(models, model_name)
+    pretrained = None if pretrained == 'None' else pretrained
     if pretrained is not None:
         # TODO Update THIS!
         nc = {k.lower(): v for k, v in cfg.num_classes_dict.items()}.get(pretrained)
