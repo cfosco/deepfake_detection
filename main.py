@@ -71,6 +71,7 @@ def main_worker(gpu, ngpus_per_node, args):
 
     save_name = '_'.join([args.arch,
                           args.dataset.lower(),
+                          f'seg_count-{args.segment_count}',
                           f'init-{"-".join([args.pretrained, args.init]) if args.pretrained else args.init}',
                           f'optim-{args.optimizer}',
                           f'lr-{args.lr}',
@@ -165,6 +166,7 @@ def main_worker(gpu, ngpus_per_node, args):
     dataloaders = core.get_dataloaders(args.dataset, args.data_root,
                                        dataset_type=args.dataset_type,
                                        record_set_type=args.record_set_type,
+                                       segment_count=args.segment_count,
                                        batch_size=args.batch_size,
                                        num_workers=args.num_workers,
                                        distributed=args.distributed,
