@@ -83,6 +83,14 @@ class DeepfakeFaceRecord(DeepfakeRecord):
         return self.data['face_data']['num_frames']
 
     @property
+    def face_locations(self):
+        return self.data['face_data']['face_coords']
+
+    @property
+    def size(self):
+        return self.data['face_data']['size']
+
+    @property
     def has_face_data(self):
         return 'face_data' in self.data
 
@@ -129,6 +137,9 @@ DeepfakeFaceSet = functools.partial(DeepfakeSet, record_func=DeepfakeFaceRecord)
 
 
 class DeepfakeFrame(data.Dataset):
+
+    offset = 1
+
     def __init__(
             self,
             root: Union[str, Path],
@@ -151,6 +162,7 @@ class DeepfakeFrame(data.Dataset):
         self.target_transform = target_transform
 
     def _load_image(self, directory, idx):
+        idx += self.offset
         filename_tmpl = os.path.join(self.root, directory, self.image_tmpl)
         try:
             return Image.open(filename_tmpl.format(idx)).convert('RGB')
@@ -186,12 +198,16 @@ class DeepfakeFaceFrame(DeepfakeFrame):
             record_set: DeepfakeSet,
             sampler: FrameSampler = _default_sampler(),
             image_tmpl: str = '{:06d}.jpg',
+            crop_faces: bool = False,
+            margin=100,
             transform=None, target_transform=None):
 
         self.root = root
         self.sampler = sampler
         self.record_set = record_set
         self.image_tmpl = image_tmpl
+        self.crop_faces = crop_faces
+        self.margin = margin
 
         if transform is None:
             transform = PILVideoToTensor()
@@ -202,6 +218,7 @@ class DeepfakeFaceFrame(DeepfakeFrame):
         self.target_transform = target_transform
 
     def _get_face_frames(self, index: int) -> Union[torch.Tensor, Tuple[torch.Tensor, int]]:
+        # TODO
         record = self.record_set[index]
         frame_path = os.path.join(self.root, record.path)
         frame_inds = self.sampler.sample(record.num_frames)
@@ -215,14 +232,27 @@ class DeepfakeFaceFrame(DeepfakeFrame):
 
         return frames, label
 
+    def _crop_frame(self, frame, coords, size=360):
+        top, right, bottom, left = coords
+        mtop = max(top - self.margin, 0)
+        mbottom = min(bottom + self.margin, frame.size[0])
+        mleft = max(left - self.margin, 0)
+        mright = min(right + self.margin, frame.size[1])
+        return frame.crop((mleft, mtop, mright, mbottom)).resize((size, size))
+
     def __getitem__(self, index: int) -> Union[torch.Tensor, Tuple[torch.Tensor, int]]:
         record = self.record_set[index]
         frame_path = os.path.join(self.root, record.path)
         face_num = np.random.choice(record.face_nums)
         num_face_frames = record.num_face_frames[face_num]
-        face_frame_path = os.path.join(frame_path, record.face_names[face_num])
         frame_inds = self.sampler.sample(num_face_frames)
-        frames = self._load_frames(face_frame_path, frame_inds)
+
+        if not self.crop_faces:
+            frame_path = os.path.join(frame_path, record.face_names[face_num])
+        frames = self._load_frames(frame_path, frame_inds)
+        if self.crop_faces:
+            face_coords = [record.face_locations[str(face_num)][idx] for idx in frame_inds]
+            frames = [self._crop_frame(f, c, record.size) for f, c in zip(frames, face_coords)]
         label = record.label
 
         if self.transform is not None:
@@ -231,6 +261,20 @@ class DeepfakeFaceFrame(DeepfakeFrame):
             label = self.target_transform(label)
 
         return frames, label
+
+
+class DeepfakeFaceCropFrame(DeepfakeFaceFrame):
+    def __init__(self, root, record_set, sampler=_default_sampler(),
+                 image_tmpl='{:06d}.jpg', margin=100, transform=None, target_transform=None):
+        super().__init__(
+            root,
+            record_set,
+            sampler=sampler,
+            image_tmpl=image_tmpl,
+            crop_faces=True,
+            margin=margin,
+            transform=transform,
+            target_transform=target_transform)
 
 
 class Record(object):
