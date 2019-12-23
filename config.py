@@ -85,11 +85,12 @@ def get_metadata(name, split='train', dataset_type='DeepfakeFrame', record_set_t
     }.get(split, 'train')
     metafiles = {
         'DFDC': {
-            'DeepfakeSet': defaultdict(lambda: os.path.join(root, fname), {}),
+            'DeepfakeSet': defaultdict(lambda: os.path.join(data_root, 'DeepfakeDetection', fname), {}),
+            'DeepfakeFaceSet': defaultdict(lambda: os.path.join(data_root, 'DeepfakeDetection', fname), {}),
         },
     }
     metafile = metafiles[name][record_set_type][resolution]
-    blacklist_file = os.path.join(root, 'test_videos.json') if split == 'train' else None
+    blacklist_file = os.path.join(data_root, 'DeepfakeDetection', 'test_videos.json') if split == 'train' else None
 
     return {'root': root, 'metafile': metafile, 'blacklist_file': blacklist_file}
 
