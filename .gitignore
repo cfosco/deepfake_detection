@@ -134,3 +134,5 @@ weights
 notebooks/data
 notebooks/models
 notebooks/DeepfakeDetection
+
+*.lock
