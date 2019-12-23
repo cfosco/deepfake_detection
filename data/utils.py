@@ -274,16 +274,16 @@ def get_face_match(known_faces, face_encoding, tolerance=0.50):
 
 
 def interp_face_locations(coords):
-    n = len(coords)
     coords = np.array(coords)
-    missing = coords is None
+    n = len(coords)
+    missing = coords.__eq__(None)
     inds = np.arange(n)[missing]
     x = np.arange(n)[~missing]
     y = coords[x]
     interps = []
     for dim in range(4):
-        origin = np.array([e[dim] for e in y])
-        out = np.interp(inds, x, origin).astype(int)
+        yc = np.array([e[dim] for e in y])
+        out = np.interp(inds, x, yc).astype(int)
         interps.append(out)
     interps = np.stack(interps, axis=-1)
     for i, ind in enumerate(inds):
@@ -291,15 +291,27 @@ def interp_face_locations(coords):
     return coords
 
 
+def smooth_data(data, amount=1.0):
+    if not amount > 0.0:
+        return data
+    data_len = len(data)
+    ksize = int(amount * (data_len // 2))
+    kernel = np.ones(ksize) / ksize
+    return np.convolve(data, kernel, mode='same')
+
+
 def extract_multi_faces(video, v_margin=100, h_margin=100, batch_size=32, fps=30, imsize=360):
 
-    def process_multi_batch(frames, known_faces, face_images, imsize):
+    def process_multi_batch(frames, known_faces, face_coords, face_images, imsize):
 
         batched_face_locations = face_recognition.batch_face_locations(frames, number_of_times_to_upsample=0)
+
         for frameno, (frame, face_locations) in enumerate(zip(frames, batched_face_locations)):
             num_faces = len(face_locations)
 
             if num_faces < 1:
+                face_coords[0].append(None)
+                face_images[0].append(None)
                 print('WARNING: NEED TO TRY ANOTHER METHOD')
             elif num_faces > 1:
                 print('MORE THAN ONE FACE')
@@ -313,12 +325,15 @@ def extract_multi_faces(video, v_margin=100, h_margin=100, batch_size=32, fps=30
                     # See if the face is a match for the known face(s)
                     face_idx = get_face_match(known_faces, face_encoding)
                     face_image = crop_face_location(frame, face_location, v_margin, h_margin, imsize)
+
+                    face_coords[face_idx].append(face_location)
                     face_images[face_idx].append(face_image)
                     known_faces[face_idx] = face_encoding
             else:
                 for i, face_location in enumerate(face_locations):
                     # Print the location of each face in this frame
                     face_image = crop_face_location(frame, face_location, v_margin, h_margin, imsize)
+                    face_coords[i].append(face_location)
                     face_images[i].append(face_image)
 
         return known_faces, face_images
@@ -327,10 +342,12 @@ def extract_multi_faces(video, v_margin=100, h_margin=100, batch_size=32, fps=30
     video_capture = cv2.VideoCapture(video)
     video_capture.set(cv2.CAP_PROP_FPS, fps)
 
-    known_faces = []
-    face_images = defaultdict(list)
     frames = []
     frame_count = 0
+
+    known_faces = []
+    face_images = defaultdict(list)
+    face_coords = defaultdict(list)
 
     while video_capture.isOpened():
         # Grab a single frame of video
@@ -349,10 +366,10 @@ def extract_multi_faces(video, v_margin=100, h_margin=100, batch_size=32, fps=30
 
         if len(frames) == batch_size:
             # faces.extend(process_batch(frames, frame_count, batch_size))
-            known_faces, face_images = process_multi_batch(frames, known_faces, face_images, imsize)
+            known_faces, face_coords, face_images = process_multi_batch(frames, known_faces, face_coords, face_images, imsize)
 
             # Clear the frames array to start the next batch
             frames = []
     if frames:
-        known_faces, face_images = process_multi_batch(frames, known_faces, face_images, imsize)
+        known_faces, face_coords, face_images = process_multi_batch(frames, known_faces, face_coords, face_images, imsize)
     return face_images
