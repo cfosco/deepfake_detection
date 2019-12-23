@@ -41,6 +41,7 @@ def get_root_dirs(name, dataset_type='DeepfakeFrame', resolution=224, data_root=
     root_dirs = {
         'DFDC': {
             'DeepfakeFrame': defaultdict(lambda: os.path.join(data_root, 'DeepfakeDetection/frames'), {}),
+            'DeepfakeFaceFrame': defaultdict(lambda: os.path.join(data_root, 'DeepfakeDetection/face_frames'), {}),
         },
         'ImageNet': {
             'ImageHDF5': defaultdict(lambda: os.path.join(data_root, 'ImageNet'), {}),
@@ -62,6 +63,7 @@ def get_metadata(name, split='train', dataset_type='DeepfakeFrame', record_set_t
     root_dirs = {
         'DFDC': {
             'DeepfakeFrame': defaultdict(lambda: os.path.join(data_root, 'DeepfakeDetection/frames'), {}),
+            'DeepfakeFaceFrame': defaultdict(lambda: os.path.join(data_root, 'DeepfakeDetection/face_frames'), {}),
         },
         'ImageNet': {
             'ImageHDF5': defaultdict(lambda: os.path.join(data_root, 'ImageNet'), {}),

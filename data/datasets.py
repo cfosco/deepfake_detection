@@ -1,3 +1,4 @@
+import functools
 import json
 import os
 from collections import defaultdict
@@ -63,11 +64,35 @@ class DeepfakeRecord:
             return False
 
 
+class DeepfakeFaceRecord(DeepfakeRecord):
+
+    @property
+    def num_faces(self):
+        return self.data['face_data']['num_faces']
+
+    @property
+    def face_names(self):
+        return self.data['face_data']['face_names']
+
+    @property
+    def face_nums(self):
+        return self.data['face_data']['face_nums']
+
+    @property
+    def num_face_frames(self):
+        return self.data['face_data']['num_frames']
+
+    @property
+    def has_face_data(self):
+        return 'face_data' in self.data
+
+
 class DeepfakeSet:
 
-    def __init__(self, metafile, blacklist_file=None):
+    def __init__(self, metafile, blacklist_file=None, record_func=DeepfakeRecord):
         self.records = []
         self.metafile = metafile
+        self.record_func = record_func
         with open(metafile) as f:
             self.data = json.load(f)
 
@@ -81,7 +106,11 @@ class DeepfakeSet:
         self.blacklist_records = []
         for part, part_data in self.data.items():
             for name, rec in part_data.items():
-                record = DeepfakeRecord(part, name, rec)
+                record = self.record_func(part, name, rec)
+
+                if issubclass(self.record_func, DeepfakeFaceRecord):
+                    if not record.has_face_data:
+                        continue
 
                 if name not in self.blacklist:
                     self.records.append(record)
@@ -94,6 +123,9 @@ class DeepfakeSet:
 
     def __len__(self):
         return len(self.records)
+
+
+DeepfakeFaceSet = functools.partial(DeepfakeSet, record_func=DeepfakeFaceRecord)
 
 
 class DeepfakeFrame(data.Dataset):
@@ -145,6 +177,60 @@ class DeepfakeFrame(data.Dataset):
 
     def __len__(self):
         return len(self.record_set)
+
+
+class DeepfakeFaceFrame(DeepfakeFrame):
+    def __init__(
+            self,
+            root: Union[str, Path],
+            record_set: DeepfakeSet,
+            sampler: FrameSampler = _default_sampler(),
+            image_tmpl: str = '{:06d}.jpg',
+            transform=None, target_transform=None):
+
+        self.root = root
+        self.sampler = sampler
+        self.record_set = record_set
+        self.image_tmpl = image_tmpl
+
+        if transform is None:
+            transform = PILVideoToTensor()
+        self.transform = transform
+
+        if target_transform is None:
+            target_transform = int
+        self.target_transform = target_transform
+
+    def _get_face_frames(self, index: int) -> Union[torch.Tensor, Tuple[torch.Tensor, int]]:
+        record = self.record_set[index]
+        frame_path = os.path.join(self.root, record.path)
+        frame_inds = self.sampler.sample(record.num_frames)
+        frames = self._load_frames(frame_path, frame_inds)
+        label = record.label
+
+        if self.transform is not None:
+            frames = self.transform(frames)
+        if self.target_transform is not None:
+            label = self.target_transform(label)
+
+        return frames, label
+
+    def __getitem__(self, index: int) -> Union[torch.Tensor, Tuple[torch.Tensor, int]]:
+        record = self.record_set[index]
+        frame_path = os.path.join(self.root, record.path)
+        face_num = np.random.choice(record.face_nums)
+        num_face_frames = record.num_face_frames[face_num]
+        face_frame_path = os.path.join(frame_path, record.face_names[face_num])
+        frame_inds = self.sampler.sample(num_face_frames)
+        frames = self._load_frames(face_frame_path, frame_inds)
+        label = record.label
+
+        if self.transform is not None:
+            frames = self.transform(frames)
+        if self.target_transform is not None:
+            label = self.target_transform(label)
+
+        return frames, label
 
 
 class Record(object):
