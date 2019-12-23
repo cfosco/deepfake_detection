@@ -305,8 +305,6 @@ def extract_multi_faces(video, v_margin=100, h_margin=100, batch_size=32, fps=30
     def process_multi_batch(frames, known_faces, face_coords, face_images, imsize):
 
         interp_inds = []
-        batch_coords = defaultdict(list)
-
         batch_size = len(frames)
         batched_face_locations = face_recognition.batch_face_locations(frames, number_of_times_to_upsample=0)
 
@@ -317,7 +315,6 @@ def extract_multi_faces(video, v_margin=100, h_margin=100, batch_size=32, fps=30
                 face_coords[0].append(None)
                 face_images[0].append(None)
                 interp_inds.append(frameno)
-                batch_coords[0].append(None)
             else:
 
                 if num_faces > 1:
@@ -341,24 +338,24 @@ def extract_multi_faces(video, v_margin=100, h_margin=100, batch_size=32, fps=30
                     known_faces[face_idx] = face_encoding
                     face_images[face_idx].append(face_image)
                     face_coords[face_idx].append(face_location)
-                    batch_coords[face_idx].append(face_location)
 
         if interp_inds:
-            # interped_face_locations = [interp_face_locations(fl) for fl in batch_coords.values()]
+            frame_count = len(face_coords[0])
             interped_face_locations = [interp_face_locations(fl) for fl in face_coords.values()]
-            # for face_num, fls in batch_coords.items():
+
             for face_num, fls in face_coords.items():
                 interped_fls = interped_face_locations[face_num]
 
-                # for idx in interp_inds:
-                    # frame_count = len(face_coords[0])
-                    # face_image = crop_face_location(frames[idx], interped_fls[idx], v_margin, h_margin, imsize)
-                    # face_images[face_num][(frame_count - batch_size) + idx] = face_image
+                for batch_idx in interp_inds:
+                    idx = (frame_count - batch_size) + batch_idx
+                    face_image = crop_face_location(frames[batch_idx], interped_fls[idx], v_margin, h_margin, imsize)
+                    face_images[face_num][idx] = face_image
 
-                for i, ifl in enumerate(interped_fls):
-                    if fls[i] is None:
-                        face_image = crop_face_location(frames[i % batch_size], ifl, v_margin, h_margin, imsize)
-                        face_images[face_num][i] = face_image
+                # for i, ifl in enumerate(interped_fls):
+                #     if fls[i] is None:
+                #         print('fls is none', i)
+                #         face_image = crop_face_location(frames[i % batch_size], ifl, v_margin, h_margin, imsize)
+                #         face_images[face_num][i] = face_image
 
         return known_faces, face_coords, face_images
 
