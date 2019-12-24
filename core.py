@@ -1,21 +1,24 @@
-import torchvision
 import functools
 import os
 from operator import add
 
 import torch
 import torch.nn as nn
+import torchvision
+import torchvision.models as torchvision_models
 from torch.nn import init
 from torch.utils.data import DataLoader
 from torch.utils.data.distributed import DistributedSampler
 
-
-from pretorched import models, optim, utils
-from pretorched.data import transforms, samplers
-
-
-import data
 import config as cfg
+import data
+import models as deepfake_models
+from pretorched import models, optim, utils
+from pretorched.data import samplers, transforms
+
+torchvision_model_names = sorted(name for name in torchvision_models.__dict__
+                                 if name.islower() and not name.startswith("__")
+                                 and callable(torchvision_models.__dict__[name]))
 
 
 def get_optimizer(model, optimizer_name='SGD', lr=0.001, **kwargs):
@@ -104,6 +107,9 @@ def get_model(model_name, num_classes, pretrained='imagenet', init_name=None, **
         if init_name is not None:
             print(f'Initializing {model_name} with {init_name}.')
             model = init_weights(model, init_name)
+    if model_name in torchvision_model_names:
+        print('2D model detected! Converting to FrameModel with mean consensus.')
+        model = deepfake_models.FrameModel(model)
     return model
 
 
