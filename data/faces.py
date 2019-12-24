@@ -94,8 +94,6 @@ def interp_face_locations(coords):
     coords = np.array(coords).ravel()
     n = len(coords)
     missing = coords.__eq__(None).ravel()
-    print(missing)
-    print(len(missing))
     if sum(missing) == 0 or all(missing):
         return coords
     inds = np.arange(n)[missing]
@@ -339,7 +337,6 @@ def extract_faces(video, v_margin=100, h_margin=100, batch_size=32, fps=30, imsi
         faces = face_recognition.batch_face_locations(frames,
                                                       number_of_times_to_upsample=0,
                                                       batch_size=batch_size)
-        print(faces)
         if not any(faces):
             print('Could not find any faces... trying again with "enhanced" frames')
             frames = enhance_frames(frames)
@@ -386,7 +383,6 @@ def extract_faces(video, v_margin=100, h_margin=100, batch_size=32, fps=30, imsi
             if None not in fls:
                 break
             interped_fls = interp_face_locations(fls)
-            print(interped_fls)
             face_coords[face_num] = interped_fls.tolist()
 
             for idx in interp_inds:
