@@ -94,7 +94,6 @@ def interp_face_locations(coords):
     coords = np.array(coords).ravel()
     n = len(coords)
     missing = coords.__eq__(None).ravel()
-    print(missing)
     if sum(missing) == 0 or all(missing):
         return coords
     inds = np.arange(n)[missing]
@@ -109,98 +108,6 @@ def interp_face_locations(coords):
     for i, ind in enumerate(inds):
         coords[ind] = tuple([int(x) for x in interps[i]])
     return coords
-
-
-def extract_faces(video, v_margin=100, h_margin=100, batch_size=32, fps=30, imsize=360):
-
-    def process_multi_batch(frames, known_faces, face_coords, face_images, imsize):
-
-        interp_inds = []
-        batch_size = len(frames)
-        batched_face_locations = face_recognition.batch_face_locations(frames, number_of_times_to_upsample=0)
-
-        for frameno, (frame, face_locations) in enumerate(zip(frames, batched_face_locations)):
-            num_faces = len(face_locations)
-
-            if num_faces < 1:
-                face_coords[0].append(None)
-                face_images[0].append(None)
-                interp_inds.append(frameno)
-            else:
-
-                face_encodings = face_recognition.face_encodings(frame, face_locations)
-
-                if not known_faces:
-                    known_faces = face_encodings
-
-                added = []
-                for i, (face_encoding, face_location) in enumerate(zip(face_encodings, face_locations)):
-
-                    # See if the face is a match for the known face(s)
-                    if face_encoding is not None:
-                        face_idx = get_face_match(known_faces, face_encoding)
-                    else:
-                        face_idx = i
-                    if face_idx not in added:
-                        face_image = crop_face_location(frame, face_location, v_margin, h_margin, imsize)
-
-                        known_faces[face_idx] = face_encoding
-                        face_images[face_idx].append(face_image)
-                        face_coords[face_idx].append(face_location)
-                        added.append(face_idx)
-
-        if interp_inds:
-
-            for face_num, fls in face_coords.items():
-                if None not in fls:
-                    break
-                frame_count = len(fls)
-                interped_fls = interp_face_locations(fls)
-                face_coords[face_num] = interped_fls.tolist()
-
-                for batch_idx in interp_inds:
-                    idx = (frame_count - batch_size) + batch_idx
-                    interped_coords = interped_fls[idx]
-                    face_image = crop_face_location(frames[batch_idx], interped_coords, v_margin, h_margin, imsize)
-
-                    face_images[face_num][idx] = face_image
-
-        return known_faces, face_coords, face_images
-
-    # Open video file
-    video_capture = cv2.VideoCapture(video)
-    video_capture.set(cv2.CAP_PROP_FPS, fps)
-
-    frames = []
-    frame_count = 0
-
-    known_faces = []
-    face_images = defaultdict(list)
-    face_coords = defaultdict(list)
-
-    while video_capture.isOpened():
-        # Grab a single frame of video
-        ret, frame = video_capture.read()
-
-        # Bail out when the video file ends
-        if not ret:
-            break
-
-        # Convert the image from BGR color (which OpenCV uses) to RGB color (which face_recognition uses)
-        frame = frame[:, :, ::-1]
-
-        # Save each frame of the video to a list
-        frame_count += 1
-        frames.append(frame)
-
-        if len(frames) == batch_size:
-            known_faces, face_coords, face_images = process_multi_batch(frames, known_faces, face_coords, face_images, imsize)
-
-            # Clear the frames array to start the next batch
-            frames = []
-    if frames:
-        known_faces, face_coords, face_images = process_multi_batch(frames, known_faces, face_coords, face_images, imsize)
-    return face_images, face_coords
 
 
 def extract_face_frame(image_file, model='hog', v_margin=30, h_margin=15):
@@ -227,13 +134,94 @@ def get_framedir_name(video, num_pdirs=1):
     return name
 
 
-def _extract_faces(video, v_margin=100, h_margin=100, batch_size=32, fps=30, imsize=360):
+def read_frames(video, fps=30):
+    # Open video file
+    video_capture = cv2.VideoCapture(video)
+    video_capture.set(cv2.CAP_PROP_FPS, fps)
+
+    frames = []
+
+    while video_capture.isOpened():
+        # Grab a single frame of video
+        ret, frame = video_capture.read()
+
+        # Bail out when the video file ends
+        if not ret:
+            break
+
+        # Convert the image from BGR color (which OpenCV uses) to RGB color (which face_recognition uses)
+        frame = frame[:, :, ::-1]
+
+        # Save each frame of the video to a list
+        frames.append(frame)
+    return frames
+
+
+def extract_faces(video, v_margin=100, h_margin=100, batch_size=32, fps=30, imsize=360):
+
+    frames = read_frames(video, fps=fps)
+
+    known_faces = []
+    interp_inds = []
+    face_images = defaultdict(list)
+    face_coords = defaultdict(list)
+    batched_face_locations = face_recognition.batch_face_locations(frames, number_of_times_to_upsample=0,
+                                                                   batch_size=batch_size)
+
+    for frameno, (frame, face_locations) in enumerate(zip(frames, batched_face_locations)):
+        num_faces = len(face_locations)
+
+        if num_faces < 1:
+            face_coords[0].append(None)
+            face_images[0].append(None)
+            interp_inds.append(frameno)
+        else:
+
+            face_encodings = face_recognition.face_encodings(frame, face_locations)
+
+            if not known_faces:
+                known_faces = face_encodings
+
+            added = []
+            for i, (face_encoding, face_location) in enumerate(zip(face_encodings, face_locations)):
+
+                # See if the face is a match for the known face(s)
+                if face_encoding is not None:
+                    face_idx = get_face_match(known_faces, face_encoding)
+                else:
+                    face_idx = i
+                if face_idx not in added:
+                    face_image = crop_face_location(frame, face_location, v_margin, h_margin, imsize)
+
+                    known_faces[face_idx] = face_encoding
+                    face_images[face_idx].append(face_image)
+                    face_coords[face_idx].append(face_location)
+                    added.append(face_idx)
+
+    if interp_inds:
+
+        for face_num, fls in face_coords.items():
+            if None not in fls:
+                break
+            interped_fls = interp_face_locations(fls)
+            face_coords[face_num] = interped_fls.tolist()
+
+            for idx in interp_inds:
+                interped_coords = interped_fls[idx]
+                face_image = crop_face_location(frames[idx], interped_coords, v_margin, h_margin, imsize)
+
+                face_images[face_num][idx] = face_image
+
+    return face_images, face_coords
+
+
+def extract_faces_batched(video, v_margin=100, h_margin=100, batch_size=32, fps=30, imsize=360):
 
     def process_multi_batch(frames, known_faces, face_coords, face_images, imsize):
 
         interp_inds = []
         batch_size = len(frames)
-        batched_face_locations = face_recognition.batch_face_locations(frames, number_of_times_to_upsample=0)
+        batched_face_locations = face_recognition.batch_face_locations(frames, number_of_times_to_upsample=0, batch_size=32)
 
         for frameno, (frame, face_locations) in enumerate(zip(frames, batched_face_locations)):
             num_faces = len(face_locations)
