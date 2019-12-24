@@ -14,7 +14,7 @@ import filelock
 import face_recognition
 
 
-def videos_to_faces(video_root, faces_root):
+def videos_to_faces(video_root, faces_root, batch_size=32):
     """videos_to_faces."""
 
     videos = []
@@ -23,7 +23,8 @@ def videos_to_faces(video_root, faces_root):
             if '.mp4' in file:
                 videos.append(os.path.join(r, file))
 
-    func = functools.partial(process_faces, video_root=video_root, faces_root=faces_root)
+    func = functools.partial(process_faces, video_root=video_root, faces_root=faces_root,
+                             batch_size=batch_size)
     for video in videos:
         func(video)
 
