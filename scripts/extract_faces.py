@@ -5,7 +5,7 @@ import subprocess
 
 import torch
 
-BATCH_SIZE = 300
+BATCH_SIZE = 64
 DATA_ROOT = os.getenv('DATA_ROOT')
 VIDEO_ROOT = os.path.join(DATA_ROOT, 'DeepfakeDetection', 'videos')
 FACES_ROOT = os.path.join(DATA_ROOT, 'DeepfakeDetection', 'face_frames')

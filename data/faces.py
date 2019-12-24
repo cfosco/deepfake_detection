@@ -7,7 +7,7 @@ from multiprocessing.pool import ThreadPool
 
 import cv2
 import numpy as np
-from PIL import Image
+from PIL import Image, ImageEnhance
 from tqdm import tqdm
 import filelock
 
@@ -94,6 +94,8 @@ def interp_face_locations(coords):
     coords = np.array(coords).ravel()
     n = len(coords)
     missing = coords.__eq__(None).ravel()
+    print(missing)
+    print(len(missing))
     if sum(missing) == 0 or all(missing):
         return coords
     inds = np.arange(n)[missing]
@@ -307,7 +309,42 @@ def extract_faces_batched(video, v_margin=100, h_margin=100, batch_size=32, fps=
     return face_images, face_coords
 
 
+def enhance_image(image, brightness=2.0, color=1, contrast=1, sharpness=1):
+    if isinstance(image, np.ndarray):
+        image = Image.fromarray(image)
+    if brightness > 0:
+        enh_bri = ImageEnhance.Brightness(image)
+        image = enh_bri.enhance(brightness)
+    if color > 0:
+        enh_col = ImageEnhance.Color(image)
+        image = enh_col.enhance(color)
+    if contrast > 0:
+        enh_con = ImageEnhance.Contrast(image)
+        image = enh_con.enhance(contrast)
+    if sharpness > 0:
+        enh_sha = ImageEnhance.Sharpness(image)
+        image = enh_sha.enhance(sharpness)
+    return np.array(image)
+
+
+def enhance_frames(frames):
+    return [enhance_image(f) for f in frames]
+
+
 def extract_faces(video, v_margin=100, h_margin=100, batch_size=32, fps=30, imsize=360):
+
+    def get_faces(frames, batch_size, attempt=0, retries=1):
+        if attempt > retries:
+            raise ValueError(f'Could not find faces in video after {retries} retries!')
+        faces = face_recognition.batch_face_locations(frames,
+                                                      number_of_times_to_upsample=0,
+                                                      batch_size=batch_size)
+        print(faces)
+        if not any(faces):
+            print('Could not find any faces... trying again with "enhanced" frames')
+            frames = enhance_frames(frames)
+            return get_faces(frames, batch_size, attempt + 1, retries)
+        return faces, frames
 
     frames = read_frames(video, fps=fps)
 
@@ -315,8 +352,8 @@ def extract_faces(video, v_margin=100, h_margin=100, batch_size=32, fps=30, imsi
     interp_inds = []
     face_images = defaultdict(list)
     face_coords = defaultdict(list)
-    batched_face_locations = face_recognition.batch_face_locations(frames, number_of_times_to_upsample=0,
-                                                                   batch_size=batch_size)
+
+    batched_face_locations, frames = get_faces(frames, batch_size)
 
     for frameno, (frame, face_locations) in enumerate(zip(frames, batched_face_locations)):
         num_faces = len(face_locations)
@@ -333,7 +370,7 @@ def extract_faces(video, v_margin=100, h_margin=100, batch_size=32, fps=30, imsi
             for i, face_location in enumerate(face_locations):
 
                 diff = np.abs(np.array(face_location) - np.array(known_coords)).sum(1)
-                face_idx = np.argmin(diff)
+                face_idx = int(np.argmin(diff))
 
                 if face_idx not in added:
                     face_image = crop_face_location(frame, face_location, v_margin, h_margin, imsize)
@@ -349,9 +386,11 @@ def extract_faces(video, v_margin=100, h_margin=100, batch_size=32, fps=30, imsi
             if None not in fls:
                 break
             interped_fls = interp_face_locations(fls)
+            print(interped_fls)
             face_coords[face_num] = interped_fls.tolist()
 
             for idx in interp_inds:
+
                 interped_coords = interped_fls[idx]
                 face_image = crop_face_location(frames[idx], interped_coords, v_margin, h_margin, imsize)
 
