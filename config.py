@@ -101,14 +101,14 @@ def parse_args():
     parser.add_argument('--dataset', type=str, default='DFDC')
     parser.add_argument('--data_root', metavar='DIR', default=None,
                         help='path to data_root containing all datasets')
-    parser.add_argument('-a', '--arch', metavar='ARCH', default='resnet3d18',
+    parser.add_argument('-a', '--arch', metavar='ARCH', default='resnet3d50',
                         choices=model_names,
                         help='model architecture: ' +
                         ' | '.join(model_names) +
-                        ' (default: resnet18)')
+                        ' (default: resnet3d50)')
     parser.add_argument('--segment_count', type=int, default=16)
-    parser.add_argument('--dataset_type', type=str, default='DeepfakeFrame')
-    parser.add_argument('--record_set_type', type=str, default='DeepfakeSet')
+    parser.add_argument('--dataset_type', type=str, default='DeepfakeFaceFrame')
+    parser.add_argument('--record_set_type', type=str, default='DeepfakeFaceSet')
     parser.add_argument('--sampler_type', type=str, default='TSNFrameSampler')
     parser.add_argument('--pretrained', type=str, default=None, dest='pretrained',
                         help='use a pre-trained model')
@@ -142,9 +142,9 @@ def parse_args():
     parser.add_argument('--logs_dir', default='logs', type=str, metavar='PATH')
     parser.add_argument('-e', '--evaluate', dest='evaluate', action='store_true',
                         help='evaluate model on validation set')
-    parser.add_argument('--world-size', '-w', default=-1, type=int,
+    parser.add_argument('--world-size', '-w', default=1, type=int,
                         help='number of nodes for distributed training')
-    parser.add_argument('--rank', '-r', default=-1, type=int,
+    parser.add_argument('--rank', '-r', default=0, type=int,
                         help='node rank for distributed training')
     parser.add_argument('--dist-url', default='tcp://localhost:23456', type=str,
                         help='url used to set up distributed training')
@@ -154,7 +154,7 @@ def parse_args():
                         help='seed for initializing training. ')
     parser.add_argument('--gpu', default=None, type=int,
                         help='GPU id to use.')
-    parser.add_argument('--ddp', '--multiprocessing-distributed', action='store_true',
+    parser.add_argument('--ddp', '-ddp', '--multiprocessing-distributed', action='store_true',
                         dest='multiprocessing_distributed',
                         help='Use multi-processing distributed training to launch '
                         'N processes per node, which has N GPUs. This is the '
