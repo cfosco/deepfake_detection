@@ -82,16 +82,17 @@ def generate_metadata(data_root, video_dir='videos', frames_dir='frames', faces_
             with open(fname, 'r') as f:
                 data = json.load(f)
                 for name, info in data.items():
+
                     # Frame metadata
                     frame_dir = os.path.join(frame_root, d, name)
+                    data[name]['filename'] = name
+                    data[name]['path'] = os.path.join(d, name)
                     try:
                         num_frames = len(os.listdir(frame_dir))
                     except Exception:
                         missing_frames.append(name)
                     else:
-                        data[name]['filename'] = name
                         data[name]['num_frames'] = num_frames
-                        data[name]['path'] = os.path.join(d, name)
 
                     # Face frame metadata
                     face_dir = os.path.join(faces_root, d, name)
