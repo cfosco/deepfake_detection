@@ -157,7 +157,7 @@ def read_frames(video, fps=30):
     return frames
 
 
-def extract_faces(video, v_margin=100, h_margin=100, batch_size=32, fps=30, imsize=360):
+def extract_faces_with_encodings(video, v_margin=100, h_margin=100, batch_size=32, fps=30, imsize=360):
 
     frames = read_frames(video, fps=fps)
 
@@ -304,4 +304,57 @@ def extract_faces_batched(video, v_margin=100, h_margin=100, batch_size=32, fps=
             frames = []
     if frames:
         known_faces, face_coords, face_images = process_multi_batch(frames, known_faces, face_coords, face_images, imsize)
+    return face_images, face_coords
+
+
+def extract_faces(video, v_margin=100, h_margin=100, batch_size=32, fps=30, imsize=360):
+
+    frames = read_frames(video, fps=fps)
+
+    known_coords = []
+    interp_inds = []
+    face_images = defaultdict(list)
+    face_coords = defaultdict(list)
+    batched_face_locations = face_recognition.batch_face_locations(frames, number_of_times_to_upsample=0,
+                                                                   batch_size=batch_size)
+
+    for frameno, (frame, face_locations) in enumerate(zip(frames, batched_face_locations)):
+        num_faces = len(face_locations)
+
+        if num_faces < 1:
+            face_coords[0].append(None)
+            face_images[0].append(None)
+            interp_inds.append(frameno)
+        else:
+            if not known_coords:
+                known_coords = face_locations
+
+            added = []
+            for i, face_location in enumerate(face_locations):
+
+                diff = np.abs(np.array(face_location) - np.array(known_coords)).sum(1)
+                face_idx = np.argmin(diff)
+
+                if face_idx not in added:
+                    face_image = crop_face_location(frame, face_location, v_margin, h_margin, imsize)
+
+                    known_coords[face_idx] = face_location
+                    face_images[face_idx].append(face_image)
+                    face_coords[face_idx].append(face_location)
+                    added.append(face_idx)
+
+    if interp_inds:
+
+        for face_num, fls in face_coords.items():
+            if None not in fls:
+                break
+            interped_fls = interp_face_locations(fls)
+            face_coords[face_num] = interped_fls.tolist()
+
+            for idx in interp_inds:
+                interped_coords = interped_fls[idx]
+                face_image = crop_face_location(frames[idx], interped_coords, v_margin, h_margin, imsize)
+
+                face_images[face_num][idx] = face_image
+
     return face_images, face_coords
