@@ -14,14 +14,18 @@ import filelock
 import face_recognition
 
 
-def videos_to_faces(video_root, faces_root, batch_size=32):
+def videos_to_faces(video_root, faces_root, batch_size=32, parts=[]):
     """videos_to_faces."""
 
     videos = []
+    if not parts:
+        parts = list(range(50))
+
     for r, d, f in os.walk(video_root):
-        for file in f:
-            if '.mp4' in file:
-                videos.append(os.path.join(r, file))
+        if any([f'dfdc_train_part_{p}' in r for p in parts]):
+            for file in f:
+                if '.mp4' in file:
+                    videos.append(os.path.join(r, file))
 
     func = functools.partial(process_faces, video_root=video_root, faces_root=faces_root,
                              batch_size=batch_size)
@@ -52,6 +56,8 @@ def process_faces(video, video_root='', faces_root='', fdir_tmpl='face_{}', tmpl
                     return
             face_images, face_coords = extract_faces(video, v_margin=margin, h_margin=margin,
                                                      batch_size=batch_size, fps=fps, imsize=imsize)
+            if not face_images:
+                return
             metadata = {
                 'filename': os.path.basename(name),
                 'num_faces': len(face_coords),
@@ -333,7 +339,9 @@ def extract_faces(video, v_margin=100, h_margin=100, batch_size=32, fps=30, imsi
 
     def get_faces(frames, batch_size, attempt=0, retries=1):
         if attempt > retries:
-            raise ValueError(f'Could not find faces in video after {retries} retries!')
+            # raise ValueError(f'Could not find faces in video after {retries} retries!')
+            print(f'Could not find faces in video after {retries} retries!')
+            return (None, None)
         faces = face_recognition.batch_face_locations(frames,
                                                       number_of_times_to_upsample=0,
                                                       batch_size=batch_size)
@@ -351,6 +359,8 @@ def extract_faces(video, v_margin=100, h_margin=100, batch_size=32, fps=30, imsi
     face_coords = defaultdict(list)
 
     batched_face_locations, frames = get_faces(frames, batch_size)
+    if batched_face_locations is None:
+        return
 
     for frameno, (frame, face_locations) in enumerate(zip(frames, batched_face_locations)):
         num_faces = len(face_locations)
