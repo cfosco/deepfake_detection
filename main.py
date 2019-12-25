@@ -14,6 +14,7 @@ import torch.multiprocessing as mp
 import torch.utils.data
 import torch.utils.data.distributed
 
+from pretorched import loggers
 from pretorched.metrics import accuracy
 from pretorched.runners.utils import AverageMeter, ProgressMeter
 
@@ -132,10 +133,12 @@ def main_worker(gpu, ngpus_per_node, args):
     # Define loss function (criterion) and optimizer
     criterion = nn.CrossEntropyLoss().cuda(args.gpu)
 
+    print(f'Getting optimizer: {args.optimizer}')
     optimizer = core.get_optimizer(model, args.optimizer,
                                    lr=args.lr, momentum=args.momentum,
                                    weight_decay=args.weight_decay)
 
+    print(f'Getting scheduler: {args.scheduler}')
     scheduler = core.get_scheduler(optimizer, args.scheduler)
 
     # optionally resume from a checkpoint
@@ -163,6 +166,7 @@ def main_worker(gpu, ngpus_per_node, args):
     cudnn.benchmark = True
 
     # Data loading code
+    print(f'Getting dataloader for {args.dataset}')
     dataloaders = core.get_dataloaders(args.dataset, args.data_root,
                                        dataset_type=args.dataset_type,
                                        record_set_type=args.record_set_type,
@@ -173,6 +177,9 @@ def main_worker(gpu, ngpus_per_node, args):
                                        size=input_size)
     train_loader, val_loader = dataloaders['train'], dataloaders['val']
     train_sampler = train_loader.sampler
+
+    print('Getting logger')
+    logger = loggers.TensorBoardLogger(args.logs_dir, name=save_name, rank=args.rank)
 
     if args.evaluate:
         validate(val_loader, model, criterion, args)
@@ -195,7 +202,8 @@ def main_worker(gpu, ngpus_per_node, args):
         # Train for one epoch.
         train_acc1, train_loss = train(train_loader, model,
                                        criterion, optimizer,
-                                       epoch, args, display)
+                                       logger, epoch, args,
+                                       display)
 
         history['acc'].append(train_acc1.item())
         history['loss'].append(train_loss)
@@ -206,6 +214,13 @@ def main_worker(gpu, ngpus_per_node, args):
         history['val_acc'].append(val_acc1)
         history['val_loss'].append(val_loss)
         history['epoch'].append(epoch + 1)
+
+        logger.log_metrics({
+            'EpochAccuracy/train': train_acc1,
+            'EpochLoss/train': train_loss,
+            'EpochAccuracy/val': val_acc1,
+            'EpochLoss/val': val_loss,
+        }, step=epoch + 1)
 
         # Update the learning rate.
         if type(scheduler).__name__ == 'ReduceLROnPlateau':
@@ -236,7 +251,7 @@ def is_rank0(args, ngpus_per_node):
                                                     and args.rank % ngpus_per_node == 0)
 
 
-def train(train_loader, model, criterion, optimizer, epoch, args, display=True):
+def train(train_loader, model, criterion, optimizer, logger, epoch, args, display=True):
     batch_time = AverageMeter('Time', ':6.3f')
     data_time = AverageMeter('Data', ':6.3f')
     losses = AverageMeter('Loss', ':.4e')
@@ -246,6 +261,7 @@ def train(train_loader, model, criterion, optimizer, epoch, args, display=True):
         [batch_time, data_time, losses, top1],
         prefix="Epoch: [{}]".format(epoch))
 
+    itr = epoch * len(train_loader)
     # switch to train mode
     model.train()
 
@@ -253,6 +269,7 @@ def train(train_loader, model, criterion, optimizer, epoch, args, display=True):
     for i, (images, target) in enumerate(train_loader):
         # measure data loading time
         data_time.update(time.time() - end)
+        itr += 1
 
         if args.gpu is not None:
             images = images.cuda(args.gpu, non_blocking=True)
@@ -267,6 +284,11 @@ def train(train_loader, model, criterion, optimizer, epoch, args, display=True):
         losses.update(loss.item(), images.size(0))
         top1.update(acc1, images.size(0))
 
+        logger.log_metrics({
+            'Accuracy/train': acc1,
+            'Loss/train': loss
+        }, step=itr)
+
         # compute gradient and do SGD step
         optimizer.zero_grad()
         loss.backward()
@@ -278,6 +300,7 @@ def train(train_loader, model, criterion, optimizer, epoch, args, display=True):
 
         if i % args.print_freq == 0 and display:
             progress.display(i)
+            # logger.save()
 
     return top1.avg, losses.avg
 
@@ -293,7 +316,6 @@ def validate(val_loader, model, criterion, args, display=True):
 
     # switch to evaluate mode
     model.eval()
-
     with torch.no_grad():
         end = time.time()
         for i, (images, target) in enumerate(val_loader):
