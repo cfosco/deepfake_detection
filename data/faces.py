@@ -360,7 +360,8 @@ def extract_faces(video, v_margin=100, h_margin=100, batch_size=32, fps=30, imsi
 
     batched_face_locations, frames = get_faces(frames, batch_size)
     if batched_face_locations is None:
-        return
+        print(f'Could not find face frames for video: video')
+        return (None, None)
 
     for frameno, (frame, face_locations) in enumerate(zip(frames, batched_face_locations)):
         num_faces = len(face_locations)
