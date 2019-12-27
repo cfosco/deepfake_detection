@@ -3,8 +3,7 @@ import json
 import os
 from collections import defaultdict
 from contextlib import suppress
-# from multiprocessing.pool import ThreadPool as Pool
-from multiprocessing.pool import Pool
+from multiprocessing.pool import ThreadPool, Pool
 
 import cv2
 import numpy as np
@@ -407,12 +406,16 @@ def extract_faces(video, v_margin=100, h_margin=100, batch_size=32, fps=30, imsi
     return face_images, face_coords
 
 
-def filter_real_metadata(metadata):
+def filter_real_metadata(metadata, req_face_data=True):
     real_metadata = defaultdict(dict)
     for part, part_data in metadata.items():
         for name, data in part_data.items():
             if data['label'] == 'REAL':
-                real_metadata[part][name] = data
+                if req_face_data:
+                    if 'face_data' in data:
+                        real_metadata[part][name] = data
+                else:
+                    real_metadata[part][name] = data
     return real_metadata
 
 
@@ -489,8 +492,8 @@ def interp_nans(arr):
     return arr
 
 
-def match_actors(known_rec, metadata, face_num=0, data_root='.', num_frames=10, tolerance=0.6,
-                 num_workers=24):
+def __match_actors(known_rec, metadata, face_num=0, data_root='.', num_frames=10, tolerance=0.6,
+                   num_workers=24):
     face_data = known_rec['face_data']
     faces_root = os.path.join(data_root, 'face_frames')
 
@@ -563,15 +566,12 @@ class Person:
         return encodings
 
     def compare(self, person, tolerance=0.6):
-        # print(f'Comparing {self.name} to {person.name}')
         if self.encodings is None:
             self.encodings = self.get_face_encodings(-1)
 
         dist = np.mean([
             np.mean(face_recognition.face_distance(self.encodings, uke))
             for uke in person.get_face_encodings(-1)])
-        # print(len(self.encodings), dist)
-        # return (dist <= tolerance, person)
         return (dist, person)
 
     @property
@@ -601,19 +601,18 @@ class Person:
 
 class Matcher:
 
-    def __init__(self, name='', data_root='', face_framedir='face_frames'):
+    def __init__(self, name='', data_root='', face_framedir='face_frames', num_workers=100):
         self.name = name
         self.data_root = data_root
         self.faces_root = os.path.join(data_root, face_framedir)
         self.people = []
+        self.num_workers = num_workers
 
     def match_all(self, metadata, part='dfdc_train_part_0'):
         pqueue = self.get_people(metadata[part])
         while pqueue:
-            print(f'queue len: {len(pqueue)}')
             p = pqueue.pop()
-            matches, pqueue = self.match(p, pqueue)
-            print(f'matches: {len(matches)}')
+            matches, pqueue = self.match(p, pqueue, num_workers=self.num_workers)
             p.merge(matches)
             self.people.append(p)
 
@@ -630,12 +629,12 @@ class Matcher:
                 people.append(p)
         return people
 
-    def match(self, person, people, num_frames=10, tolerance=0.6, num_workers=24):
+    def match(self, person, people, num_frames=10, tolerance=0.6, num_workers=12):
         dists = []
         psons = []
-        with Pool(num_workers) as p:
+        with ThreadPool(num_workers) as p:
             for dist, pson in p.imap_unordered(person.compare, people):
-                # print(f'Person: {pson.name} dist: {dist}')
+                print(f'Person: {pson.name} dist: {dist}')
                 dists.append(dist)
                 psons.append(pson)
             p.close()
@@ -689,3 +688,25 @@ class Matcher:
         matches = dists <= tolerance
         out = list(zip(matches, psons, dists))
         return out
+
+
+def match_actors(data_root, metadata_file='metadata.json', people_metafile='people_metadata.json'):
+
+    with open(os.path.join(data_root, metadata_file)) as f:
+        metadata = json.load(f)
+
+    real_metadata = filter_real_metadata(metadata)
+
+    match_data = {}
+    for part in real_metadata:
+        if part not in ['dfdc_train_part_0', 'dfdc_train_part_1']:
+            continue
+        print(f'Matching people in part: {part}')
+        matcher = Matcher(name=part, data_root=data_root)
+
+        matched = matcher.match_all(real_metadata, part=part)
+        match_data[part] = {p.name: p.data for p in matched}
+        [print(m) for m in matched]
+
+    with open(os.path.join(data_root, people_metafile), 'w') as f:
+        json.dump(match_data, f)
