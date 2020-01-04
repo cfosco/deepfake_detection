@@ -548,14 +548,14 @@ class Person:
         self.data['face_num'].append(face_num)
         self.data['num_frames'].append(num_frames)
 
-    def get_face_images(self, index=-1, num_frames=4):
+    def get_face_images(self, index=-1, num_frames=10):
         path = os.path.join(self.faces_root, self.data['paths'][index])
         frame_count = self.data['num_frames'][index]
         images = [face_recognition.load_image_file(os.path.join(path, '{:06d}.jpg'.format(i)))
                   for i in np.linspace(1, frame_count, num_frames, dtype=int)]
         return images
 
-    def get_face_encodings(self, index=-1, num_frames=4):
+    def get_face_encodings(self, index=-1, num_frames=10):
         images = self.get_face_images(index, num_frames)
         encodings = []
         for im in images:
@@ -684,7 +684,7 @@ class Matcher:
                 psons.append(pson)
             p.close()
             p.join()
-        dists = interp_nans(dists)
+        # dists = interp_nans(dists)
         matches = dists <= tolerance
         out = list(zip(matches, psons, dists))
         return out
@@ -699,7 +699,7 @@ def match_actors(data_root, metadata_file='metadata.json', people_metafile='peop
 
     match_data = {}
     for part in real_metadata:
-        if part not in ['dfdc_train_part_0', 'dfdc_train_part_1']:
+        if part not in ['dfdc_train_part_3']:
             continue
         print(f'Matching people in part: {part}')
         matcher = Matcher(name=part, data_root=data_root)
@@ -708,5 +708,5 @@ def match_actors(data_root, metadata_file='metadata.json', people_metafile='peop
         match_data[part] = {p.name: p.data for p in matched}
         [print(m) for m in matched]
 
-    with open(os.path.join(data_root, people_metafile), 'w') as f:
-        json.dump(match_data, f)
+        with open(os.path.join(data_root, f'{part}_{people_metafile}'), 'w') as f:
+            json.dump(match_data, f)
