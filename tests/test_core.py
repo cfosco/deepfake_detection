@@ -23,10 +23,11 @@ BATCH_SIZE = 16
 def test_get_dataset(name, split, num_frames, size, dataset_type, record_set_type):
     metadata = cfg.get_metadata(name, split=split, dataset_type=dataset_type,
                                 data_root=DATA_ROOT)
-
+    print(metadata)
     root = metadata['root']
     metafile = metadata['metafile']
-    record_set = getattr(data, record_set_type)(metafile)
+    blacklist_file = metadata['blacklist_file']
+    record_set = getattr(data, record_set_type)(metafile, blacklist_file=blacklist_file)
     sampler = samplers.TSNFrameSampler(num_frames)
     Dataset = getattr(data, dataset_type, 'ImageFolder')
     transform = data.get_transform(split=split, size=size)
