@@ -131,6 +131,7 @@ dmypy.json
 # Project Specific
 logs
 weights
+archive
 notebooks/data
 notebooks/models
 notebooks/DeepfakeDetection
