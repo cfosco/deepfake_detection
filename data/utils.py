@@ -11,7 +11,6 @@ from tqdm import tqdm
 
 def videos_to_frames(video_root, frame_root, num_workers=32):
     """videos_to_frames."""
-
     videos = []
     for r, d, f in os.walk(video_root):
         for file in f:
@@ -166,13 +165,50 @@ def generate_test_metadata(data_root, test_list_file='test_videos.json', video_d
     print(f'Missing test vides ({len(missing)}): {missing}')
 
 
-def verify_frames(video_dir, frame_root):
-    """Verify frames."""
-    videos = set(os.listdir(video_dir))
-    frame_dirs = set(os.listdir(frame_root))
-    missing = videos.difference(frame_dirs)
-    for m in missing:
-        print(missing)
+def verify_data(data_root, video_dir='videos', frame_dir='frames', face_dir='face_frames',
+                missing_threshold=20):
+    """Verify data."""
+    video_root = os.path.join(data_root, video_dir)
+    frame_root = os.path.join(data_root, frame_dir)
+    face_root = os.path.join(data_root, face_dir)
+
+    video_parts = set(d for d in os.listdir(video_root) if os.path.isdir(os.path.join(video_root, d)))
+    frame_parts = set(d for d in os.listdir(frame_root) if os.path.isdir(os.path.join(frame_root, d)))
+    face_parts = set(d for d in os.listdir(face_root) if os.path.isdir(os.path.join(face_root, d)))
+
+    missing_frame_parts = video_parts.difference(frame_parts)
+    missing_face_parts = video_parts.difference(face_parts)
+
+    print(f'Missing frame parts: {missing_frame_parts}')
+    print(f'Missing face parts: {missing_face_parts}')
+
+    video_counts = defaultdict(int)
+    for part in video_parts:
+        if part in frame_parts.union(face_parts):
+            video_counts[part] = len(os.listdir(os.path.join(video_root, part)))
+
+    frame_counts = defaultdict(int)
+    for part in frame_parts:
+        frame_counts[part] = len(os.listdir(os.path.join(frame_root, part)))
+
+    face_counts = defaultdict(int)
+    for part in face_parts:
+        face_counts[part] = len(os.listdir(os.path.join(face_root, part)))
+
+    missing = defaultdict(list)
+    for part in video_parts:
+        nv = video_counts[part]
+        if nv - frame_counts[part] > missing_threshold:
+            missing['frame'].append(part)
+        if nv - face_counts[part] > missing_threshold:
+            missing['face'].append(part)
+        print(
+            f'Part: {part}\n'
+            f'\t Videos: {video_counts[part]}\n'
+            f'\t Frames: {frame_counts[part]}\n'
+            f'\t Faces: {face_counts[part]}\n'
+        )
+    print(missing)
 
 
 def save_image(args):
