@@ -132,6 +132,7 @@ dmypy.json
 logs
 weights
 archive
+submissions
 notebooks/data
 notebooks/models
 notebooks/DeepfakeDetection
