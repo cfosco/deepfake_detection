@@ -20,6 +20,7 @@ torchvision_model_names = sorted(name for name in torchvision_models.__dict__
                                  if name.islower() and not name.startswith("__")
                                  and callable(torchvision_models.__dict__[name]))
 
+torchvision_model_names.extend(['xception', 'mxresnet18', 'mxresnet50'])
 
 def get_optimizer(model, optimizer_name='SGD', lr=0.001, **kwargs):
     optim_func = getattr(optim, optimizer_name)
