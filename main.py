@@ -133,12 +133,10 @@ def main_worker(gpu, ngpus_per_node, args):
     # Define loss function (criterion) and optimizer
     criterion = nn.CrossEntropyLoss().cuda(args.gpu)
 
-    print(f'Getting optimizer: {args.optimizer}')
     optimizer = core.get_optimizer(model, args.optimizer,
                                    lr=args.lr, momentum=args.momentum,
                                    weight_decay=args.weight_decay)
 
-    print(f'Getting scheduler: {args.scheduler}')
     scheduler = core.get_scheduler(optimizer, args.scheduler)
 
     # optionally resume from a checkpoint
@@ -149,24 +147,24 @@ def main_worker(gpu, ngpus_per_node, args):
                 checkpoint = torch.load(args.resume)
             else:
                 # Map model to be loaded to specified single gpu.
-                loc = 'cuda:{}'.format(args.gpu)
+                # loc = 'cuda:{}'.format(args.gpu)
+                loc = 'cpu'
                 checkpoint = torch.load(args.resume, map_location=loc)
             args.start_epoch = checkpoint['epoch']
             best_acc1 = checkpoint['best_acc1']
-            if args.gpu is not None:
+            # if args.gpu is not None:
                 # best_acc1 may be from a checkpoint from a different GPU
-                best_acc1 = best_acc1.to(args.gpu)
+                # best_acc1 = best_acc1.to(args.gpu)
             model.load_state_dict(checkpoint['state_dict'])
             optimizer.load_state_dict(checkpoint['optimizer'])
             print("=> loaded checkpoint '{}' (epoch {})"
                   .format(args.resume, checkpoint['epoch']))
         else:
             print("=> no checkpoint found at '{}'".format(args.resume))
-
+        torch.cuda.empty_cache()
     cudnn.benchmark = True
 
     # Data loading code
-    print(f'Getting dataloader for {args.dataset}')
     dataloaders = core.get_dataloaders(args.dataset, args.data_root,
                                        dataset_type=args.dataset_type,
                                        record_set_type=args.record_set_type,
@@ -178,8 +176,8 @@ def main_worker(gpu, ngpus_per_node, args):
     train_loader, val_loader = dataloaders['train'], dataloaders['val']
     train_sampler = train_loader.sampler
 
-    print('Getting logger')
-    logger = loggers.TensorBoardLogger(args.logs_dir, name=save_name, rank=args.rank)
+    logger = loggers.TensorBoardLogger(args.logs_dir, name=save_name, rank=args.rank,
+                                       version=args.version)
 
     if args.evaluate:
         validate(val_loader, model, criterion, args)

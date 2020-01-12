@@ -104,9 +104,18 @@ def generate_metadata(data_root, video_dir='videos', frames_dir='frames', faces_
                         missing_faces.append((d, name))
 
                 metadata[d] = data
+    with open(os.path.join(data_root, 'with_coords_' + filename), 'w') as f:
+        json.dump(metadata, f)
+        # json.dump(metadata, f, indent=4)
+
+    for part, data in metadata.items():
+        for name, info in data.items():
+            try:
+                info['face_data'].pop('face_coords')
+            except KeyError:
+                pass
     with open(os.path.join(data_root, filename), 'w') as f:
-        # json.dump(metadata, f)
-        json.dump(metadata, f, indent=4)
+        json.dump(metadata, f)
 
     missing_data = {
         'frames': missing_frames,

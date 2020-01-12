@@ -19,19 +19,25 @@ BATCH_SIZE = 16
     ('DFDC', 'val', 16, 224, 'DeepfakeFaceFrame', 'DeepfakeFaceSet'),
     ('DFDC', 'train', 16, 224, 'DeepfakeFaceCropFrame', 'DeepfakeFaceSet'),
     ('DFDC', 'val', 16, 224, 'DeepfakeFaceCropFrame', 'DeepfakeFaceSet'),
+    ('DFDC', 'train', 16, 224, 'DeepfakeVideo', 'DeepfakeSet'),
+    ('DFDC', 'val', 16, 224, 'DeepfakeVideo', 'DeepfakeSet'),
 ])
 def test_get_dataset(name, split, num_frames, size, dataset_type, record_set_type):
     metadata = cfg.get_metadata(name, split=split, dataset_type=dataset_type,
                                 data_root=DATA_ROOT)
-
+    print(metadata)
     root = metadata['root']
     metafile = metadata['metafile']
-    record_set = getattr(data, record_set_type)(metafile)
+    blacklist_file = metadata['blacklist_file']
+    record_set = getattr(data, record_set_type)(metafile, blacklist_file=blacklist_file)
     sampler = samplers.TSNFrameSampler(num_frames)
     Dataset = getattr(data, dataset_type, 'ImageFolder')
     transform = data.get_transform(split=split, size=size)
-    dataset = Dataset(root, record_set, sampler, transform=transform)
+    dataset = Dataset(root, record_set, sampler, transform=None)
     print(len(dataset))
-    frames, label = dataset[0]
-    assert label < cfg.num_classes_dict[name]
-    assert frames.shape == torch.Size((3, num_frames, size, size))
+    for i, (frames, label) in enumerate(dataset):
+        if not (i < MAX_ITERS):
+            break
+        print(i, frames.shape, label)
+        assert label < cfg.num_classes_dict[name]
+        assert frames.shape == torch.Size((3, num_frames, size, size))
