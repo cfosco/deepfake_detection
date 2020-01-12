@@ -3,7 +3,7 @@ import json
 import os
 from collections import defaultdict
 from pathlib import Path
-from typing import Tuple, Union
+from typing import Tuple, Union, Callable, Optional
 
 import numpy as np
 import torch
@@ -12,7 +12,9 @@ from numpy.random import randint
 from PIL import Image
 
 from torchvideo.samplers import FrameSampler, _default_sampler
+from torchvideo.internal.readers import _get_videofile_frame_count, _is_video_file, default_loader
 from torchvideo.transforms import PILVideoToTensor
+from torchvideo.datasets import VideoDataset
 
 
 class DeepfakeRecord:
@@ -171,13 +173,13 @@ class DeepfakeFrame(data.Dataset):
             return Image.open(filename_tmpl.format(1)).convert('RGB')
 
     def _load_frames(self, frame_dir, frame_inds):
-        return [self._load_image(frame_dir, idx) for idx in frame_inds]
+        return (self._load_image(frame_dir, idx) for idx in frame_inds)
 
     def __getitem__(self, index: int) -> Union[torch.Tensor, Tuple[torch.Tensor, int]]:
         record = self.record_set[index]
         frame_path = os.path.join(self.root, record.path)
         frame_inds = self.sampler.sample(record.num_frames)
-        frames = self._load_frames(frame_path, frame_inds)
+        frames = list(self._load_frames(frame_path, frame_inds))
         label = record.label
 
         if self.transform is not None:
@@ -249,7 +251,7 @@ class DeepfakeFaceFrame(DeepfakeFrame):
 
         if not self.crop_faces:
             frame_path = os.path.join(frame_path, record.face_names[face_num])
-        frames = self._load_frames(frame_path, frame_inds)
+        frames = list(self._load_frames(frame_path, frame_inds))
         if self.crop_faces:
             face_coords = [record.face_locations[str(face_num)][idx] for idx in frame_inds]
             frames = [self._crop_frame(f, c, record.size) for f, c in zip(frames, face_coords)]
@@ -277,8 +279,57 @@ class DeepfakeFaceCropFrame(DeepfakeFaceFrame):
             target_transform=target_transform)
 
 
+class DeepfakeVideo(VideoDataset):
+
+    def __init__(
+        self,
+        root: Union[str, Path],
+        record_set: DeepfakeSet,
+        sampler: FrameSampler = _default_sampler(),
+        transform: Optional[Callable] = None,
+        target_transform: Optional[Callable] = None,
+        frame_counter: Optional[Callable[[Path], int]] = None,
+    ) -> None:
+
+        self.root = root
+        self.record_set = record_set
+        self.sampler = sampler
+
+        if frame_counter is None:
+            frame_counter = _get_videofile_frame_count
+        self.frame_counter = frame_counter
+
+        if transform is None:
+            transform = PILVideoToTensor()
+        self.transform = transform
+
+        if target_transform is None:
+            target_transform = int
+        self.target_transform = target_transform
+
+    def __getitem__(self, index: int) -> Union[torch.Tensor, Tuple[torch.Tensor, int]]:
+        record = self.record_set[index]
+        video_path = os.path.join(self.root, record.path)
+        # video_length = self.frame_counter(video_path)
+        video_length = record.num_frames
+        frame_inds = self.sampler.sample(video_length)
+        frames = self._load_frames(video_path, frame_inds)
+        label = record.label
+
+        if self.transform is not None:
+            frames = self.transform(frames)
+        if self.target_transform is not None:
+            label = self.target_transform(label)
+
+        return frames, label
+
+    def __len__(self):
+        return len(self.record_set)
+
+
 class Record(object):
     """Represents a record.
+
     A record has the following properties:
         path (str): path to file.
         label (int): primary label associated with video.
