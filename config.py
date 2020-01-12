@@ -62,6 +62,7 @@ def get_root_dirs(name, dataset_type='DeepfakeFrame', resolution=224, data_root=
 def get_metadata(name, split='train', dataset_type='DeepfakeFrame', record_set_type='DeepfakeSet', resolution=224, data_root=DATA_ROOT):
     root_dirs = {
         'DFDC': {
+            'DeepfakeVideo': defaultdict(lambda: os.path.join(data_root, 'DeepfakeDetection/videos'), {}),
             'DeepfakeFrame': defaultdict(lambda: os.path.join(data_root, 'DeepfakeDetection/frames'), {}),
             'DeepfakeFaceFrame': defaultdict(lambda: os.path.join(data_root, 'DeepfakeDetection/face_frames'), {}),
             'DeepfakeFaceCropFrame': defaultdict(lambda: os.path.join(data_root, 'DeepfakeDetection/frames'), {}),
@@ -141,6 +142,7 @@ def parse_args():
                         help='path to latest checkpoint (default: none)')
     parser.add_argument('--weights_dir', default='weights', type=str, metavar='PATH')
     parser.add_argument('--logs_dir', default='logs', type=str, metavar='PATH')
+    parser.add_argument('--submissions_dir', default='submissions', type=str, metavar='PATH')
     parser.add_argument('-e', '--evaluate', dest='evaluate', action='store_true',
                         help='evaluate model on validation set')
     parser.add_argument('--world-size', '-w', default=1, type=int,
