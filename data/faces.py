@@ -139,33 +139,29 @@ def get_framedir_name(video, num_pdirs=1):
     name = '/'.join(video.rstrip('/').split('/')[-(num_pdirs + 1):])
     return name
 
-
-def read_frames(video, fps=30):
+def read_frames(video, fps=30, step=1):
     # Open video file
     video_capture = cv2.VideoCapture(video)
     video_capture.set(cv2.CAP_PROP_FPS, fps)
 
-    frames = []
-
+    count = 0
     while video_capture.isOpened():
         # Grab a single frame of video
-        ret, frame = video_capture.read()
+        ret = video_capture.grab()
 
         # Bail out when the video file ends
         if not ret:
             break
-
-        # Convert the image from BGR color (which OpenCV uses) to RGB color (which face_recognition uses)
-        frame = frame[:, :, ::-1]
-
-        # Save each frame of the video to a list
-        frames.append(frame)
-    return frames
-
+        if count % step == 0:
+            # Convert the image from BGR color (which OpenCV uses) to RGB color (which face_recognition uses)
+            ret, frame = video_capture.retrieve()
+            frame = cv2.cvtColor(frame, cv2.COLOR_BGR2RGB)
+            yield frame
+        count += 1
 
 def extract_faces_with_encodings(video, v_margin=100, h_margin=100, batch_size=32, fps=30, imsize=360):
 
-    frames = read_frames(video, fps=fps)
+    frames = list(read_frames(video, fps=fps))
 
     known_faces = []
     interp_inds = []
@@ -335,7 +331,7 @@ def enhance_frames(frames):
     return [enhance_image(f) for f in frames]
 
 
-def extract_faces(video, v_margin=100, h_margin=100, batch_size=32, fps=30, imsize=360):
+def extract_faces(video, v_margin=100, h_margin=100, batch_size=32, fps=30, imsize=360, step=1):
 
     def get_faces(frames, batch_size, attempt=0, retries=1):
         if attempt > retries:
@@ -351,7 +347,7 @@ def extract_faces(video, v_margin=100, h_margin=100, batch_size=32, fps=30, imsi
             return get_faces(frames, batch_size, attempt + 1, retries)
         return faces, frames
 
-    frames = read_frames(video, fps=fps)
+    frames = list(read_frames(video, fps=fps, step=step))
 
     known_coords = []
     interp_inds = []
