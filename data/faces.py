@@ -139,6 +139,7 @@ def get_framedir_name(video, num_pdirs=1):
     name = '/'.join(video.rstrip('/').split('/')[-(num_pdirs + 1):])
     return name
 
+
 def read_frames(video, fps=30, step=1):
     # Open video file
     video_capture = cv2.VideoCapture(video)
@@ -158,6 +159,7 @@ def read_frames(video, fps=30, step=1):
             frame = cv2.cvtColor(frame, cv2.COLOR_BGR2RGB)
             yield frame
         count += 1
+
 
 def extract_faces_with_encodings(video, v_margin=100, h_margin=100, batch_size=32, fps=30, imsize=360):
 
@@ -223,7 +225,8 @@ def extract_faces_batched(video, v_margin=100, h_margin=100, batch_size=32, fps=
 
         interp_inds = []
         batch_size = len(frames)
-        batched_face_locations = face_recognition.batch_face_locations(frames, number_of_times_to_upsample=0, batch_size=32)
+        batched_face_locations = face_recognition.batch_face_locations(
+            frames, number_of_times_to_upsample=0, batch_size=32)
 
         for frameno, (frame, face_locations) in enumerate(zip(frames, batched_face_locations)):
             num_faces = len(face_locations)
@@ -300,12 +303,14 @@ def extract_faces_batched(video, v_margin=100, h_margin=100, batch_size=32, fps=
         frames.append(frame)
 
         if len(frames) == batch_size:
-            known_faces, face_coords, face_images = process_multi_batch(frames, known_faces, face_coords, face_images, imsize)
+            known_faces, face_coords, face_images = process_multi_batch(
+                frames, known_faces, face_coords, face_images, imsize)
 
             # Clear the frames array to start the next batch
             frames = []
     if frames:
-        known_faces, face_coords, face_images = process_multi_batch(frames, known_faces, face_coords, face_images, imsize)
+        known_faces, face_coords, face_images = process_multi_batch(
+            frames, known_faces, face_coords, face_images, imsize)
     return face_images, face_coords
 
 

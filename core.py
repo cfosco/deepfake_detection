@@ -150,7 +150,6 @@ def get_dataset(name, root, metafile, split='train', size=224, resolution=256, n
     record_set = getattr(data, record_set_type, 'DeepfakeSet')
 
     sampler = getattr(samplers, sampler_type)(num_frames)
-    print(Dataset)
 
     kwargs = {'root': root,
               'metafile': os.path.join(root, f'{split}.txt'),
@@ -169,7 +168,6 @@ def _get_dataset(name, root, metafile, split='train', size=224, resolution=256, 
     record_set = getattr(data, record_set_type, 'DeepfakeSet')
 
     sampler = getattr(samplers, sampler_type)(num_frames)
-    print(Dataset)
 
     kwargs = {'root': root,
               'metafile': os.path.join(root, f'{split}.txt'),
@@ -230,7 +228,6 @@ def get_dataloader(name, data_root=None, split='train', num_frames=16, size=224,
     dataset = Dataset(**dataset_kwargs)
 
     loader_sampler = DistributedSampler(dataset) if (distributed and split == 'train') else None
-    print(split, loader_sampler)
     return DataLoader(dataset, batch_size=batch_size, sampler=loader_sampler,
                       shuffle=(sampler is None and shuffle), num_workers=num_workers,
                       pin_memory=pin_memory, drop_last=drop_last)
