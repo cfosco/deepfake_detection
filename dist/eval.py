@@ -28,7 +28,7 @@ from torchvision.ops.boxes import batched_nms
 TEST_VIDEO_DIR = os.path.join(os.environ['DATA_ROOT'], 'DeepfakeDetection', 'test_videos')
 SAMPLE_SUBMISSION_CSV = os.path.join(os.environ['DATA_ROOT'], 'DeepfakeDetection', 'sample_submission.csv')
 WEIGHT_DIR = 'data'
-NUM_WORKERS = 0
+NUM_WORKERS = 4
 STEP = 50
 
 
@@ -69,23 +69,29 @@ def main():
     model.eval()
     with torch.no_grad():
         end = time.time()
-        # for i, (images, target) in enumerate(val_loader):
         for i, (filenames, images) in enumerate(dataloader):
             images = images.to(device, non_blocking=True)
-            # images.mul_(255)
+            images.mul_(255)
             print(images.shape, images.min(), images.max())
+            try:
+                # compute output
+                output = model(images)
+                print(output.shape)
 
-            # compute output
-            output = model(images)
-            print(output.shape)
-            # prob = torch.softmax(output, 1)[0, 1]
-            # sub.loc[filenames, 'label'] = prob.item()
-            # print(f'filenames: {filenames}; prob: {prob:.3f}')
+                probs = torch.softmax(output, 1)
+                for fn, prob in zip(filenames, probs):
+                    p = prob[1].item()
+                    if np.isnan(p):
+                        p = 0.5
+                    elif p <= 0.0:
+                        p = 0.0001
+                    elif p >= 1.0:
+                        p = 0.9999
+                    sub.loc[fn, 'label'] = p
+                    print(f'filename: {fn}; prob: {prob[1]:.3f}')
+            except Exception:
+                sub.loc[filenames[0], 'label'] = 0.5
 
-            probs = torch.softmax(output, 1)
-            for fn, prob in zip(filenames, probs):
-                sub.loc[fn, 'label'] = prob[1].item()
-                print(f'filename: {fn}; prob: {prob[1]:.3f}')
             # measure elapsed time
             batch_time.update(time.time() - end)
             end = time.time()
