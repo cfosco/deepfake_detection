@@ -2,46 +2,49 @@ import json
 import os
 import random
 import shutil
+import sys
 import time
 import warnings
+from multiprocessing.pool import Pool, ThreadPool
+
+import cv2
 import numpy as np
 import pandas as pd
-
-from multiprocessing.pool import ThreadPool, Pool
-
-from tqdm import tqdm
 import torch
-import torch.nn as nn
-import torch.nn.functional as F
-import torch.nn.parallel
 import torch.backends.cudnn as cudnn
 import torch.distributed as dist
 import torch.multiprocessing as mp
+import torch.nn as nn
+import torch.nn.functional as F
+import torch.nn.parallel
 import torch.utils.data
 import torch.utils.data.distributed
+from PIL import Image
 from torch.utils.data import DataLoader
 from torchvision.transforms import functional as TF
-from PIL import Image
+from tqdm import tqdm
 
+import config as cfg
+import core
+import models
 import pretorched
+from models import MTCNN, FaceModel
 from pretorched import loggers
 from pretorched.metrics import accuracy
 from pretorched.runners.utils import AverageMeter, ProgressMeter
-from models import MTCNN, FaceModel
 from pretorched.utils import chunk
-
-import core
-import models
-import config as cfg
-from torchvideo.internal.readers import _get_videofile_frame_count, _is_video_file, default_loader
+from torchvideo.internal.readers import (_get_videofile_frame_count,
+                                         _is_video_file, default_loader)
 from torchvideo.transforms import PILVideoToTensor
-import cv2
 
 STEP = 2
-CHUNK_SIZE = 75
+CHUNK_SIZE = 150
 NUM_WORKERS = 2
 
-PART = 'dfdc_train_part_4'
+try:
+    PART = sys.argv[1]
+except IndexError:
+    PART = 'dfdc_train_part_0'
 VIDEO_ROOT = os.path.join(os.environ['DATA_ROOT'], 'DeepfakeDetection', 'videos')
 FACE_ROOT = os.path.join(os.environ['DATA_ROOT'], 'DeepfakeDetection', 'facenet_frames')
 VIDEO_DIR = os.path.join(VIDEO_ROOT, PART)
@@ -170,7 +173,7 @@ def main():
                 faces_out.append(out)
             min_face = min([f.shape[1] for f in faces_out])
             faces_out = torch.cat([f[:, :min_face] for f in faces_out])
-            print('faces_out', faces_out.shape)
+            # print('faces_out', faces_out.shape)
             face_images = {i: [Image.fromarray(ff.permute(1, 2, 0).numpy().astype(np.uint8)) for ff in f]
                            for i, f in enumerate(faces_out.permute(1, 0, 2, 3, 4))}
 
