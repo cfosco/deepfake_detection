@@ -2,7 +2,6 @@ import torch
 import torch.nn as nn
 from torch.nn import Parameter as P
 
-from pretorched.models.detection.facenet import MTCNN
 from pretorched.utils import chunk
 
 
@@ -41,43 +40,6 @@ class FrameModel(torch.nn.Module):
     @property
     def input_size(self):
         return self.model.input_size
-
-
-class FaceModel(torch.nn.Module):
-
-    def __init__(self, size=224, device='cuda', margin=50, keep_all=False,
-                 post_process=False, select_largest=True):
-        super().__init__()
-        self.model = MTCNN(image_size=size,
-                           device=device,
-                           margin=margin,
-                           keep_all=keep_all,
-                           post_process=post_process,
-                           select_largest=select_largest)
-
-    def forward(self, x):
-        """
-        Args:
-            x: [bs, nc, d, h, w]
-        NOTE: For now, assume keep_all=False for 1 face per frame.
-        lists of lists or nested tensors should be used to handle variable
-        number of faces per example in batch (avoid this for now).
-        """
-        bs, nc, d, h, w = x.shape
-        x = x.permute(0, 2, 1, 3, 4)  # [bs, d, nc, h, w]
-        # x = x.view(-1, *x.shape[2:])  # [bs * d, nc, h, w]
-        x = x.reshape(-1, *x.shape[2:])  # [bs * d, nc, h, w]
-        out = self.model(x)
-        for i, o in enumerate(out):
-            if o is None:
-                try:
-                    out[i] = out[i-1]
-                except IndexError:
-                    pass
-        out = torch.stack(out)
-        out = out.view(bs, d, nc, *out.shape[-2:])
-        out = out.permute(0, 2, 1, 3, 4)  # [bs, nc, d, h, w]
-        return out
 
 
 class DeepfakeDetector(torch.nn.Module):
