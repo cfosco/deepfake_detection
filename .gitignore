@@ -132,6 +132,7 @@ logs
 weights
 archive
 submissions
+models/data
 notebooks/data
 notebooks/models
 notebooks/DeepfakeDetection
