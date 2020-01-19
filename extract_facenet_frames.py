@@ -1,21 +1,13 @@
 import json
 import os
-import random
-import shutil
 import sys
 import time
-import warnings
-from multiprocessing.pool import Pool, ThreadPool
+from multiprocessing.pool import ThreadPool
 
 import cv2
 import numpy as np
-import pandas as pd
 import torch
 import torch.backends.cudnn as cudnn
-import torch.distributed as dist
-import torch.multiprocessing as mp
-import torch.nn as nn
-import torch.nn.functional as F
 import torch.nn.parallel
 import torch.utils.data
 import torch.utils.data.distributed
@@ -24,18 +16,9 @@ from torch.utils.data import DataLoader
 from torchvision.transforms import functional as TF
 from tqdm import tqdm
 
-import config as cfg
-import core
-import models
-import pretorched
-from models import MTCNN, FaceModel
-from pretorched import loggers
-from pretorched.metrics import accuracy
+from models import FaceModel
 from pretorched.runners.utils import AverageMeter, ProgressMeter
 from pretorched.utils import chunk
-from torchvideo.internal.readers import (_get_videofile_frame_count,
-                                         _is_video_file, default_loader)
-from torchvideo.transforms import PILVideoToTensor
 
 STEP = 2
 CHUNK_SIZE = 150
@@ -77,9 +60,6 @@ class VideoDataset(torch.utils.data.Dataset):
         self.root = root
         self.step = step
         self.videos_filenames = sorted([f for f in os.listdir(root) if f.endswith('.mp4')])
-
-        if transform is None:
-            transform = PILVideoToTensor(rescale=False)
         self.transform = transform
 
     def __getitem__(self, index):
@@ -87,10 +67,8 @@ class VideoDataset(torch.utils.data.Dataset):
         video_filename = os.path.join(self.root, name)
         frames = read_frames(video_filename, step=self.step)
         frames = torch.stack(list(map(TF.to_tensor, frames))).transpose(0, 1)
-        # frames = torch.tensor(read_frames(video_filename, step=self.step), dtype=torch.float32)
-        # frames = default_loader(video_filename, list(range(0, 300, self.step)))
-        # if self.transform is not None:
-        # frames = self.transform(frames)
+        if self.transform is not None:
+            frames = self.transform(frames)
         return name, frames
 
     def __len__(self):
@@ -129,18 +107,6 @@ def main():
                       keep_all=True,
                       post_process=False,
                       select_largest=False)
-    # facenet = models.FaceModel(select_largest=False)
-    # fakenet = pretorched.resnet18(num_classes=2, pretrained=None)
-    # fakenet.load_state_dict({k.replace('module.model.', ''): v
-    #                          for k, v in torch.load('weights/half_split/'
-    #                                                 'resnet18_dfdc_seg_count-24_init-imagenet-'
-    #                                                 'ortho_optim-Ranger_lr-0.001_sched-CosineAnnealingLR_bs'
-    #                                                 '-64_best.pth.tar')['state_dict'].items()})
-    # fakenet.eval()
-    # detector = models.FrameModel(fakenet, normalize=True)
-    # model = models.DeepfakeDetector(facenet, detector)
-    # model.to(device)
-
     cudnn.benchmark = True
 
     batch_time = AverageMeter('Time', ':6.3f')
@@ -167,13 +133,11 @@ def main():
             save_paths = [os.path.join(save_dir, '{:06d}.jpg'.format(idx)) for idx in range(d)]
             faces_out = []
             for xx, ss in zip(chunk(x, CHUNK_SIZE), chunk(save_paths, CHUNK_SIZE)):
-                # out = model.model(xx, smooth=True, save_path=ss)
                 out = model.model(xx, smooth=True)
                 out = torch.stack(out).cpu()
                 faces_out.append(out)
             min_face = min([f.shape[1] for f in faces_out])
             faces_out = torch.cat([f[:, :min_face] for f in faces_out])
-            # print('faces_out', faces_out.shape)
             face_images = {i: [Image.fromarray(ff.permute(1, 2, 0).numpy().astype(np.uint8)) for ff in f]
                            for i, f in enumerate(faces_out.permute(1, 0, 2, 3, 4))}
 
@@ -211,45 +175,3 @@ def main():
 
 if __name__ == '__main__':
     main()
-
-    # count = 0
-    # for o in out:
-    #     if o is None:
-    #         try:
-    #             o = out[count-1]
-    #             out[] = o
-    #         except IndexError:
-    #             try:
-    #                 o = out[i + 1]
-    #                 out[i] = o
-    #             except IndexError:
-    #                 pass
-    #     for j, f in enumerate(o):
-    #         print(count, j,  o.shape)
-    #     count += STEP
-    # for i, o in enumerate(out):
-    # if o is None:
-    # try:
-    # out[i] = out[i-1]
-    # except IndexError:
-    # pass
-    # out = torch.stack(out)
-    # out = out.view(bs, d, nc, *out.shape[-2:])
-    # out = out.permute(0, 2, 1, 3, 4)  # [bs, nc, d, h, w]
-    # print(f'out: {out.shape}')
-
-    # for i, o in enumerate(out):
-    #     if o is None:
-    #         try:
-    #             out[i] = out[i-1]
-    #         except IndexError:
-    #             pass
-    # out = torch.stack(out)
-    # out = out.view(bs, d, nc, *out.shape[-2:])
-    # out = out.permute(0, 2, 1, 3, 4)  # [bs, nc, d, h, w]
-    # print(f'out: {out.shape}')
-    # compute output
-    # output = model(images)
-    # prob = torch.softmax(output, 1)[0, 1]
-    # sub.loc[filename, 'label'] = prob.item()
-    # print(f'filename: {filename}; prob: {prob:.3f}')
