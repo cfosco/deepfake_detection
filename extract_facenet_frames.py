@@ -101,7 +101,7 @@ def save_image(args):
     image, filename = args
     os.makedirs(os.path.dirname(filename), exist_ok=True)
     try:
-        image.save(filename)
+        image.save(filename, quality=95)
     except Exception:
         pass
 
