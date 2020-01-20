@@ -41,14 +41,7 @@ class FaceModel(torch.nn.Module):
         # x = x.view(-1, *x.shape[2:])  # [bs * d, nc, h, w]
         x = x.reshape(-1, *x.shape[2:])  # [bs * d, nc, h, w]
         out = self.model(x, smooth=True)
-        # for i, o in enumerate(out):
-            # if o is None:
-                # try:
-                    # out[i] = out[i - 1]
-                # except IndexError:
-                    # pass
         out = torch.stack(out)
-        print(out.shape)
         out = out.view(bs, -1, nc, *out.shape[-2:])
         out = out.permute(0, 2, 1, 3, 4)  # [bs, nc, d, h, w]
         return out

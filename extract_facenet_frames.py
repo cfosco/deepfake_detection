@@ -119,7 +119,7 @@ def main():
     model.eval()
     with torch.no_grad():
         end = time.time()
-        for i, (filename, x) in enumerate(dataloader):
+        for i, (filename, x) in tqdm(enumerate(dataloader), total=len(dataloader)):
             print(f'Extracting faces from: {filename}')
             x = x.to(device)
             x.mul_(255.)
@@ -134,13 +134,16 @@ def main():
             faces_out = []
             for xx, ss in zip(chunk(x, CHUNK_SIZE), chunk(save_paths, CHUNK_SIZE)):
                 out = model.model(xx, smooth=True)
+                if not out:
+                    continue
                 out = torch.stack(out).cpu()
                 faces_out.append(out)
             min_face = min([f.shape[1] for f in faces_out])
             faces_out = torch.cat([f[:, :min_face] for f in faces_out])
             face_images = {i: [Image.fromarray(ff.permute(1, 2, 0).numpy().astype(np.uint8)) for ff in f]
                            for i, f in enumerate(faces_out.permute(1, 0, 2, 3, 4))}
-
+            del x
+            torch.cuda.empty_cache()
             metadata = {
                 'filename': os.path.basename(filename[0]),
                 'num_faces': len(face_images),
@@ -163,7 +166,8 @@ def main():
                 out_filename = os.path.join(save_dir, fdir_tmpl.format(face_num), tmpl)
                 with ThreadPool(num_images) as pool:
                     names = (out_filename.format(i) for i in range(1, num_images + 1))
-                    list(tqdm(pool.imap(save_image, zip(faces, names)), total=num_images))
+                    # list(tqdm(pool.imap(save_image, zip(faces, names)), total=num_images))
+                    list(pool.imap(save_image, zip(faces, names)))
                     pool.close()
                     pool.join()
             # measure elapsed time
