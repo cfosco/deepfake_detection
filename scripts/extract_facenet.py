@@ -22,8 +22,8 @@ from models import FaceModel
 from pretorched.runners.utils import AverageMeter, ProgressMeter
 from pretorched.utils import chunk
 
-STEP = 2
-CHUNK_SIZE = 150
+STEP = 1
+CHUNK_SIZE = 300
 NUM_WORKERS = 2
 OVERWRITE = False
 REMOVE_FRAMES = False
@@ -34,7 +34,7 @@ except IndexError:
     PART = 'dfdc_train_part_0'
 SCRATCH_DATA_ROOT = '/data/vision/oliva/scratch/datasets'
 VIDEO_ROOT = os.path.join(SCRATCH_DATA_ROOT, 'DeepfakeDetection', 'videos')
-FACE_ROOT = os.path.join(os.environ['DATA_ROOT'], 'DeepfakeDetection', 'facenet_frames')
+FACE_ROOT = os.path.join(os.environ['DATA_ROOT'], 'DeepfakeDetection', 'facenet_smooth_frames')
 VIDEO_DIR = os.path.join(VIDEO_ROOT, PART)
 FACE_DIR = os.path.join(FACE_ROOT, PART)
 
@@ -70,8 +70,8 @@ def main():
                             shuffle=False, num_workers=NUM_WORKERS,
                             pin_memory=False, drop_last=False)
 
-    size = 256
-    margin = 50
+    size = 360
+    margin = 100
     fdir_tmpl = 'face_{}'
     tmpl = '{:06d}.jpg'
     metadata_fname = 'face_metadata.json'
@@ -96,7 +96,7 @@ def main():
     with torch.no_grad():
         end = time.time()
         for i in tqdm(range(len(dataloader)), total=len(dataloader)):
-            with contextlib.suppress(Exception):
+            with contextlib.suppress(RuntimeError):
                 filename, x = next(dataloader)
                 print(f'Extracting faces from: {filename}')
                 bs, nc, d, h, w = x.shape
