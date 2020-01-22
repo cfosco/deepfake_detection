@@ -35,7 +35,7 @@ class FrameToVideoDataset(torch.utils.data.Dataset):
 
 
 for split in ['val', 'train']:
-    dataloader = core.get_dataloader('DFDC', data_root='/data/datasets', resolution=256, size=224, segment_count=16,
+    dataloader = core.get_dataloader('DFDC', data_root='/data/datasets', resolution=256, size=224, segment_count=2,
                                      dataset_type='DeepfakeFaceVideo', record_set_type='DeepfakeFaceSet', split=split,
                                      batch_size=1, pin_memory=False)
     dataset = FrameToVideoDataset(dataloader.dataset)
