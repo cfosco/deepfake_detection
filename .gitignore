@@ -128,11 +128,15 @@ dmypy.json
 .pyre/
 
 # Project Specific
+dev
 logs
 weights
 archive
+dist/data
+dist/data.zip
 submissions
 models/data
+scripts/models
 notebooks/data
 notebooks/models
 notebooks/DeepfakeDetection
