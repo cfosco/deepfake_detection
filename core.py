@@ -27,6 +27,7 @@ torchvision_model_names.extend(['xception'])
 
 torchvision_model_names.extend(['xception', 'mxresnet18', 'mxresnet50'])
 
+
 def get_optimizer(model, optimizer_name='SGD', lr=0.001, **kwargs):
     optim_func = getattr(optim, optimizer_name)
     func_kwargs, _ = utils.split_kwargs_by_func(optim_func, kwargs)

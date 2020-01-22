@@ -3,18 +3,21 @@ import json
 import os
 from collections import defaultdict
 from pathlib import Path
-from typing import Tuple, Union, Callable, Optional
+from typing import Callable, Optional, Tuple, Union
 
+import cv2
 import numpy as np
 import torch
 import torch.utils.data as data
 from numpy.random import randint
 from PIL import Image
+from torchvision.transforms import functional as TF
 
-from torchvideo.samplers import FrameSampler, _default_sampler
-from torchvideo.internal.readers import _get_videofile_frame_count, _is_video_file, default_loader
-from torchvideo.transforms import PILVideoToTensor
 from torchvideo.datasets import VideoDataset
+from torchvideo.internal.readers import (_get_videofile_frame_count,
+                                         _is_video_file, default_loader)
+from torchvideo.samplers import FrameSampler, _default_sampler
+from torchvideo.transforms import PILVideoToTensor
 
 
 class DeepfakeRecord:
@@ -68,33 +71,43 @@ class DeepfakeRecord:
 
 class DeepfakeFaceRecord(DeepfakeRecord):
 
+    def __init__(self, part, name, data, face_data_key='facenet_frames'):
+        self.part = part
+        self.name = name
+        self.data = data
+        self.face_data_key = face_data_key
+
     @property
     def num_faces(self):
-        return self.data['face_data']['num_faces']
+        return self.face_data['num_faces']
 
     @property
     def face_names(self):
-        return self.data['face_data']['face_names']
+        return self.face_data['face_names']
 
     @property
     def face_nums(self):
-        return self.data['face_data']['face_nums']
+        return self.face_data['face_nums']
 
     @property
     def num_face_frames(self):
-        return self.data['face_data']['num_frames']
+        return self.face_data['num_frames']
 
     @property
     def face_locations(self):
-        return self.data['face_data']['face_coords']
+        return self.face_data['face_coords']
 
     @property
     def size(self):
-        return self.data['face_data']['size']
+        return self.face_data['size']
 
     @property
     def has_face_data(self):
-        return 'face_data' in self.data
+        return self.face_data_key in self.data
+
+    @property
+    def face_data(self):
+        return self.data[self.face_data_key]
 
 
 class DeepfakeSet:
@@ -117,7 +130,6 @@ class DeepfakeSet:
         for part, part_data in self.data.items():
             for name, rec in part_data.items():
                 record = self.record_func(part, name, rec)
-
                 if issubclass(self.record_func, DeepfakeFaceRecord):
                     if not record.has_face_data:
                         continue
@@ -325,6 +337,68 @@ class DeepfakeVideo(VideoDataset):
 
     def __len__(self):
         return len(self.record_set)
+
+
+class DeepfakeFaceVideo(DeepfakeVideo):
+    def __getitem__(self, index: int):
+        record = self.record_set[index]
+        video_dir = os.path.join(self.root, record.path)
+        face_num = np.random.choice(record.face_nums)
+        num_face_frames = record.num_face_frames[face_num]
+        frame_inds = self.sampler.sample(num_face_frames)
+
+        video_path = os.path.join(video_dir, record.face_names[face_num] + '.mp4')
+        frames = list(self._load_frames(video_path, frame_inds))
+        label = record.label
+
+        if self.transform is not None:
+            frames = self.transform(frames)
+        if self.target_transform is not None:
+            label = self.target_transform(label)
+
+        return frames, label
+        pass
+
+
+def read_frames(video, fps=30, step=1):
+    # Open video file
+    video_capture = cv2.VideoCapture(video)
+    video_capture.set(cv2.CAP_PROP_FPS, fps)
+
+    count = 0
+    while video_capture.isOpened():
+        # Grab a single frame of video
+        ret = video_capture.grab()
+
+        # Bail out when the video file ends
+        if not ret:
+            break
+        if count % step == 0:
+            # Convert the image from BGR color (which OpenCV uses) to RGB color (which face_recognition uses)
+            ret, frame = video_capture.retrieve()
+            frame = cv2.cvtColor(frame, cv2.COLOR_BGR2RGB)
+            yield frame
+        count += 1
+
+
+class VideoFolder(torch.utils.data.Dataset):
+    def __init__(self, root, step=2, transform=None):
+        self.root = root
+        self.step = step
+        self.videos_filenames = sorted([f for f in os.listdir(root) if f.endswith('.mp4')])
+        self.transform = transform
+
+    def __getitem__(self, index):
+        name = self.videos_filenames[index]
+        video_filename = os.path.join(self.root, name)
+        frames = read_frames(video_filename, step=self.step)
+        frames = torch.stack(list(map(TF.to_tensor, frames))).transpose(0, 1)
+        if self.transform is not None:
+            frames = self.transform(frames)
+        return name, frames
+
+    def __len__(self):
+        return len(self.videos_filenames)
 
 
 class Record(object):

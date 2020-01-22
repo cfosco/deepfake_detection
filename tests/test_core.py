@@ -21,6 +21,7 @@ BATCH_SIZE = 16
     ('DFDC', 'val', 16, 224, 'DeepfakeFaceCropFrame', 'DeepfakeFaceSet'),
     ('DFDC', 'train', 16, 224, 'DeepfakeVideo', 'DeepfakeSet'),
     ('DFDC', 'val', 16, 224, 'DeepfakeVideo', 'DeepfakeSet'),
+    ('DFDC', 'val', 16, 224, 'DeepfakeFaceVideo', 'DeepfakeFaceSet'),
 ])
 def test_get_dataset(name, split, num_frames, size, dataset_type, record_set_type):
     metadata = cfg.get_metadata(name, split=split, dataset_type=dataset_type,
@@ -33,7 +34,7 @@ def test_get_dataset(name, split, num_frames, size, dataset_type, record_set_typ
     sampler = samplers.TSNFrameSampler(num_frames)
     Dataset = getattr(data, dataset_type, 'ImageFolder')
     transform = data.get_transform(split=split, size=size)
-    dataset = Dataset(root, record_set, sampler, transform=None)
+    dataset = Dataset(root, record_set, sampler, transform=transform)
     print(len(dataset))
     for i, (frames, label) in enumerate(dataset):
         if not (i < MAX_ITERS):

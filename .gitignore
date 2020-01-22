@@ -136,6 +136,7 @@ dist/data
 dist/data.zip
 submissions
 models/data
+scripts/data
 scripts/models
 notebooks/data
 notebooks/models

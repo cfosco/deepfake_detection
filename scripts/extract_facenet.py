@@ -5,7 +5,6 @@ import sys
 import time
 from multiprocessing.pool import ThreadPool
 
-import cv2
 import numpy as np
 import torch
 import torch.backends.cudnn as cudnn
@@ -14,10 +13,10 @@ import torch.utils.data
 import torch.utils.data.distributed
 from PIL import Image
 from torch.utils.data import DataLoader
-from torchvision.transforms import functional as TF
 from tqdm import tqdm
 
 from models import FaceModel
+from data import VideoFolder
 from pretorched.runners.utils import AverageMeter, ProgressMeter
 from pretorched.utils import chunk
 
@@ -37,47 +36,6 @@ VIDEO_DIR = os.path.join(VIDEO_ROOT, PART)
 FACE_DIR = os.path.join(FACE_ROOT, PART)
 
 
-def read_frames(video, fps=30, step=1):
-    # Open video file
-    video_capture = cv2.VideoCapture(video)
-    video_capture.set(cv2.CAP_PROP_FPS, fps)
-
-    count = 0
-    while video_capture.isOpened():
-        # Grab a single frame of video
-        ret = video_capture.grab()
-
-        # Bail out when the video file ends
-        if not ret:
-            break
-        if count % step == 0:
-            # Convert the image from BGR color (which OpenCV uses) to RGB color (which face_recognition uses)
-            ret, frame = video_capture.retrieve()
-            frame = cv2.cvtColor(frame, cv2.COLOR_BGR2RGB)
-            yield frame
-        count += 1
-
-
-class VideoDataset(torch.utils.data.Dataset):
-    def __init__(self, root, step=2, transform=None):
-        self.root = root
-        self.step = step
-        self.videos_filenames = sorted([f for f in os.listdir(root) if f.endswith('.mp4')])
-        self.transform = transform
-
-    def __getitem__(self, index):
-        name = self.videos_filenames[index]
-        video_filename = os.path.join(self.root, name)
-        frames = read_frames(video_filename, step=self.step)
-        frames = torch.stack(list(map(TF.to_tensor, frames))).transpose(0, 1)
-        if self.transform is not None:
-            frames = self.transform(frames)
-        return name, frames
-
-    def __len__(self):
-        return len(self.videos_filenames)
-
-
 def save_image(args):
     image, filename = args
     os.makedirs(os.path.dirname(filename), exist_ok=True)
@@ -93,7 +51,7 @@ def main():
 
     device = 'cuda' if torch.cuda.is_available() else 'cpu'
 
-    dataset = VideoDataset(VIDEO_DIR, step=STEP)
+    dataset = VideoFolder(VIDEO_DIR, step=STEP)
     if not OVERWRITE:
         video_filenames = []
         for f in dataset.videos_filenames:
