@@ -34,15 +34,15 @@ class FrameToVideoDataset(torch.utils.data.Dataset):
         return len(self.dataset)
 
 
-dataloader = core.get_dataloader('DFDC', data_root='/data/datasets', resolution=256, size=224, segment_count=16,
-                                 dataset_type='DeepfakeFaceVideo', record_set_type='DeepfakeFaceSet',
-                                 batch_size=1, pin_memory=False)
-dataset = FrameToVideoDataset(dataloader.dataset)
-dataloader = torch.utils.data.DataLoader(dataset, batch_size=32, num_workers=12, shuffle=False)
+for split in ['val', 'train']:
+    dataloader = core.get_dataloader('DFDC', data_root='/data/datasets', resolution=256, size=224, segment_count=16,
+                                     dataset_type='DeepfakeFaceVideo', record_set_type='DeepfakeFaceSet', split=split,
+                                     batch_size=1, pin_memory=False)
+    dataset = FrameToVideoDataset(dataloader.dataset)
+    dataloader = torch.utils.data.DataLoader(dataset, batch_size=32, num_workers=12, shuffle=False)
 
-
-end = time.time()
-for i, d in enumerate(dataloader):
-    if i % 100 == 0:
-        print(i, d[0].shape, time.time() - end)
-        end = time.time()
+    end = time.time()
+    for i, d in enumerate(dataloader):
+        if i % 100 == 0:
+            print(i, d[0].shape, time.time() - end)
+            end = time.time()
