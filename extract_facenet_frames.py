@@ -23,12 +23,14 @@ from pretorched.utils import chunk
 STEP = 2
 CHUNK_SIZE = 150
 NUM_WORKERS = 2
+OVERWRITE = False
 
 try:
     PART = sys.argv[1]
 except IndexError:
     PART = 'dfdc_train_part_0'
-VIDEO_ROOT = os.path.join(os.environ['DATA_ROOT'], 'DeepfakeDetection', 'videos')
+SCRATCH_DATA_ROOT = '/data/vision/oliva/scratch/datasets'
+VIDEO_ROOT = os.path.join(SCRATCH_DATA_ROOT, 'DeepfakeDetection', 'videos')
 FACE_ROOT = os.path.join(os.environ['DATA_ROOT'], 'DeepfakeDetection', 'facenet_frames')
 VIDEO_DIR = os.path.join(VIDEO_ROOT, PART)
 FACE_DIR = os.path.join(FACE_ROOT, PART)
@@ -91,6 +93,17 @@ def main():
     device = 'cuda' if torch.cuda.is_available() else 'cpu'
 
     dataset = VideoDataset(VIDEO_DIR, step=STEP)
+    if not OVERWRITE:
+        video_filenames = []
+        for f in dataset.videos_filenames:
+            frame_dir = os.path.join(FACE_DIR, f)
+            if os.path.exists(frame_dir):
+                if os.listdir(frame_dir):
+                    print(f'Skipping {frame_dir}')
+                    continue
+            video_filenames.append(f)
+        dataset.videos_filenames = video_filenames
+
     dataloader = DataLoader(dataset, batch_size=1,
                             shuffle=False, num_workers=NUM_WORKERS,
                             pin_memory=True, drop_last=False)
@@ -99,7 +112,7 @@ def main():
     margin = 50
     fdir_tmpl = 'face_{}'
     tmpl = '{:06d}.jpg'
-    metadata_fname = 'faces_metadata.json'
+    metadata_fname = 'face_metadata.json'
     model = FaceModel(size=size,
                       device=device,
                       margin=margin,
