@@ -7,7 +7,10 @@ from multiprocessing import Pool
 
 import ffmpeg
 import numpy as np
+import torch
 from tqdm import tqdm
+
+from pretorched.data.utils import frames_to_video
 
 
 def videos_to_frames(video_root, frame_root, num_workers=32):
@@ -245,3 +248,24 @@ def smooth_data(data, amount=1.0):
     ksize = int(amount * (data_len // 2))
     kernel = np.ones(ksize) / ksize
     return np.convolve(data, kernel, mode='same')
+
+
+class FrameToVideoDataset(torch.utils.data.Dataset):
+    def __init__(self, dataset):
+        self.dataset = dataset
+
+    def __getitem__(self, index):
+        try:
+            return self.dataset[index]
+        except FileNotFoundError:
+            record = self.dataset.record_set[index]
+            video_dir = os.path.join(self.dataset.root, record.path)
+
+            for fn in record.face_names:
+                video_path = os.path.join(video_dir, fn)
+                print(video_path)
+                frames_to_video(f'{video_path}/*.jpg', video_path + '.mp4')
+            return self[index]
+
+    def __len__(self):
+        return len(self.dataset)
