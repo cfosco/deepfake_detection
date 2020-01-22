@@ -106,7 +106,7 @@ def main():
 
     dataloader = DataLoader(dataset, batch_size=1,
                             shuffle=False, num_workers=NUM_WORKERS,
-                            pin_memory=True, drop_last=False)
+                            pin_memory=False, drop_last=False)
 
     size = 256
     margin = 50
@@ -134,11 +134,8 @@ def main():
         end = time.time()
         for i, (filename, x) in tqdm(enumerate(dataloader), total=len(dataloader)):
             print(f'Extracting faces from: {filename}')
-            x = x.to(device)
-            x.mul_(255.)
             bs, nc, d, h, w = x.shape
             x = x.permute(0, 2, 1, 3, 4).contiguous()  # [bs, d, nc, h, w]
-            # x = x.reshape(-1, *x.shape[2:])  # [bs * d, nc, h, w]
             x = x.view(-1, *x.shape[2:])  # [bs * d, nc, h, w]
 
             save_dir = os.path.join(FACE_DIR, filename[0])
@@ -146,6 +143,8 @@ def main():
             save_paths = [os.path.join(save_dir, '{:06d}.jpg'.format(idx)) for idx in range(d)]
             faces_out = []
             for xx, ss in zip(chunk(x, CHUNK_SIZE), chunk(save_paths, CHUNK_SIZE)):
+                xx = xx.to(device)
+                xx.mul_(255.)
                 out = model.model(xx, smooth=True)
                 if not out:
                     continue
@@ -179,7 +178,6 @@ def main():
                 out_filename = os.path.join(save_dir, fdir_tmpl.format(face_num), tmpl)
                 with ThreadPool(num_images) as pool:
                     names = (out_filename.format(i) for i in range(1, num_images + 1))
-                    # list(tqdm(pool.imap(save_image, zip(faces, names)), total=num_images))
                     list(pool.imap(save_image, zip(faces, names)))
                     pool.close()
                     pool.join()
