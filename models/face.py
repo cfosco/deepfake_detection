@@ -99,7 +99,7 @@ class MTCNN(nn.Module):
             self.device = device
             self.to(device)
 
-    def forward(self, img, save_path=None, return_prob=False, smooth=False):
+    def forward(self, img, save_path=None, return_prob=False, smooth=False, amount=0.4):
         """Run MTCNN face detection on a PIL image. This method performs both detection and
         extraction of faces, returning tensors representing detected faces rather than the bounding
         boxes. To access bounding boxes, see the MTCNN.detect() method below.
@@ -135,7 +135,7 @@ class MTCNN(nn.Module):
             batch_boxes, batch_probs = self.detect(img)
 
         if smooth:
-            batch_boxes = smooth_boxes(batch_boxes)
+            batch_boxes = smooth_boxes(batch_boxes, amount=amount)
 
         # Determine if a batch or single image was passed
         batch_mode = True
@@ -452,7 +452,74 @@ def prewhiten(x):
     return y
 
 
-def smooth_boxes(batch_boxes):
+def smooth_data(data, amount=1.0):
+    if not amount > 0.0:
+        return data
+    data_len = len(data)
+    ksize = max(1, int(amount * (data_len // 2)))
+    kernel = np.ones(ksize) / ksize
+    return np.convolve(data, kernel, mode='same')
+
+
+def smooth(x, amount=0.2, window='hanning'):
+    """smooth the data using a window with requested size.
+
+    This method is based on the convolution of a scaled window with the signal.
+    The signal is prepared by introducing reflected copies of the signal
+    (with the window size) in both ends so that transient parts are minimized
+    in the begining and end part of the output signal.
+
+    input:
+        x: the input signal
+        window_len: the dimension of the smoothing window; should be an odd integer
+        window: the type of window from 'flat', 'hanning', 'hamming', 'bartlett', 'blackman'
+            flat window will produce a moving average smoothing.
+
+    output:
+        the smoothed signal
+
+    example:
+
+    t=linspace(-2,2,0.1)
+    x=sin(t)+randn(len(t))*0.1
+    y=smooth(x)
+
+    see also:
+
+    numpy.hanning, numpy.hamming, numpy.bartlett, numpy.blackman, numpy.convolve
+    scipy.signal.lfilter
+
+    TODO: the window parameter could be the window itself if an array instead of a string
+    NOTE: length(output) != length(input), to correct this: return y[(window_len/2-1):-(window_len/2)] instead of just y.
+    """
+
+    if x.ndim != 1:
+        raise ValueError("smooth only accepts 1 dimension arrays.")
+
+    data_len = len(x)
+    window_len = max(1, int(amount * (data_len // 2)))
+
+    if x.size < window_len:
+        raise ValueError("Input vector needs to be bigger than window size.")
+
+    if window_len < 3:
+        return x
+
+    if window not in ['flat', 'hanning', 'hamming', 'bartlett', 'blackman']:
+        raise ValueError("Window is on of 'flat', 'hanning', 'hamming', 'bartlett', 'blackman'")
+
+    s = np.r_[x[window_len - 1:0:-1], x, x[-2:-window_len - 1:-1]]
+
+    if window == 'flat':  # moving average
+        w = np.ones(window_len, 'd')
+    else:
+        w = eval('np.' + window + '(window_len)')
+
+    y = np.convolve(w / w.sum(), s, mode='valid')
+    return y[(window_len // 2):-(window_len // 2)]
+
+
+def smooth_boxes(batch_boxes, amount=0.5):
     known_coords = None
     boxes = defaultdict(list)
     for i, bb in enumerate(batch_boxes):
@@ -471,7 +538,7 @@ def smooth_boxes(batch_boxes):
                     boxes[face_idx].append(b)
                     added.append(face_idx)
     for face_num, coords in boxes.items():
-        out = [np.array(x) for x in zip(*[interp_nans(dim) for dim in zip(*coords)])]
+        out = [np.array(x) for x in zip(*[smooth(interp_nans(dim), amount=amount) for dim in zip(*coords)])]
         boxes[face_num] = out
     return list(map(np.stack, zip(*boxes.values())))
 
