@@ -1,3 +1,4 @@
+import contextlib
 import functools
 import json
 import os
@@ -104,10 +105,10 @@ def generate_metadata(data_root, video_dir='videos', frames_dir='frames',
                             with open(os.path.join(fd, face_metadata_fname)) as f:
                                 fdata = json.load(f)
                             if not with_coords:
-                                fdata.pop('face_coords')
+                                with contextlib.suppress(KeyError):
+                                    fdata.pop('face_coords')
                             data[name][face_dir] = fdata
                         except Exception:
-                            # print(f'Could not find face_data for {face_dir}:{d}:{name}')
                             missing_faces[face_dir].append((d, name))
 
                 metadata[d] = data
@@ -115,21 +116,10 @@ def generate_metadata(data_root, video_dir='videos', frames_dir='frames',
     filename = 'coords_' + filename if with_coords else filename
     with open(os.path.join(data_root, filename), 'w') as f:
         json.dump(metadata, f)
-        # json.dump(metadata, f, indent=4)
-
-    # for part, data in metadata.items():
-    #     for name, info in data.items():
-    #         for face_dir in faces_dirs:
-    #             try:
-    #                 info[face_dir].pop('face_coords')
-    #             except KeyError:
-    #                 pass
-    # with open(os.path.join(data_root, filename), 'w') as f:
-    #     json.dump(metadata, f)
 
     missing_data = {
         'frames': missing_frames,
-        'face_frames': missing_faces,
+        'faces': missing_faces,
     }
     with open(os.path.join(data_root, missing_filename), 'w') as f:
         json.dump(missing_data, f, indent=4)
@@ -140,17 +130,17 @@ def generate_metadata(data_root, video_dir='videos', frames_dir='frames',
     for x in missing_frames:
         frame_counter[x[0]] += 1
 
-    for fd, x in missing_faces.items():
-        face_counter[fd][x[0]] += 1
+    for name, fd in missing_faces.items():
+        for x in fd:
+            face_counter[name][x[0]] += 1
 
     print(f'Missing Frames: ({len(missing_frames)})')
     for name, c in frame_counter.items():
         print(f'\t{name}: {c}')
 
-    print(f'Missing Face Frames: ({len(missing_faces)})')
     for name, fd in face_counter.items():
+        print(f'Missing {name}: ({len(missing_faces[name])})')
         for n, c in fd.items():
-
             print(f'\t{name}:{n} Missing Face Frames: {c}')
 
 
@@ -183,7 +173,7 @@ def generate_test_metadata(data_root, test_list_file='test_videos.json', video_d
     with open(os.path.join(data_root, test_metadata_file), 'w') as f:
         json.dump(test_metadata, f, indent=4)
 
-    print(f'Missing test vides ({len(missing)}): {missing}')
+    print(f'Missing test videos ({len(missing)}): {missing}')
 
 
 def verify_data(data_root, video_dir='videos', frame_dir='frames', face_dir='face_frames',
