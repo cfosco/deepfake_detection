@@ -138,10 +138,20 @@ def generate_metadata(data_root, video_dir='videos', frames_dir='frames',
     for name, c in frame_counter.items():
         print(f'\t{name}: {c}')
 
+    print(f'Finished Frames:')
+    for name, c in frame_counter.items():
+        if c == 0:
+            print(f'\t{name}: {c}')
+
     for name, fd in face_counter.items():
         print(f'Missing {name}: ({len(missing_faces[name])})')
         for n, c in fd.items():
             print(f'\t{name}:{n} Missing Face Frames: {c}')
+        print(f'Finished {name}:')
+        for i in range(50):
+            n = f'dfdc_train_part_{i}'
+            if fd[n] == 0:
+                print(f'\t{name}:{n}')
 
 
 def generate_test_metadata(data_root, test_list_file='test_videos.json', video_dir='videos',

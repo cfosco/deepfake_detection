@@ -1,2 +1,6 @@
 #!/usr/bin/env bash
-ln -s ${PWD}/models scripts
+
+# Start from directory of script
+cd "$(dirname "${BASH_SOURCE[0]}")"
+
+ln -s ../models .
