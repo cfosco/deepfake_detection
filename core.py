@@ -122,12 +122,13 @@ def get_model(model_name, num_classes, pretrained='imagenet', init_name=None, **
 
 def get_transform(name='DFDC', split='train', size=224, resolution=256,
                   mean=[0.485, 0.456, 0.406], std=[0.229, 0.224, 0.225],
-                  normalize=True):
+                  normalize=True, degrees=25):
     norm = transforms.NormalizeVideo(mean=mean, std=std)
     cropping = {
         'train': torchvision.transforms.Compose([
             transforms.RandomResizedCropVideo(size),
-            transforms.RandomHorizontalFlipVideo()]),
+            transforms.RandomHorizontalFlipVideo(),
+            transforms.RandomRotationVideo(degrees)]),
         'val': torchvision.transforms.Compose([
             transforms.ResizeVideo(resolution),
             transforms.CenterCropVideo(size),
