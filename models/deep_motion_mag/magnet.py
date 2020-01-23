@@ -284,6 +284,7 @@ class MagNet3Frames(object):
               os.path.join(out_dir, f'%06d.{frame_ext}'), '-c:v', 'libx264',
               os.path.join(out_dir, '../', vid_name + '.mp4')]
              )
+        return out_dir
 
     # Temporal Operations
     def _build_IIR_filtering_graphs(self):
@@ -511,6 +512,7 @@ class MagNet3Frames(object):
               os.path.join(out_dir, f'%06d.{frame_ext}'), '-c:v', 'libx264',
               os.path.join(out_dir, '../', vid_name + '.mp4')]
              )
+        return out_dir
 
     # Training code.
     def _build_training_graph(self, train_config):

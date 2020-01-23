@@ -153,22 +153,22 @@ def run_motion_mag_one_video(model, checkpoint, phase, video, output,
                              filter_type='differenceOfIIR',
                              frame_ext='jpg'):
     if phase == 'run':
-        model.run(checkpoint,
-                  video,
-                  frame_ext,
-                  output,
-                  amplification_factor,
-                  velocity_mag)
+        return model.run(checkpoint,
+                         video,
+                         frame_ext,
+                         output,
+                         amplification_factor,
+                         velocity_mag)
 
     elif phase == 'run_temporal':
-        model.run_temporal(checkpoint,
-                           video,
-                           frame_ext,
-                           output,
-                           amplification_factor,
-                           fl, fh, fs,
-                           n_filter_tap,
-                           filter_type)
+        return model.run_temporal(checkpoint,
+                                  video,
+                                  frame_ext,
+                                  output,
+                                  amplification_factor,
+                                  fl, fh, fs,
+                                  n_filter_tap,
+                                  filter_type)
         #    fixed_size=256)
 
 

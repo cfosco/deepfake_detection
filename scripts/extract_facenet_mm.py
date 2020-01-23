@@ -24,10 +24,9 @@ from pretorched.utils import chunk
 
 STEP = 1
 CHUNK_SIZE = 300
-# CHUNK_SIZE = 50
 NUM_WORKERS = 2
 OVERWRITE = False
-REMOVE_FRAMES = False
+REMOVE_FRAMES = True
 
 try:
     PART = sys.argv[1]
@@ -150,9 +149,10 @@ def main():
                         pool.join()
                     video_path = os.path.join(save_dir, fdir_tmpl.format(face_num))
                     pretorched.data.utils.frames_to_video(f'{video_path}/*.jpg', video_path + '.mp4')
-                    run_motion_mag(video=video_path, output=video_path + '_mm')
+                    mm_out_dir = run_motion_mag(video=video_path, output=video_path + '_mm')
                     if REMOVE_FRAMES:
                         os.system(f'rm -rf {video_path}')
+                        os.system(f'rm -rf {mm_out_dir}')
                 # measure elapsed time
                 batch_time.update(time.time() - end)
                 end = time.time()
