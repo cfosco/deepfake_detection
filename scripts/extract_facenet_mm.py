@@ -32,8 +32,7 @@ try:
     PART = sys.argv[1]
 except IndexError:
     PART = 'dfdc_train_part_0'
-SCRATCH_DATA_ROOT = '/data/vision/oliva/scratch/datasets'
-VIDEO_ROOT = os.path.join(SCRATCH_DATA_ROOT, 'DeepfakeDetection', 'videos')
+VIDEO_ROOT = os.path.join(os.environ['SCRATCH_DATA_ROOT'], 'DeepfakeDetection', 'videos')
 FACE_ROOT = os.path.join(os.environ['DATA_ROOT'], 'DeepfakeDetection', 'facenet_smooth_frames')
 VIDEO_DIR = os.path.join(VIDEO_ROOT, PART)
 FACE_DIR = os.path.join(FACE_ROOT, PART)
@@ -107,6 +106,7 @@ def main():
                 os.makedirs(save_dir, exist_ok=True)
                 save_paths = [os.path.join(save_dir, '{:06d}.jpg'.format(idx)) for idx in range(d)]
                 faces_out = []
+                torch.cuda.empty_cache()
                 for xx, ss in zip(chunk(x, CHUNK_SIZE), chunk(save_paths, CHUNK_SIZE)):
                     xx = xx.to(device)
                     xx.mul_(255.)

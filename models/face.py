@@ -550,7 +550,7 @@ def detect_face(imgs, minsize, pnet, rnet, onet, threshold, factor, device):
         raise Exception("MTCNN batch processing only compatible with equal-dimension images.")
     if not isinstance(imgs, torch.Tensor):
         imgs_np = np.stack([np.uint8(img) for img in imgs])
-        imgs = torch.as_tensor(imgs_np, device=device).permute(0, 3, 1, 2).float()
+        imgs = torch.as_tensor(imgs_np).permute(0, 3, 1, 2).float()
 
     batch_size = len(imgs)
     h, w = imgs.shape[2:4]
@@ -574,7 +574,8 @@ def detect_face(imgs, minsize, pnet, rnet, onet, threshold, factor, device):
     for scale in scales:
         im_data = imresample(imgs, (int(h * scale + 1), int(w * scale + 1)))
         im_data = (im_data - 127.5) * 0.0078125
-        reg, probs = pnet(im_data)
+        reg, probs = pnet(im_data.to(device))
+        im_data.cpu()
 
         boxes_scale, image_inds_scale = generateBoundingBox(reg, probs[:, 1], scale, threshold[0])
         boxes.append(boxes_scale)
@@ -613,7 +614,8 @@ def detect_face(imgs, minsize, pnet, rnet, onet, threshold, factor, device):
                 im_data.append(imresample(img_k, (24, 24)))
         im_data = torch.cat(im_data, dim=0)
         im_data = (im_data - 127.5) * 0.0078125
-        out = rnet(im_data)
+        out = rnet(im_data.to(device))
+        im_data.cpu()
 
         out0 = out[0].permute(1, 0)
         out1 = out[1].permute(1, 0)
@@ -640,7 +642,8 @@ def detect_face(imgs, minsize, pnet, rnet, onet, threshold, factor, device):
                 im_data.append(imresample(img_k, (48, 48)))
         im_data = torch.cat(im_data, dim=0)
         im_data = (im_data - 127.5) * 0.0078125
-        out = onet(im_data)
+        out = onet(im_data.to(device))
+        im_data.cpu()
 
         out0 = out[0].permute(1, 0)
         out1 = out[1].permute(1, 0)
