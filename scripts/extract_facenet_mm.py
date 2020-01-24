@@ -80,7 +80,8 @@ def main():
                       min_face_size=50,
                       keep_all=True,
                       post_process=False,
-                      select_largest=False)
+                      select_largest=False,
+                      chunk_size=150)
     cudnn.benchmark = True
 
     batch_time = AverageMeter('Time', ':6.3f')

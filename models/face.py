@@ -18,7 +18,8 @@ WEIGHT_DIR = os.path.join(dir_path, 'data')
 class FaceModel(torch.nn.Module):
 
     def __init__(self, size=224, device='cuda', margin=50, keep_all=False,
-                 post_process=False, select_largest=True, min_face_size=50):
+                 post_process=False, select_largest=True, min_face_size=50,
+                 chunk_size=None):
         super().__init__()
         self.model = MTCNN(image_size=size,
                            device=device,
@@ -26,7 +27,8 @@ class FaceModel(torch.nn.Module):
                            keep_all=keep_all,
                            min_face_size=min_face_size,
                            post_process=post_process,
-                           select_largest=select_largest)
+                           select_largest=select_largest,
+                           chunk_size=chunk_size)
 
     def forward(self, x):
         """
@@ -77,7 +79,7 @@ class MTCNN(nn.Module):
     def __init__(
         self, image_size=160, margin=0, min_face_size=20,
         thresholds=[0.6, 0.7, 0.7, 0.98], factor=0.709, post_process=True,
-        select_largest=True, keep_all=False, device=None
+        select_largest=True, keep_all=False, device=None, chunk_size=None,
     ):
         super().__init__()
 
@@ -89,6 +91,7 @@ class MTCNN(nn.Module):
         self.post_process = post_process
         self.select_largest = select_largest
         self.keep_all = keep_all
+        self.chunk_size = chunk_size
 
         self.pnet = PNet(pretrained=os.path.join(WEIGHT_DIR, 'pnet.pth'))
         self.rnet = RNet(pretrained=os.path.join(WEIGHT_DIR, 'rnet.pth'))
@@ -132,7 +135,12 @@ class MTCNN(nn.Module):
 
         # Detect faces
         with torch.no_grad():
-            batch_boxes, batch_probs = self.detect(img)
+            cs = len(img) if self.chunk_size is None else self.chunk_size
+            batch_boxes, batch_probs = [], []
+            for im in chunk(img, cs):
+                bb, bp = self.detect(im)
+                batch_boxes.extend(bb)
+                batch_probs.extend(bp)
 
         if smooth:
             batch_boxes = smooth_boxes(batch_boxes, amount=amount)
@@ -550,7 +558,7 @@ def detect_face(imgs, minsize, pnet, rnet, onet, threshold, factor, device):
         raise Exception("MTCNN batch processing only compatible with equal-dimension images.")
     if not isinstance(imgs, torch.Tensor):
         imgs_np = np.stack([np.uint8(img) for img in imgs])
-        imgs = torch.as_tensor(imgs_np).permute(0, 3, 1, 2).float()
+        imgs = torch.as_tensor(imgs_np, device=device).permute(0, 3, 1, 2)
 
     batch_size = len(imgs)
     h, w = imgs.shape[2:4]
@@ -574,8 +582,7 @@ def detect_face(imgs, minsize, pnet, rnet, onet, threshold, factor, device):
     for scale in scales:
         im_data = imresample(imgs, (int(h * scale + 1), int(w * scale + 1)))
         im_data = (im_data - 127.5) * 0.0078125
-        reg, probs = pnet(im_data.to(device))
-        im_data.cpu()
+        reg, probs = pnet(im_data)
 
         boxes_scale, image_inds_scale = generateBoundingBox(reg, probs[:, 1], scale, threshold[0])
         boxes.append(boxes_scale)
@@ -614,8 +621,7 @@ def detect_face(imgs, minsize, pnet, rnet, onet, threshold, factor, device):
                 im_data.append(imresample(img_k, (24, 24)))
         im_data = torch.cat(im_data, dim=0)
         im_data = (im_data - 127.5) * 0.0078125
-        out = rnet(im_data.to(device))
-        im_data.cpu()
+        out = rnet(im_data)
 
         out0 = out[0].permute(1, 0)
         out1 = out[1].permute(1, 0)
@@ -642,8 +648,7 @@ def detect_face(imgs, minsize, pnet, rnet, onet, threshold, factor, device):
                 im_data.append(imresample(img_k, (48, 48)))
         im_data = torch.cat(im_data, dim=0)
         im_data = (im_data - 127.5) * 0.0078125
-        out = onet(im_data.to(device))
-        im_data.cpu()
+        out = onet(im_data)
 
         out0 = out[0].permute(1, 0)
         out1 = out[1].permute(1, 0)
@@ -740,7 +745,7 @@ def nms_numpy(boxes, scores, threshold, method):
         w = np.maximum(0.0, xx2 - xx1 + 1)
         h = np.maximum(0.0, yy2 - yy1 + 1)
         inter = w * h
-        if method is "Min":
+        if method == "Min":
             o = inter / np.minimum(area[i], area[idx])
         else:
             o = inter / (area[i] + area[idx] - inter)
@@ -859,3 +864,9 @@ def extract_face(img, box, image_size=160, margin=0, save_path=None):
         face_im.save(save_path, **save_args)
 
     return face
+
+
+def chunk(l, n):
+    """Yield successive n-sized chunks from l."""
+    for i in range(0, len(l), n):
+        yield l[i:i + n]
