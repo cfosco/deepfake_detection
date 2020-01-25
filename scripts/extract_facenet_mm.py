@@ -61,8 +61,8 @@ def filter_filenames(video_filenames, face_dir):
 def main(size=360, margin=100, fdir_tmpl='face_{}', tmpl='{:06d}.jpg', metadata_fname='face_metadata.json'):
 
     os.makedirs(FACE_DIR, exist_ok=True)
-
     device = 'cuda' if torch.cuda.is_available() else 'cpu'
+
     dataset = VideoFolder(VIDEO_DIR, step=STEP)
     if not OVERWRITE:
         dataset.videos_filenames = filter_filenames(dataset.videos_filenames, FACE_DIR)
@@ -79,9 +79,9 @@ def main(size=360, margin=100, fdir_tmpl='face_{}', tmpl='{:06d}.jpg', metadata_
                       post_process=False,
                       select_largest=False,
                       chunk_size=CHUNK_SIZE)
-    cudnn.benchmark = True
 
     run_motion_mag = deepmmag.get_motion_mag()
+    cudnn.benchmark = True
 
     batch_time = AverageMeter('Time', ':6.3f')
     progress = ProgressMeter(len(dataset), [batch_time], prefix='Facenet Extraction and MM: ')
@@ -93,16 +93,13 @@ def main(size=360, margin=100, fdir_tmpl='face_{}', tmpl='{:06d}.jpg', metadata_
         end = time.time()
         for i in tqdm(range(len(dataloader)), total=len(dataloader)):
             with contextlib.suppress(RuntimeWarning):
+
                 filename, x = next(dataloader)
                 print(f'Extracting faces from: {filename}')
-                bs, nc, d, h, w = x.shape
-                x = x.permute(0, 2, 1, 3, 4).contiguous()  # [bs, d, nc, h, w]
-                x = x.view(-1, *x.shape[2:])  # [bs * d, nc, h, w]
 
-                save_dir = os.path.join(FACE_DIR, filename[0])
-                os.makedirs(save_dir, exist_ok=True)
                 faces_out = []
                 torch.cuda.empty_cache()
+                x = model.input_transform(x)
                 out = model.model(x, smooth=True)
                 if not out:
                     continue
@@ -113,8 +110,12 @@ def main(size=360, margin=100, fdir_tmpl='face_{}', tmpl='{:06d}.jpg', metadata_
                 faces_out = torch.cat([f[:, :min_face] for f in faces_out])
                 face_images = {i: [Image.fromarray(ff.permute(1, 2, 0).numpy().astype(np.uint8)) for ff in f]
                                for i, f in enumerate(faces_out.permute(1, 0, 2, 3, 4))}
+
                 del x
                 torch.cuda.empty_cache()
+
+                save_dir = os.path.join(FACE_DIR, filename[0])
+                os.makedirs(save_dir, exist_ok=True)
                 metadata = {
                     'filename': os.path.basename(filename[0]),
                     'num_faces': len(face_images),

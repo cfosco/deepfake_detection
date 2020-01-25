@@ -30,6 +30,10 @@ class FaceModel(torch.nn.Module):
                            select_largest=select_largest,
                            chunk_size=chunk_size)
 
+    def input_transform(self, x):
+        x = x.permute(0, 2, 1, 3, 4).contiguous()  # [bs, d, nc, h, w]
+        return x.view(-1, *x.shape[2:])            # [bs * d, nc, h, w]
+
     def forward(self, x):
         """
         Args:
@@ -39,9 +43,7 @@ class FaceModel(torch.nn.Module):
         number of faces per example in batch (avoid this for now).
         """
         bs, nc, d, h, w = x.shape
-        x = x.permute(0, 2, 1, 3, 4)  # [bs, d, nc, h, w]
-        # x = x.view(-1, *x.shape[2:])  # [bs * d, nc, h, w]
-        x = x.reshape(-1, *x.shape[2:])  # [bs * d, nc, h, w]
+        x = self.input_transform(x)
         out = self.model(x, smooth=True)
         out = torch.stack(out)
         out = out.view(bs, -1, nc, *out.shape[-2:])
