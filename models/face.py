@@ -34,6 +34,19 @@ class FaceModel(torch.nn.Module):
         x = x.permute(0, 2, 1, 3, 4).contiguous()  # [bs, d, nc, h, w]
         return x.view(-1, *x.shape[2:])            # [bs * d, nc, h, w]
 
+    def get_faces(self, x):
+        faces_out = []
+        x = self.input_transform(x)
+        out = self.model(x, smooth=True)
+        out = torch.stack(out).cpu()
+        faces_out.append(out)
+
+        min_face = min([f.shape[1] for f in faces_out])
+        faces_out = torch.cat([f[:, :min_face] for f in faces_out])
+        face_images = {i: [Image.fromarray(ff.permute(1, 2, 0).numpy().astype(np.uint8)) for ff in f]
+                       for i, f in enumerate(faces_out.permute(1, 0, 2, 3, 4))}
+        return face_images
+
     def forward(self, x):
         """
         Args:

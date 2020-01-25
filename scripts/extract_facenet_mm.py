@@ -33,7 +33,7 @@ FACE_DIR = os.path.join(FACE_ROOT, PART)
 
 
 def main(size=360, margin=100, fdir_tmpl='face_{}', tmpl='{:06d}.jpg', metadata_fname='face_metadata.json',
-         step=1, chunk_size=100, num_workers=2, overwrite=False, remove_frames=True):
+         step=1, batch_size=1, chunk_size=100, num_workers=2, overwrite=False, remove_frames=True):
 
     os.makedirs(FACE_DIR, exist_ok=True)
     device = 'cuda' if torch.cuda.is_available() else 'cpu'
@@ -42,7 +42,7 @@ def main(size=360, margin=100, fdir_tmpl='face_{}', tmpl='{:06d}.jpg', metadata_
     if not overwrite:
         dataset.videos_filenames = filter_filenames(dataset.videos_filenames, FACE_DIR)
 
-    dataloader = DataLoader(dataset, batch_size=1,
+    dataloader = DataLoader(dataset, batch_size=batch_size,
                             shuffle=False, num_workers=num_workers,
                             pin_memory=False, drop_last=False)
 
@@ -72,21 +72,7 @@ def main(size=360, margin=100, fdir_tmpl='face_{}', tmpl='{:06d}.jpg', metadata_
                 filenames, x = next(dataloader)
                 print(f'Extracting faces from: {filenames}')
 
-                faces_out = []
-                torch.cuda.empty_cache()
-                x = model.input_transform(x)
-                out = model.model(x, smooth=True)
-                if not out:
-                    continue
-                out = torch.stack(out).cpu()
-                faces_out.append(out)
-
-                min_face = min([f.shape[1] for f in faces_out])
-                faces_out = torch.cat([f[:, :min_face] for f in faces_out])
-                face_images = {i: [Image.fromarray(ff.permute(1, 2, 0).numpy().astype(np.uint8)) for ff in f]
-                               for i, f in enumerate(faces_out.permute(1, 0, 2, 3, 4))}
-
-                del x
+                face_images = model.get_faces(x)
                 torch.cuda.empty_cache()
 
                 for filename, face_images in zip(filenames, [face_images]):
