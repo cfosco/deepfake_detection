@@ -23,7 +23,7 @@ from pretorched.runners.utils import AverageMeter, ProgressMeter
 from pretorched.utils import chunk
 
 STEP = 1
-CHUNK_SIZE = 300
+CHUNK_SIZE = 100
 NUM_WORKERS = 2
 OVERWRITE = False
 REMOVE_FRAMES = True
@@ -81,7 +81,7 @@ def main():
                       keep_all=True,
                       post_process=False,
                       select_largest=False,
-                      chunk_size=100)
+                      chunk_size=CHUNK_SIZE)
     cudnn.benchmark = True
 
     batch_time = AverageMeter('Time', ':6.3f')
@@ -105,22 +105,20 @@ def main():
 
                 save_dir = os.path.join(FACE_DIR, filename[0])
                 os.makedirs(save_dir, exist_ok=True)
-                save_paths = [os.path.join(save_dir, '{:06d}.jpg'.format(idx)) for idx in range(d)]
                 faces_out = []
                 torch.cuda.empty_cache()
-                for xx, ss in zip(chunk(x, CHUNK_SIZE), chunk(save_paths, CHUNK_SIZE)):
-                    xx.mul_(255.)
-                    out = model.model(xx, smooth=True)
-                    if not out:
-                        continue
-                    out = torch.stack(out).cpu()
-                    faces_out.append(out)
+                x.mul_(255.)
+                out = model.model(x, smooth=True)
+                if not out:
+                    continue
+                out = torch.stack(out).cpu()
+                faces_out.append(out)
+
                 min_face = min([f.shape[1] for f in faces_out])
                 faces_out = torch.cat([f[:, :min_face] for f in faces_out])
                 face_images = {i: [Image.fromarray(ff.permute(1, 2, 0).numpy().astype(np.uint8)) for ff in f]
                                for i, f in enumerate(faces_out.permute(1, 0, 2, 3, 4))}
                 del x
-                del xx
                 torch.cuda.empty_cache()
                 metadata = {
                     'filename': os.path.basename(filename[0]),
