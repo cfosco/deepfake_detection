@@ -20,7 +20,6 @@ import pretorched
 from data import VideoFolder
 from models import FaceModel, deepmmag
 from pretorched.runners.utils import AverageMeter, ProgressMeter
-from pretorched.utils import chunk
 
 STEP = 1
 CHUNK_SIZE = 100
@@ -32,8 +31,8 @@ try:
     PART = sys.argv[1]
 except IndexError:
     PART = 'dfdc_train_part_0'
-VIDEO_ROOT = os.path.join(os.environ['SCRATCH_DATA_ROOT'], 'DeepfakeDetection', 'videos')
-FACE_ROOT = os.path.join(os.environ['SCRATCH_DATA_ROOT'], 'DeepfakeDetection', 'facenet_smooth_frames')
+VIDEO_ROOT = os.path.join(os.environ['DATA_ROOT'], 'DeepfakeDetection', 'videos')
+FACE_ROOT = os.path.join(os.environ['DATA_ROOT'], 'DeepfakeDetection', 'facenet_smooth_frames')
 VIDEO_DIR = os.path.join(VIDEO_ROOT, PART)
 FACE_DIR = os.path.join(FACE_ROOT, PART)
 
@@ -47,33 +46,31 @@ def save_image(args):
         pass
 
 
-def main():
+def filter_filenames(video_filenames, face_dir):
+    filtered_filename = []
+    for f in video_filenames:
+        frame_dir = os.path.join(face_dir, f)
+        if os.path.exists(frame_dir):
+            if os.listdir(frame_dir):
+                print(f'Skipping {frame_dir}')
+                continue
+        filtered_filename.append(f)
+    return filtered_filename
+
+
+def main(size=360, margin=100, fdir_tmpl='face_{}', tmpl='{:06d}.jpg', metadata_fname='face_metadata.json'):
 
     os.makedirs(FACE_DIR, exist_ok=True)
 
-    device = 'cuda:0' if torch.cuda.is_available() else 'cpu'
-    run_motion_mag = deepmmag.get_motion_mag()
+    device = 'cuda' if torch.cuda.is_available() else 'cpu'
     dataset = VideoFolder(VIDEO_DIR, step=STEP)
     if not OVERWRITE:
-        video_filenames = []
-        for f in dataset.videos_filenames:
-            frame_dir = os.path.join(FACE_DIR, f)
-            if os.path.exists(frame_dir):
-                if os.listdir(frame_dir):
-                    print(f'Skipping {frame_dir}')
-                    continue
-            video_filenames.append(f)
-        dataset.videos_filenames = video_filenames
+        dataset.videos_filenames = filter_filenames(dataset.videos_filenames, FACE_DIR)
 
     dataloader = DataLoader(dataset, batch_size=1,
                             shuffle=False, num_workers=NUM_WORKERS,
                             pin_memory=False, drop_last=False)
 
-    size = 360
-    margin = 100
-    fdir_tmpl = 'face_{}'
-    tmpl = '{:06d}.jpg'
-    metadata_fname = 'face_metadata.json'
     model = FaceModel(size=size,
                       device=device,
                       margin=margin,
@@ -84,11 +81,10 @@ def main():
                       chunk_size=CHUNK_SIZE)
     cudnn.benchmark = True
 
+    run_motion_mag = deepmmag.get_motion_mag()
+
     batch_time = AverageMeter('Time', ':6.3f')
-    progress = ProgressMeter(
-        len(dataset),
-        [batch_time],
-        prefix='Test: ')
+    progress = ProgressMeter(len(dataset), [batch_time], prefix='Facenet Extraction and MM: ')
 
     # switch to evaluate mode
     model.eval()
@@ -107,7 +103,6 @@ def main():
                 os.makedirs(save_dir, exist_ok=True)
                 faces_out = []
                 torch.cuda.empty_cache()
-                x.mul_(255.)
                 out = model.model(x, smooth=True)
                 if not out:
                     continue
@@ -151,6 +146,7 @@ def main():
                     if REMOVE_FRAMES:
                         os.system(f'rm -rf {video_path}')
                         os.system(f'rm -rf {mm_out_dir}')
+
                 # measure elapsed time
                 batch_time.update(time.time() - end)
                 end = time.time()
