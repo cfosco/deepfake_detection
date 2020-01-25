@@ -21,11 +21,6 @@ from data import VideoFolder
 from models import FaceModel, deepmmag
 from pretorched.runners.utils import AverageMeter, ProgressMeter
 
-STEP = 1
-CHUNK_SIZE = 100
-NUM_WORKERS = 2
-OVERWRITE = False
-REMOVE_FRAMES = True
 
 try:
     PART = sys.argv[1]
@@ -37,17 +32,18 @@ VIDEO_DIR = os.path.join(VIDEO_ROOT, PART)
 FACE_DIR = os.path.join(FACE_ROOT, PART)
 
 
-def main(size=360, margin=100, fdir_tmpl='face_{}', tmpl='{:06d}.jpg', metadata_fname='face_metadata.json'):
+def main(size=360, margin=100, fdir_tmpl='face_{}', tmpl='{:06d}.jpg', metadata_fname='face_metadata.json',
+         step=1, chunk_size=100, num_workers=2, overwrite=False, remove_frames=True):
 
     os.makedirs(FACE_DIR, exist_ok=True)
     device = 'cuda' if torch.cuda.is_available() else 'cpu'
 
-    dataset = VideoFolder(VIDEO_DIR, step=STEP)
-    if not OVERWRITE:
+    dataset = VideoFolder(VIDEO_DIR, step=step)
+    if not overwrite:
         dataset.videos_filenames = filter_filenames(dataset.videos_filenames, FACE_DIR)
 
     dataloader = DataLoader(dataset, batch_size=1,
-                            shuffle=False, num_workers=NUM_WORKERS,
+                            shuffle=False, num_workers=num_workers,
                             pin_memory=False, drop_last=False)
 
     model = FaceModel(size=size,
@@ -57,7 +53,7 @@ def main(size=360, margin=100, fdir_tmpl='face_{}', tmpl='{:06d}.jpg', metadata_
                       keep_all=True,
                       post_process=False,
                       select_largest=False,
-                      chunk_size=CHUNK_SIZE)
+                      chunk_size=chunk_size)
 
     run_motion_mag = deepmmag.get_motion_mag()
     cudnn.benchmark = True
@@ -97,7 +93,8 @@ def main(size=360, margin=100, fdir_tmpl='face_{}', tmpl='{:06d}.jpg', metadata_
                     save_dir = os.path.join(FACE_DIR, filename)
                     save_face_data(save_dir, face_images, run_motion_mag,
                                    size=size, margin=margin, fdir_tmpl=fdir_tmpl,
-                                   tmpl=tmpl, metadata_fname=metadata_fname)
+                                   tmpl=tmpl, metadata_fname=metadata_fname,
+                                   remove_frames=remove_frames)
 
                 # measure elapsed time
                 batch_time.update(time.time() - end)
@@ -107,7 +104,7 @@ def main(size=360, margin=100, fdir_tmpl='face_{}', tmpl='{:06d}.jpg', metadata_
 
 
 def save_face_data(save_dir, face_images, run_motion_mag, size=360, margin=100, fdir_tmpl='face_{}',
-                   tmpl='{:06d}.jpg', metadata_fname='face_metadata.json'):
+                   tmpl='{:06d}.jpg', metadata_fname='face_metadata.json', remove_frames=False):
 
     os.makedirs(save_dir, exist_ok=True)
     metadata = {
@@ -136,7 +133,7 @@ def save_face_data(save_dir, face_images, run_motion_mag, size=360, margin=100, 
         video_path = os.path.join(save_dir, fdir_tmpl.format(face_num))
         pretorched.data.utils.frames_to_video(f'{video_path}/*.jpg', video_path + '.mp4')
         mm_out_dir = run_motion_mag(video=video_path, output=video_path + '_mm')
-        if REMOVE_FRAMES:
+        if remove_frames:
             os.system(f'rm -rf {video_path}')
             os.system(f'rm -rf {mm_out_dir}')
 

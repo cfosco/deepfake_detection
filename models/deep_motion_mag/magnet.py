@@ -409,7 +409,7 @@ class MagNet3Frames(object):
         except BaseException:
             print("Cannot get iteration number")
 
-        if len(filter_a) is not 0:
+        if len(filter_a) != 0:
             x_state = []
             y_state = []
 
