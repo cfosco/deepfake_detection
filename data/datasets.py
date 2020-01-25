@@ -14,10 +14,11 @@ from PIL import Image
 from torchvision.transforms import functional as TF
 
 from torchvideo.datasets import VideoDataset
-from torchvideo.internal.readers import (_get_videofile_frame_count,
-                                         _is_video_file, default_loader)
+from torchvideo.internal.readers import _get_videofile_frame_count
 from torchvideo.samplers import FrameSampler, _default_sampler
 from torchvideo.transforms import PILVideoToTensor
+
+from . import transforms
 
 
 class DeepfakeRecord:
@@ -386,13 +387,14 @@ class VideoFolder(torch.utils.data.Dataset):
         self.root = root
         self.step = step
         self.videos_filenames = sorted([f for f in os.listdir(root) if f.endswith('.mp4')])
+        if transform is None:
+            transform = transforms.VideoToTensor(rescale=False)
         self.transform = transform
 
     def __getitem__(self, index):
         name = self.videos_filenames[index]
         video_filename = os.path.join(self.root, name)
         frames = read_frames(video_filename, step=self.step)
-        frames = torch.stack(list(map(TF.to_tensor, frames))).transpose(0, 1)
         if self.transform is not None:
             frames = self.transform(frames)
         return name, frames

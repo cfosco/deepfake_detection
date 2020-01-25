@@ -1,5 +1,3 @@
-from typing import Iterator
-
 import numpy as np
 import torch
 import torchvision
@@ -180,8 +178,6 @@ class VideoToTensor:
         Since we have a list of these tensors, when we stack them we get shape
         (T, C, H, W)
         """
-        if isinstance(frames, Iterator):
-            frames = list(frames)
         tensor = torch.stack(list(map(self.to_tensor, frames)))
         if self.ordering == "CTHW":
             tensor = tensor.transpose(0, 1)
