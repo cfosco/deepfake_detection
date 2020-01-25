@@ -33,7 +33,7 @@ try:
 except IndexError:
     PART = 'dfdc_train_part_0'
 VIDEO_ROOT = os.path.join(os.environ['SCRATCH_DATA_ROOT'], 'DeepfakeDetection', 'videos')
-FACE_ROOT = os.path.join(os.environ['DATA_ROOT'], 'DeepfakeDetection', 'facenet_smooth_frames')
+FACE_ROOT = os.path.join(os.environ['SCRATCH_DATA_ROOT'], 'DeepfakeDetection', 'facenet_smooth_frames')
 VIDEO_DIR = os.path.join(VIDEO_ROOT, PART)
 FACE_DIR = os.path.join(FACE_ROOT, PART)
 
@@ -81,7 +81,7 @@ def main():
                       keep_all=True,
                       post_process=False,
                       select_largest=False,
-                      chunk_size=150)
+                      chunk_size=100)
     cudnn.benchmark = True
 
     batch_time = AverageMeter('Time', ':6.3f')
@@ -109,7 +109,6 @@ def main():
                 faces_out = []
                 torch.cuda.empty_cache()
                 for xx, ss in zip(chunk(x, CHUNK_SIZE), chunk(save_paths, CHUNK_SIZE)):
-                    xx = xx.to(device)
                     xx.mul_(255.)
                     out = model.model(xx, smooth=True)
                     if not out:

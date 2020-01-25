@@ -560,6 +560,7 @@ def detect_face(imgs, minsize, pnet, rnet, onet, threshold, factor, device):
         imgs_np = np.stack([np.uint8(img) for img in imgs])
         imgs = torch.as_tensor(imgs_np, device=device).permute(0, 3, 1, 2)
 
+    imgs = imgs.to(device)
     batch_size = len(imgs)
     h, w = imgs.shape[2:4]
     m = 12.0 / minsize
