@@ -118,3 +118,31 @@ def to_tensor(pic, rescale=False):
         return img.div(255) if rescale else img
     else:
         return img
+
+
+class ToTensor(object):
+    """Convert a ``PIL Image`` or ``numpy.ndarray`` to tensor.
+
+    Converts a PIL Image or numpy.ndarray (H x W x C) in the range
+    [0, 255] to a torch.FloatTensor of shape (C x H x W) optionally rescaled to the range [0.0, 1.0]
+    if the PIL Image belongs to one of the modes (L, LA, P, I, F, RGB, YCbCr, RGBA, CMYK, 1)
+    or if the numpy.ndarray has dtype = np.uint8
+
+    In the other cases, tensors are returned without scaling.
+    """
+
+    def __init__(self, rescale=False):
+        self.rescale = rescale
+
+    def __call__(self, pic, rescale=None):
+        """
+        Args:
+            pic (PIL Image or numpy.ndarray): Image to be converted to tensor.
+
+        Returns:
+            Tensor: Converted image.
+        """
+        return to_tensor(pic, self.rescale if rescale is None else rescale)
+
+    def __repr__(self):
+        return self.__class__.__name__ + '()'
