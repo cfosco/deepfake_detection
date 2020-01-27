@@ -4,23 +4,21 @@ import json
 import os
 import sys
 import time
-from multiprocessing.pool import ThreadPool
+from multiprocessing.pool import ThreadPool, Pool
+from multiprocessing import Process
 
-import numpy as np
 import torch
 import torch.backends.cudnn as cudnn
 import torch.nn.parallel
 import torch.utils.data
 import torch.utils.data.distributed
-from PIL import Image
 from torch.utils.data import DataLoader
 from tqdm import tqdm
 
 import pretorched
-from data import VideoFolder
+from data import VideoFolder, video_collate_fn
 from models import FaceModel, deepmmag
 from pretorched.runners.utils import AverageMeter, ProgressMeter
-
 
 try:
     PART = sys.argv[1]
@@ -33,7 +31,7 @@ FACE_DIR = os.path.join(FACE_ROOT, PART)
 
 
 def main(size=360, margin=100, fdir_tmpl='face_{}', tmpl='{:06d}.jpg', metadata_fname='face_metadata.json',
-         step=1, batch_size=1, chunk_size=100, num_workers=2, overwrite=False, remove_frames=True):
+         step=1, batch_size=2, chunk_size=100, num_workers=2, overwrite=False, remove_frames=True):
 
     os.makedirs(FACE_DIR, exist_ok=True)
     device = 'cuda' if torch.cuda.is_available() else 'cpu'
@@ -44,7 +42,8 @@ def main(size=360, margin=100, fdir_tmpl='face_{}', tmpl='{:06d}.jpg', metadata_
 
     dataloader = DataLoader(dataset, batch_size=batch_size,
                             shuffle=False, num_workers=num_workers,
-                            pin_memory=False, drop_last=False)
+                            pin_memory=False, drop_last=False,
+                            collate_fn=video_collate_fn)
 
     model = FaceModel(size=size,
                       device=device,
@@ -75,7 +74,7 @@ def main(size=360, margin=100, fdir_tmpl='face_{}', tmpl='{:06d}.jpg', metadata_
                 face_images = model.get_faces(x)
                 torch.cuda.empty_cache()
 
-                for filename, face_images in zip(filenames, [face_images]):
+                for filename, face_images in zip(filenames, face_images):
                     save_dir = os.path.join(FACE_DIR, filename)
                     save_face_data(save_dir, face_images, run_motion_mag,
                                    size=size, margin=margin, fdir_tmpl=fdir_tmpl,
@@ -117,8 +116,37 @@ def save_face_data(save_dir, face_images, run_motion_mag, size=360, margin=100, 
         save_images(faces, names, num_workers=num_images)
 
         video_path = os.path.join(save_dir, fdir_tmpl.format(face_num))
-        pretorched.data.utils.frames_to_video(f'{video_path}/*.jpg', video_path + '.mp4')
+        frames_to_video(video_path)
+        # motion_magnification(video_path, remove_frames)
         mm_out_dir = run_motion_mag(video=video_path, output=video_path + '_mm')
+        if remove_frames:
+            os.system(f'rm -rf {video_path}')
+            os.system(f'rm -rf {mm_out_dir}')
+
+
+def frames_to_video(video_path):
+    p = Process(target=pretorched.data.utils.frames_to_video,
+                args=(f'{video_path}/*.jpg', video_path + '.mp4'))
+    p.start()
+    p.join()
+
+
+def motion_magnification(video_path, remove_frames):
+    p = Process(target=deepmmag.motion_magnify,
+                kwargs={'video': video_path,
+                        'output': video_path + '_mm',
+                        'remove_frames': remove_frames})
+    p.start()
+    p.join()
+
+
+def _motion_magnification(video_path, remove_frames):
+    with Pool(2) as pool:
+        res = pool.apply_async(deepmmag.motion_magnify,
+                               kwds={'video': video_path,
+                                     'output': video_path + '_mm',
+                                     'remove_frames': remove_frames})
+        mm_out_dir = res.get()
         if remove_frames:
             os.system(f'rm -rf {video_path}')
             os.system(f'rm -rf {mm_out_dir}')

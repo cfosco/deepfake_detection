@@ -186,14 +186,22 @@ out_dir = os.path.join(DATA_ROOT, 'DeepfakeDetection', 'test_videos_mm')
 os.makedirs(out_dir, exist_ok=True)
 
 
-def get_motion_mag(device='/device:GPU:1'):
-    with tf.device(device):
-        run_motion_mag = functools.partial(run_motion_mag_one_video,
-                                           model=get_model(config_spec, config_file),
-                                           checkpoint=checkpoint,
-                                           phase='run_temporal'
-                                           )
-        return run_motion_mag
+def get_motion_mag(device='/device:GPU:0'):
+    # with tf.device(device):
+    run_motion_mag = functools.partial(run_motion_mag_one_video,
+                                       model=get_model(config_spec, config_file),
+                                       checkpoint=checkpoint,
+                                       phase='run_temporal'
+                                       )
+    return run_motion_mag
+
+
+def motion_magnify(video, output, remove_frames=False):
+    run_motion_mag = get_motion_mag()
+    mm_out_dir = run_motion_mag(video=video, output=output)
+    if remove_frames:
+        os.system(f'rm -rf {video}')
+        os.system(f'rm -rf {mm_out_dir}')
 # run_motion_mag_folder(vid_dir, out_dir, config_spec, config_file, checkpoint)
 # run_motion_mag_face_folder(vid_dir, out_dir, config_spec, config_file, checkpoint)
 
