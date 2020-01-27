@@ -403,6 +403,18 @@ class VideoFolder(torch.utils.data.Dataset):
         return len(self.videos_filenames)
 
 
+def video_collate_fn(batch):
+    names, frames = zip(*batch)
+    nc, _, h, w = frames[0].shape
+    num_frames = [f.size(1) for f in frames]
+    max_len = max(num_frames)
+    frames = torch.stack([
+        torch.cat([f, f[:, -1:].expand(nc, max_len - nf, h, w)], 1)
+        for f, nf in zip(frames, num_frames)
+    ])
+    return names, frames
+
+
 class Record(object):
     """Represents a record.
 
