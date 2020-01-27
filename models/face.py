@@ -32,20 +32,26 @@ class FaceModel(torch.nn.Module):
 
     def input_transform(self, x):
         x = x.permute(0, 2, 1, 3, 4).contiguous()  # [bs, d, nc, h, w]
-        return x.view(-1, *x.shape[2:])            # [bs * d, nc, h, w]
+        return x
+        # return x.view(-1, *x.shape[2:])            # [bs * d, nc, h, w]
 
     def get_faces(self, x):
-        faces_out = []
-        x = self.input_transform(x)
-        out = self.model(x, smooth=True)
-        out = torch.stack(out).cpu()
-        faces_out.append(out)
+        print(f'get_faces:x: {x.shape}')
+        bs, nc, d, h, w = x.shape
+        batched_face_images = []
+        for x in self.input_transform(x):
+            faces_out = []
+            out = self.model(x, smooth=True, smooth_len=d)
+            out = torch.stack(out).cpu()  # [num_frames, num_faces, 3, 360, 360]
+            print(f'get_faces:out: {out.shape}')
+            faces_out.append(out)
 
-        min_face = min([f.shape[1] for f in faces_out])
-        faces_out = torch.cat([f[:, :min_face] for f in faces_out])
-        face_images = {i: [Image.fromarray(ff.permute(1, 2, 0).numpy().astype(np.uint8)) for ff in f]
-                       for i, f in enumerate(faces_out.permute(1, 0, 2, 3, 4))}
-        return face_images
+            min_face = min([f.shape[1] for f in faces_out])
+            faces_out = torch.cat([f[:, :min_face] for f in faces_out])
+            face_images = {i: [Image.fromarray(ff.permute(1, 2, 0).numpy().astype(np.uint8)) for ff in f]
+                           for i, f in enumerate(faces_out.permute(1, 0, 2, 3, 4))}
+            batched_face_images.append(face_images)
+        return batched_face_images
 
     def forward(self, x):
         """
@@ -117,7 +123,7 @@ class MTCNN(nn.Module):
             self.device = device
             self.to(device)
 
-    def forward(self, img, save_path=None, return_prob=False, smooth=False, amount=0.4):
+    def forward(self, img, save_path=None, return_prob=False, smooth=False, amount=0.4, smooth_len=None):
         """Run MTCNN face detection on a PIL image. This method performs both detection and
         extraction of faces, returning tensors representing detected faces rather than the bounding
         boxes. To access bounding boxes, see the MTCNN.detect() method below.
@@ -158,7 +164,11 @@ class MTCNN(nn.Module):
                 batch_probs.extend(bp)
 
         if smooth:
-            batch_boxes = smooth_boxes(batch_boxes, amount=amount)
+            bboxes = []
+            sl = len(batch_boxes) if smooth_len is None else smooth_len
+            for bb in chunk(batch_boxes, sl):
+                bboxes.extend(smooth_boxes(bb, amount=amount))
+            batch_boxes = bboxes
 
         # Determine if a batch or single image was passed
         batch_mode = True
