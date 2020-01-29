@@ -1,6 +1,9 @@
 import json
 import multiprocessing
+import os
+import re
 import subprocess
+import time
 from multiprocessing import Process
 
 import gpustat
@@ -8,7 +11,7 @@ import torch
 import torchvision.models as models
 
 
-def get_power_reading():
+def get_satori_power_reading():
     out = subprocess.Popen(['sudo', '/home/software/perftools/0.1/bin/satori-ipmitool'],
                            stdout=subprocess.PIPE)
     out = subprocess.Popen(['grep', 'Instantaneous power reading'], stdin=out.stdout, stdout=subprocess.PIPE)
@@ -46,6 +49,157 @@ class Profile:
                 json.dump(list(self.data), f)
             print(f'Wrote output to {self.outfile}')
         return self
+
+
+BASE = "/sys/class/powercap/"
+DELAY = .1  # in seconds
+DIR_PATH = os.path.dirname(os.path.realpath(__file__))
+
+
+class RAPLFile:
+    def __init__(self, name, path):
+        self.name = name
+        self.path = path
+        self.baseline = []
+        self.process = []
+        self.recent = 0
+        self.num_process_checks = 0
+        self.process_average = 0
+        self.baseline_average = 0
+
+    def set_recent(self, val):
+        self.recent = val
+
+    def create_gpu(self, baseline_average, process_average):
+        self.baseline_average = baseline_average
+        self.process_average = process_average
+
+    def average(self, baseline_checks):
+        self.process_average = sum(self.process) / self.num_process_checks
+        self.baseline_average = sum(self.baseline) / baseline_checks
+
+    def __repr__(self):
+        return f'{self.name} {self.path} {self.recent}'
+
+    def __str__(self):
+        return f'{self.name} {self.path} {self.recent}'
+
+
+def reformat(name, multiple_cpus):
+    """ Renames the RAPL files for better readability/understanding """
+    if 'package' in name:
+        if multiple_cpus:
+            name = "CPU" + name[-1]  # renaming it to CPU-x
+        else:
+            name = "Package"
+    if name == 'core':
+        name = "CPU"
+    elif name == 'uncore':
+        name = "GPU"
+    elif name == 'dram':
+        name = name.upper()
+    return name
+
+
+def get_files():
+    """ Gets all the RAPL files with their names on the machine
+        Returns:
+            filenames (list): list of RAPLFiles
+    """
+    # Removing the intel-rapl folder that has no info
+    files = list(filter(lambda x: ':' in x, os.listdir(BASE)))
+    names = {}
+    cpu_count = 0
+    multiple_cpus = False
+    for file in files:
+        if (re.fullmatch("intel-rapl:.", file)):
+            cpu_count += 1
+
+    if cpu_count > 1:
+        multiple_cpus = True
+
+    for file in files:
+        path = BASE + '/' + file + '/name'
+        with open(path) as f:
+            name = f.read()[:-1]
+            renamed = reformat(name, multiple_cpus)
+        names[renamed] = BASE + file + '/energy_uj'
+
+    filenames = []
+    for name, path in names.items():
+        name = RAPLFile(name, path)
+        filenames.append(name)
+
+    return filenames, multiple_cpus
+
+
+def to_joules(ujoules):
+    """ Converts from microjoules to joules """
+    return ujoules * 10**(-6)
+
+
+def measure_files(files, delay=1):
+    """ Measures the energy output of all packages which should give total power usage
+    Parameters:
+        files (list): list of RAPLFiles
+        delay (int): RAPL file reading rate in ms
+    Returns:
+        files (list): list of RAPLfiles with updated measurements
+    """
+
+    files = list(map(start, files))
+    time.sleep(delay)
+    files = list(map(lambda x: end(x, delay), files))  # need lambda to pass in delay
+    return files
+
+
+def read(file):
+    """ Opens file and reads energy measurement """
+    if file == "":
+        return 0
+    with open(file, 'r') as f:
+        return to_joules(int(f.read()))
+
+
+def start(raplfile):
+    measurement = read(raplfile.path)
+    raplfile.recent = measurement
+    return raplfile
+
+
+def end(raplfile, delay):
+    measurement = read(raplfile.path)
+    raplfile.recent = (measurement - raplfile.recent) / delay
+    return raplfile
+
+
+def get_total(raplfiles, multiple_cpus):
+    total = 0
+    if multiple_cpus:
+        for file in raplfiles:
+            if "CPU" in file.name:
+                total += file.recent
+    else:
+        for file in raplfiles:
+            if file.name == "Package":
+                total = file.recent
+    if (total):
+        return total
+    return 0
+
+
+def cpu_watts():
+    files, multiple_cpus = get_files()
+    files = measure_files(files, DELAY)
+    reading = get_total(files, multiple_cpus)
+    return reading
+
+
+PLATFORM = subprocess.run(['uname', '-i'], stdout=subprocess.PIPE).stdout.decode()
+if PLATFORM == 'ppc64le':
+    get_power_reading = get_satori_power_reading
+else:
+    get_power_reading = cpu_watts
 
 
 if __name__ == '__main__':
