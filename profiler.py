@@ -195,7 +195,7 @@ def cpu_watts():
     return reading
 
 
-PLATFORM = subprocess.run(['uname', '-i'], stdout=subprocess.PIPE).stdout.decode()
+PLATFORM = subprocess.run(['uname', '-i'], stdout=subprocess.PIPE).stdout.decode().strip()
 if PLATFORM == 'ppc64le':
     get_power_reading = get_satori_power_reading
 else:
