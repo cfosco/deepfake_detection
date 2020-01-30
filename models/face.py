@@ -62,11 +62,19 @@ class FaceModel(torch.nn.Module):
         number of faces per example in batch (avoid this for now).
         """
         bs, nc, d, h, w = x.shape
+        print(f'x: {x.shape}')
         x = self.input_transform(x)
+        print(f'x: {x.shape}')
+        x = x.view(-1, *x.shape[2:])
+        print(f'x: {x.shape}')
         out = self.model(x, smooth=True)
         out = torch.stack(out)
+        print(out.shape)
         out = out.view(bs, -1, nc, *out.shape[-2:])
+        print(out.shape)
         out = out.permute(0, 2, 1, 3, 4)  # [bs, nc, d, h, w]
+        print(out.shape)
+
         return out
 
 

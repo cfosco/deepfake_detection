@@ -23,22 +23,24 @@ from pretorched.runners.utils import AverageMeter, ProgressMeter
 try:
     PART = sys.argv[1]
 except IndexError:
-    PART = 'dfdc_train_part_0'
+    PART = 'dfdc_train_part_3'
 VIDEO_ROOT = os.path.join(os.environ['DATA_ROOT'], 'DeepfakeDetection', 'videos')
 FACE_ROOT = os.path.join(os.environ['DATA_ROOT'], 'DeepfakeDetection', 'facenet_smooth_frames')
 VIDEO_DIR = os.path.join(VIDEO_ROOT, PART)
 FACE_DIR = os.path.join(FACE_ROOT, PART)
 
 
-def main(size=360, margin=100, fdir_tmpl='face_{}', tmpl='{:06d}.jpg', metadata_fname='face_metadata.json',
-         step=1, batch_size=2, chunk_size=100, num_workers=2, overwrite=False, remove_frames=True):
+def main(video_dir, face_dir, size=360, margin=100, fdir_tmpl='face_{}', tmpl='{:06d}.jpg',
+         metadata_fname='face_metadata.json', step=1, batch_size=1, chunk_size=300, num_workers=2,
+         overwrite=False, remove_frames=True):
 
-    os.makedirs(FACE_DIR, exist_ok=True)
+    os.makedirs(face_dir, exist_ok=True)
     device = 'cuda' if torch.cuda.is_available() else 'cpu'
 
-    dataset = VideoFolder(VIDEO_DIR, step=step)
+    print(f'Processing: {video_dir}')
+    dataset = VideoFolder(video_dir, step=step)
     if not overwrite:
-        dataset.videos_filenames = filter_filenames(dataset.videos_filenames, FACE_DIR)
+        dataset.videos_filenames = filter_filenames(dataset.videos_filenames, face_dir)
 
     dataloader = DataLoader(dataset, batch_size=batch_size,
                             shuffle=False, num_workers=num_workers,
@@ -68,14 +70,14 @@ def main(size=360, margin=100, fdir_tmpl='face_{}', tmpl='{:06d}.jpg', metadata_
         for i in tqdm(range(len(dataloader)), total=len(dataloader)):
             with contextlib.suppress(RuntimeWarning):
 
-                filenames, x = next(dataloader)
+                filenames, x, _ = next(dataloader)
                 print(f'Extracting faces from: {filenames}')
 
                 face_images = model.get_faces(x)
                 torch.cuda.empty_cache()
 
                 for filename, face_images in zip(filenames, face_images):
-                    save_dir = os.path.join(FACE_DIR, filename)
+                    save_dir = os.path.join(face_dir, filename)
                     save_face_data(save_dir, face_images, run_motion_mag,
                                    size=size, margin=margin, fdir_tmpl=fdir_tmpl,
                                    tmpl=tmpl, metadata_fname=metadata_fname,
@@ -182,4 +184,4 @@ def filter_filenames(video_filenames, face_dir):
 
 
 if __name__ == '__main__':
-    main()
+    main(VIDEO_DIR, FACE_DIR)

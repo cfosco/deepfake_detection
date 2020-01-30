@@ -383,7 +383,7 @@ def read_frames(video, fps=30, step=1):
 
 
 class VideoFolder(torch.utils.data.Dataset):
-    def __init__(self, root, step=2, transform=None):
+    def __init__(self, root, step=2, transform=None, target_file=None):
         self.root = root
         self.step = step
         self.videos_filenames = sorted([f for f in os.listdir(root) if f.endswith('.mp4')])
@@ -391,20 +391,27 @@ class VideoFolder(torch.utils.data.Dataset):
             transform = transforms.VideoToTensor(rescale=False)
         self.transform = transform
 
+        if target_file is not None:
+            with open(target_file) as f:
+                self.targets = json.load(f)
+        else:
+            self.targets = {}
+
     def __getitem__(self, index):
         name = self.videos_filenames[index]
         video_filename = os.path.join(self.root, name)
         frames = read_frames(video_filename, step=self.step)
         if self.transform is not None:
             frames = self.transform(frames)
-        return name, frames
+        target = int(self.targets.get(name, 0))
+        return name, frames, target
 
     def __len__(self):
         return len(self.videos_filenames)
 
 
 def video_collate_fn(batch):
-    names, frames = zip(*batch)
+    names, frames, targets = zip(*batch)
     nc, _, h, w = frames[0].shape
     num_frames = [f.size(1) for f in frames]
     max_len = max(num_frames)
@@ -412,7 +419,7 @@ def video_collate_fn(batch):
         torch.cat([f, f[:, -1:].expand(nc, max_len - nf, h, w)], 1)
         for f, nf in zip(frames, num_frames)
     ])
-    return names, frames
+    return names, frames, targets
 
 
 class Record(object):
