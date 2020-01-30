@@ -5,10 +5,75 @@ import re
 import subprocess
 import time
 from multiprocessing import Process
+import datetime
+import dateutil.parser
 
+import numpy as np
 import gpustat
 import torch
 import torchvision.models as models
+
+
+class ProfileRun:
+
+    def __init__(self, filename):
+        self.filename = filename
+        with open(filename) as f:
+            self.data = json.load(f)
+
+    def query_time(self, index):
+        return dateutil.parser.parse(self.data[index]['query_time'])
+
+    def power(self, index):
+        return int(self.data[index]['power'])
+
+    def gpu_powers(self, index):
+        return [d['power.draw'] for d in self.data[index]['gpus']]
+
+    def gpu_temps(self, index):
+        return [d['temperature.gpu'] for d in self.data[index]['gpus']]
+
+    def gpu_temp(self, index, gpu_index=None):
+        if gpu_index is None:
+            return np.mean(self.gpu_temps(index))
+        else:
+            return self.gpu_temps(index)[gpu_index]
+
+    def gpu_utils(self, index):
+        return [d['utilization.gpu'] for d in self.data[index]['gpus']]
+
+    def gpu_util(self, index, gpu_index=None):
+        if gpu_index is None:
+            return np.mean(self.gpu_utils(index))
+        else:
+            return self.gpu_utils(index)[gpu_index]
+
+    def gpu_power(self, index, gpu_index=None):
+        if gpu_index is None:
+            return sum(self.gpu_powers(index))
+        else:
+            return self.gpu_powers(index)[gpu_index]
+
+    def total_power(self):
+        return sum([self.power(i) for i in range(len(self))])
+
+    def average_power(self):
+        return np.mean([self.power(i) for i in range(len(self))])
+
+    def time_profile(self):
+        time = [(self.query_time(i) - self.query_time(0)).total_seconds() for i in range(len(self))]
+
+    def power_profile(self):
+        return [self.power(i) for i in range(len(self))]
+
+    def gpu_power_profile(self, gpu_index=None):
+        return [self.gpu_power(i, gpu_index) for i in range(len(self))]
+
+    def gpu_util_profile(self, gpu_index=None):
+        return [self.gpu_util(i, gpu_index=gpu_index) for i in range(len(self))]
+
+    def __len__(self):
+        return len(self.data)
 
 
 def get_satori_power_reading():
