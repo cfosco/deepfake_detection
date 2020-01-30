@@ -77,39 +77,9 @@ def main(video_dir, margin=100, chunk_size=300):
     sub.label = 0.5
     sub = sub.set_index('filename', drop=False)
 
-    validate(dataloader, model, criterion, device=device)
-
-    # batch_time = AverageMeter('Time', ':6.3f')
-    # progress = ProgressMeter(
-    #     len(dataset),
-    #     [batch_time],
-    #     prefix='Test: ')
-
-    # # switch to evaluate mode
-    # model.eval()
-    # with torch.no_grad():
-    #     end = time.time()
-    #     # for i, (images, target) in enumerate(val_loader):
-    #     for i, (filenames, images) in enumerate(dataloader):
-    #         images = images.to(device, non_blocking=True)
-    #         print(images.shape, images.min(), images.max())
-
-    #         # compute output
-    #         output = model(images)
-    #         # prob = torch.softmax(output, 1)[0, 1]
-    #         # sub.loc[filenames, 'label'] = prob.item()
-    #         # print(f'filenames: {filenames}; prob: {prob:.3f}')
-
-    #         probs = torch.softmax(output, 1)
-    #         for fn, prob in zip(filenames, probs):
-    #             sub.loc[fn, 'label'] = prob[1].item()
-    #             print(f'filename: {fn}; prob: {prob[1]:.3f}')
-    #         # measure elapsed time
-    #         batch_time.update(time.time() - end)
-    #         end = time.time()
-
-    #         if i % args.print_freq == 0:
-    #             progress.display(i)
+    preds, acc, loss = validate(dataloader, model, criterion, device=device)
+    for filename, prob in preds.items():
+        sub.loc[filename, 'label'] = prob
 
     # sub.to_csv('submission.csv', index=False)
 
@@ -122,6 +92,8 @@ def validate(val_loader, model, criterion, device='cuda', display=True, print_fr
         len(val_loader),
         [batch_time, losses, top1],
         prefix='Test: ')
+
+    preds = {}
 
     # switch to evaluate mode
     model.eval()
@@ -141,6 +113,10 @@ def validate(val_loader, model, criterion, device='cuda', display=True, print_fr
             losses.update(loss.item(), images.size(0))
             top1.update(acc1.item(), images.size(0))
 
+            probs = torch.softmax(output, 1)
+            for fn, prob in zip(filenames, probs):
+                preds[fn] = prob[1].item()
+
             # measure elapsed time
             batch_time.update(time.time() - end)
             end = time.time()
@@ -152,7 +128,7 @@ def validate(val_loader, model, criterion, device='cuda', display=True, print_fr
             # TODO: this should also be done with the ProgressMeter
             print(' * Acc@1 {top1.avg:.3f}'.format(top1=top1))
 
-    return top1.avg, losses.avg
+    return preds,top1.avg, losses.avg
 
 
 if __name__ == '__main__':
