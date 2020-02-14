@@ -48,6 +48,15 @@ class ProfileRun:
         else:
             return self.gpu_utils(index)[gpu_index]
 
+    def gpu_mems(self, index):
+        return [d['memory.used'] for d in self.data[index]['gpus']]
+
+    def gpu_mem(self, index, gpu_index=None):
+        if gpu_index is None:
+            return np.mean(self.gpu_mems(index))
+        else:
+            return self.gpu_mems(index)[gpu_index]
+
     def gpu_power(self, index, gpu_index=None):
         if gpu_index is None:
             return sum(self.gpu_powers(index))
@@ -57,11 +66,17 @@ class ProfileRun:
     def total_power(self):
         return sum([self.power(i) for i in range(len(self))])
 
+    def total_gpu_power(self, gpu_index=None):
+        return np.sum(self.gpu_power_profile(gpu_index=gpu_index))
+
     def average_power(self):
         return np.mean([self.power(i) for i in range(len(self))])
 
     def time_profile(self):
-        time = [(self.query_time(i) - self.query_time(0)).total_seconds() for i in range(len(self))]
+        return [(self.query_time(i) - self.query_time(0)).total_seconds() for i in range(len(self))]
+
+    def total_time(self):
+        return self.time_profile()[-1]
 
     def power_profile(self):
         return [self.power(i) for i in range(len(self))]
@@ -71,6 +86,9 @@ class ProfileRun:
 
     def gpu_util_profile(self, gpu_index=None):
         return [self.gpu_util(i, gpu_index=gpu_index) for i in range(len(self))]
+
+    def gpu_mem_profile(self, gpu_index=None):
+        return [self.gpu_mem(i, gpu_index=gpu_index) for i in range(len(self))]
 
     def __len__(self):
         return len(self.data)
@@ -92,7 +110,7 @@ class Profile:
         self.data = self.manager.list()
 
     @staticmethod
-    def record_power(data):
+    def record_power(data, outfile=None):
         while True:
             q = gpustat.new_query().jsonify()
             q['query_time'] = q['query_time'].isoformat()
@@ -102,7 +120,9 @@ class Profile:
             })
 
     def __enter__(self):
-        self.p = Process(target=self.record_power, args=(self.data,))
+        self.p = Process(target=self.record_power,
+                         args=(self.data,),
+                         kwargs={'outfile': self.outfile})
         self.p.start()
         return self
 

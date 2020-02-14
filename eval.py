@@ -40,14 +40,13 @@ SAMPLE_SUBMISSION_CSV = os.path.join(os.environ['DATA_ROOT'], 'DeepfakeDetection
 TARGET_FILE = os.path.join(os.environ['DATA_ROOT'], 'DeepfakeDetection', 'test_targets.json')
 
 
-def main(video_dir, margin=100, chunk_size=300):
-    args = cfg.parse_args()
+def main(video_dir, margin=100, step=1, batch_size=1, chunk_size=300, num_workers=4):
 
     device = 'cuda' if torch.cuda.is_available() else 'cpu'
 
-    dataset = VideoFolder(video_dir, target_file=TARGET_FILE)
+    dataset = VideoFolder(video_dir, step=step, target_file=TARGET_FILE)
     dataloader = DataLoader(dataset, batch_size=1,
-                            shuffle=False, num_workers=args.num_workers,
+                            shuffle=False, num_workers=num_workers,
                             pin_memory=True, drop_last=False)
 
     fakenet = pretorched.resnet18(num_classes=2, pretrained=None)
@@ -78,6 +77,9 @@ def main(video_dir, margin=100, chunk_size=300):
     sub = sub.set_index('filename', drop=False)
 
     preds, acc, loss = validate(dataloader, model, criterion, device=device)
+    with open(f'eval_step_{step}_bs_{batch_size}_cs_{chunk_size}_num_workers_{num_workers}.txt') as f:
+        f.write(f'acc: {acc}\n')
+        f.write(f'loss: {loss}')
     for filename, prob in preds.items():
         sub.loc[filename, 'label'] = prob
 

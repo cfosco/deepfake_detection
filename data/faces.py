@@ -11,7 +11,7 @@ from PIL import Image, ImageEnhance
 from tqdm import tqdm
 import filelock
 
-import face_recognition
+# import face_recognition
 
 
 def videos_to_faces(video_root, faces_root, batch_size=32, parts=[]):
