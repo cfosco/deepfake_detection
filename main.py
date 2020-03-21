@@ -282,11 +282,6 @@ def train(train_loader, model, criterion, optimizer, logger, epoch, args, displa
         losses.update(loss.item(), images.size(0))
         top1.update(acc1, images.size(0))
 
-        logger.log_metrics({
-            'Accuracy/train': acc1,
-            'Loss/train': loss
-        }, step=itr)
-
         # compute gradient and do SGD step
         optimizer.zero_grad()
         loss.backward()
@@ -298,6 +293,11 @@ def train(train_loader, model, criterion, optimizer, logger, epoch, args, displa
 
         if i % args.print_freq == 0 and display:
             progress.display(i)
+            logger.log_metrics({
+                'Accuracy/train': acc1,
+                'Loss/train': loss
+            }, step=itr)
+
             # logger.save()
 
     return top1.avg, losses.avg
