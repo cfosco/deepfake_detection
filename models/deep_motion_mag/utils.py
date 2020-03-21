@@ -8,13 +8,24 @@ import numpy as np
 import copy
 import os
 import errno
+import subprocess
 import cv2
 
 pp = pprint.PrettyPrinter()
 
 
+def has_libx264():
+    out = subprocess.Popen(['ffmpeg', '-loglevel', 'error', '-codecs'],
+                           stdout=subprocess.PIPE)
+    out = subprocess.Popen(['grep', 'x264'], stdin=out.stdout, stdout=subprocess.PIPE)
+    out = subprocess.run(['wc', '-l'], stdin=out.stdout, stdout=subprocess.PIPE)
+    if out.returncode == 0:
+        return '1' == out.stdout.decode().strip()
+
 # -----------------------------
 # new added functions for cyclegan
+
+
 class ImagePool(object):
     def __init__(self, maxsize=50):
         self.maxsize = maxsize
@@ -29,10 +40,10 @@ class ImagePool(object):
             self.num_img += 1
             return image
         if np.random.rand() > 0.5:
-            idx = int(np.random.rand()*self.maxsize)
+            idx = int(np.random.rand() * self.maxsize)
             tmp1 = copy.copy(self.images[idx])[0]
             self.images[idx][0] = image[0]
-            idx = int(np.random.rand()*self.maxsize)
+            idx = int(np.random.rand() * self.maxsize)
             tmp2 = copy.copy(self.images[idx])[1]
             self.images[idx][1] = image[1]
             return [tmp1, tmp2]
@@ -50,9 +61,9 @@ def load_train_data(image_path, gray_scale=True, is_testing=False):
             img_B = np.fliplr(img_B)
             img_Out = np.fliplr(img_Out)
 
-    img_A = img_A/127.5 - 1.
-    img_B = img_B/127.5 - 1.
-    img_Out = img_Out/127.5 - 1.
+    img_A = img_A / 127.5 - 1.
+    img_B = img_B / 127.5 - 1.
+    img_Out = img_Out / 127.5 - 1.
     img_A, img_B, img_Out = np.atleast_3d(img_A, img_B, img_Out)
     img_AB_out = np.concatenate((img_A, img_B, img_Out), axis=2)
     return img_AB_out
@@ -91,7 +102,7 @@ def merge(images, size):
     for idx, image in enumerate(images):
         i = idx % size[1]
         j = idx // size[1]
-        img[j*h:j*h+h, i*w:i*w+w, :] = image
+        img[j * h:j * h + h, i * w:i * w + w, :] = image
     return img
 
 
@@ -108,9 +119,9 @@ def center_crop(x, crop_h, crop_w,
     if crop_w is None:
         crop_w = crop_h
     h, w = x.shape[:2]
-    j = int(round((h - crop_h)/2.))
-    i = int(round((w - crop_w)/2.))
-    return cv2.resize(x[j:j+crop_h, i:i+crop_w], [resize_h, resize_w])
+    j = int(round((h - crop_h) / 2.))
+    i = int(round((w - crop_w) / 2.))
+    return cv2.resize(x[j:j + crop_h, i:i + crop_w], [resize_h, resize_w])
 
 
 def transform(image, npx=64, is_crop=True, resize_w=64):
@@ -119,7 +130,7 @@ def transform(image, npx=64, is_crop=True, resize_w=64):
         cropped_image = center_crop(image, npx, resize_w=resize_w)
     else:
         cropped_image = image
-    return np.array(cropped_image)/127.5 - 1.
+    return np.array(cropped_image) / 127.5 - 1.
 
 
 def inverse_transform(images):

@@ -128,7 +128,8 @@ def save_face_data(save_dir, face_images, run_motion_mag, size=360, margin=100, 
 
 def frames_to_video(video_path):
     p = Process(target=pretorched.data.utils.frames_to_video,
-                args=(f'{video_path}/*.jpg', video_path + '.mp4'))
+                args=(f'{video_path}/*.jpg', video_path + '.mp4'),
+                kwargs={'vcodec': 'mpeg4'})
     p.start()
     p.join()
 

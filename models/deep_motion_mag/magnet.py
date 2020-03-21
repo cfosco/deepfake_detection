@@ -1,6 +1,7 @@
 from __future__ import print_function
 
 import os
+import subprocess
 import tensorflow as tf
 import numpy as np
 import cv2
@@ -15,12 +16,13 @@ from subprocess import call
 from .modules import L1_loss
 from .modules import res_encoder, res_decoder, res_manipulator
 from .modules import residual_block, conv2d
-from .utils import load_train_data, mkdir, imread, save_images
+from .utils import load_train_data, mkdir, imread, save_images, has_libx264
 from .preprocessor import preprocess_image, preproc_color
 from .data_loader import read_and_decode_3frames
 
 # Change here if you use ffmpeg.
 DEFAULT_VIDEO_CONVERTER = 'ffmpeg'
+DEFAULT_VIDEO_CODEC = 'libx264' if has_libx264() else 'mpeg4'
 
 
 class MagNet3Frames(object):
@@ -281,7 +283,7 @@ class MagNet3Frames(object):
 
         # Try to combine it into a video
         call([DEFAULT_VIDEO_CONVERTER, '-y', '-f', 'image2', '-r', '30', '-i',
-              os.path.join(out_dir, f'%06d.{frame_ext}'), '-c:v', 'libx264',
+              os.path.join(out_dir, f'%06d.{frame_ext}'), '-c:v', DEFAULT_VIDEO_CODEC,
               os.path.join(out_dir, '../', vid_name + '.mp4')]
              )
         return out_dir
@@ -509,7 +511,7 @@ class MagNet3Frames(object):
 
         # Try to combine it into a video
         call([DEFAULT_VIDEO_CONVERTER, '-y', '-f', 'image2', '-r', '30', '-i',
-              os.path.join(out_dir, f'%06d.{frame_ext}'), '-c:v', 'libx264',
+              os.path.join(out_dir, f'%06d.{frame_ext}'), '-c:v', DEFAULT_VIDEO_CODEC,
               os.path.join(out_dir, '../', vid_name + '.mp4')]
              )
         return out_dir
