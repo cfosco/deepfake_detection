@@ -141,5 +141,6 @@ scripts/models
 notebooks/data
 notebooks/models
 notebooks/DeepfakeDetection
+TODO
 
 *.lock
