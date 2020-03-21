@@ -1,7 +1,6 @@
 from __future__ import print_function
 
 import os
-import subprocess
 import tensorflow as tf
 import numpy as np
 import cv2
@@ -17,7 +16,7 @@ from .modules import L1_loss
 from .modules import res_encoder, res_decoder, res_manipulator
 from .modules import residual_block, conv2d
 from .utils import load_train_data, mkdir, imread, save_images, has_libx264
-from .preprocessor import preprocess_image, preproc_color
+from .preprocessor import preprocess_image
 from .data_loader import read_and_decode_3frames
 
 # Change here if you use ffmpeg.
