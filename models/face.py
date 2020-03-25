@@ -36,14 +36,12 @@ class FaceModel(torch.nn.Module):
         # return x.view(-1, *x.shape[2:])            # [bs * d, nc, h, w]
 
     def get_faces(self, x):
-        print(f'get_faces:x: {x.shape}')
         bs, nc, d, h, w = x.shape
         batched_face_images = []
         for x in self.input_transform(x):
             faces_out = []
             out = self.model(x, smooth=True, smooth_len=d)
             out = torch.stack(out).cpu()  # [num_frames, num_faces, 3, 360, 360]
-            print(f'get_faces:out: {out.shape}')
             faces_out.append(out)
 
             min_face = min([f.shape[1] for f in faces_out])
@@ -277,14 +275,13 @@ class MTCNN(nn.Module):
             )
         boxes, probs, points = [], [], []
         for box, point in zip(batch_boxes, batch_points):
-            # box = np.array(box)
-            # point = np.array(point)
+
             if len(box) == 0:
                 boxes.append(None)
                 probs.append([None])
                 points.append(None)
             elif self.select_largest:
-                box_order = torch.argsort((box[:, 2] - box[:, 0]) * (box[:, 3] - box[:, 1]))[::-1]
+                box_order = torch.argsort((box[:, 2] - box[:, 0]) * (box[:, 3] - box[:, 1])).flip(0)
                 box = box[box_order]
                 point = point[box_order]
                 boxes.append(box[:, :4])
@@ -293,14 +290,9 @@ class MTCNN(nn.Module):
             else:
                 inds = box[:, 4] >= self.thresholds[-1]
                 inds[0] = True  # Keep at least one face
-                # boxes.append(box[:, :4])
-                # probs.append(box[:, 4])
                 boxes.append(box[inds, :4])
                 probs.append(box[inds, 4])
                 points.append(point)
-        # boxes = np.array(boxes)
-        # probs = np.array(probs)
-        # points = np.array(points)
 
         if not isinstance(img, Iterable):
             boxes = boxes[0]

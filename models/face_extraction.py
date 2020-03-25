@@ -36,7 +36,6 @@ class FaceModel(torch.nn.Module):
         # return x.view(-1, *x.shape[2:])            # [bs * d, nc, h, w]
 
     def get_faces(self, x):
-        print(f'get_faces:x: {x.shape}')
         bs, nc, d, h, w = x.shape
         batched_face_images = []
         for x in self.input_transform(x):

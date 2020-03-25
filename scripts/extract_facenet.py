@@ -33,6 +33,7 @@ def parse_args():
     parser.add_argument('--use_zip', default=True, type=str2bool)
     parser.add_argument('--video_rootdir', default='videos', type=str)
     parser.add_argument('--face_rootdir', default='facenet_videos', type=str)
+    parser.add_argument('--chunk_size', default=150, type=int)
     args = parser.parse_args()
     args.video_dir = os.path.join(DEEPFAKE_DATA_ROOT, args.video_rootdir, args.part)
     args.face_dir = os.path.join(DEEPFAKE_DATA_ROOT, args.face_rootdir, args.part)
