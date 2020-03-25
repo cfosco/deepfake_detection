@@ -64,8 +64,8 @@ def get_metadata(name, split='train', dataset_type='DeepfakeFrame', record_set_t
         'DFDC': {
             'DeepfakeVideo': defaultdict(lambda: os.path.join(data_root, 'DeepfakeDetection/videos'), {}),
             'DeepfakeZipVideo': defaultdict(lambda: os.path.join(data_root, 'DeepfakeDetection/videos'), {}),
-            'DeepfakeFaceVideo': defaultdict(lambda: os.path.join(data_root, 'DeepfakeDetection/facenet_frames'), {}),
-            'DeepfakeZipFaceVideo': defaultdict(lambda: os.path.join(data_root, 'DeepfakeDetection/facenet_frames'), {}),
+            'DeepfakeFaceVideo': defaultdict(lambda: os.path.join(data_root, 'DeepfakeDetection/facenet_videos'), {}),
+            'DeepfakeZipFaceVideo': defaultdict(lambda: os.path.join(data_root, 'DeepfakeDetection/facenet_videos'), {}),
             'DeepfakeFrame': defaultdict(lambda: os.path.join(data_root, 'DeepfakeDetection/frames'), {}),
             'DeepfakeFaceFrame': defaultdict(lambda: os.path.join(data_root, 'DeepfakeDetection/facenet_frames'), {}),
             'DeepfakeFaceCropFrame': defaultdict(lambda: os.path.join(data_root, 'DeepfakeDetection/frames'), {}),

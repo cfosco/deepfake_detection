@@ -1,3 +1,4 @@
+import os
 import pytest
 import torch
 
@@ -97,3 +98,25 @@ def test_get_dataset_frame(name, split, num_frames, size, dataset_type, record_s
         print(i, frames.shape, label)
         assert label < cfg.num_classes_dict[name]
         assert frames.shape == torch.Size((3, num_frames, size, size))
+
+
+@pytest.mark.parametrize('video_dir, step', [
+    (os.path.join(cfg.DATA_ROOT, 'DeepfakeDetection', 'videos', 'dfdc_train_part_0'), 2),
+])
+def test_videofolder_dataset(video_dir, step):
+    dataset = data.VideoFolder(video_dir, step=step)
+    for i, (name, frames, target) in enumerate(dataset):
+        if not (i < MAX_ITERS):
+            break
+        print(i, frames.shape, target)
+
+
+@pytest.mark.parametrize('filename, step', [
+    (os.path.join(cfg.DATA_ROOT, 'DeepfakeDetection', 'videos', 'dfdc_train_part_00.zip'), 2),
+])
+def test_videozipfile(filename, step):
+    dataset = data.VideoZipFile(filename, step=step)
+    for i, (name, frames, target) in enumerate(dataset):
+        if not (i < MAX_ITERS):
+            break
+        print(i, frames.shape, target)

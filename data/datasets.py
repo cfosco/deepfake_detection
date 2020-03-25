@@ -2,6 +2,8 @@ import functools
 import io
 import json
 import os
+import shutil
+import tempfile
 import zipfile
 from collections import defaultdict
 from pathlib import Path
@@ -455,6 +457,35 @@ class VideoFolder(torch.utils.data.Dataset):
 
     def __len__(self):
         return len(self.videos_filenames)
+
+
+class VideoZipFile(VideoFolder):
+
+    def __init__(self, filename, step=2, transform=None, target_file=None):
+        self.filename = filename
+        self.step = step
+        self.zipfile = zipfile.ZipFile(filename)
+        self.videos_filenames = sorted([f for f in self.zipfile.namelist() if f.endswith('.mp4')])
+
+        if transform is None:
+            transform = transforms.VideoToTensor(rescale=False)
+        self.transform = transform
+
+        if target_file is not None:
+            with open(target_file) as f:
+                self.targets = json.load(f)
+        else:
+            self.targets = {}
+
+    def __getitem__(self, index):
+        name = self.videos_filenames[index]
+        with tempfile.NamedTemporaryFile() as temp:
+            temp.write(self.zipfile.read(name))
+            frames = read_frames(temp.name, step=self.step)
+            if self.transform is not None:
+                frames = self.transform(frames)
+        target = int(self.targets.get(name, 0))
+        return name, frames, target
 
 
 def video_collate_fn(batch):

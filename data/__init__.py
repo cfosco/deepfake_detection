@@ -1,7 +1,7 @@
 from .datasets import (DeepfakeFaceCropFrame, DeepfakeFaceFrame,
                        DeepfakeFaceRecord, DeepfakeFaceSet, DeepfakeFaceVideo,
                        DeepfakeFrame, DeepfakeSet, DeepfakeVideo,
-                       DeepfakeZipFaceVideo, DeepfakeZipVideo, VideoFolder,
+                       DeepfakeZipFaceVideo, DeepfakeZipVideo, VideoFolder, VideoZipFile,
                        video_collate_fn)
 from .transforms import get_transform
 
@@ -19,4 +19,5 @@ __all__ = [
     'video_collate_fn'
     'DeepfakeZipVideo',
     'DeepfakeZipFaceVideo',
+    'VideoZipFile',
 ]
