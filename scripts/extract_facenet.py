@@ -21,8 +21,7 @@ from models import FaceModel, deepmmag
 from pretorched.runners.utils import AverageMeter, ProgressMeter
 from pretorched.utils import str2bool
 
-VIDEO_ROOT = os.path.join(os.environ['DATA_ROOT'], 'DeepfakeDetection', 'videos')
-FACE_ROOT = os.path.join(os.environ['DATA_ROOT'], 'DeepfakeDetection', 'facenet_frames')
+DEEPFAKE_DATA_ROOT = os.path.join(os.environ['DATA_ROOT'], 'DeepfakeDetection')
 
 
 def parse_args():
@@ -32,9 +31,11 @@ def parse_args():
     parser.add_argument('--overwrite', default=False, type=str2bool)
     parser.add_argument('--remove_frames', default=True, type=str2bool)
     parser.add_argument('--use_zip', default=True, type=str2bool)
+    parser.add_argument('--video_rootdir', default='videos', type=str)
+    parser.add_argument('--face_rootdir', default='facenet_videos', type=str)
     args = parser.parse_args()
-    args.video_dir = os.path.join(VIDEO_ROOT, args.part)
-    args.face_dir = os.path.join(FACE_ROOT, args.part)
+    args.video_dir = os.path.join(DEEPFAKE_DATA_ROOT, args.video_rootdir, args.part)
+    args.face_dir = os.path.join(DEEPFAKE_DATA_ROOT, args.face_rootdir, args.part)
     return args
 
 
