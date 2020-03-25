@@ -1,6 +1,8 @@
 import functools
+import io
 import json
 import os
+import zipfile
 from collections import defaultdict
 from pathlib import Path
 from typing import Callable, Optional, Tuple, Union
@@ -11,7 +13,6 @@ import torch
 import torch.utils.data as data
 from numpy.random import randint
 from PIL import Image
-from torchvision.transforms import functional as TF
 
 from torchvideo.datasets import VideoDataset
 from torchvideo.internal.readers import _get_videofile_frame_count
@@ -341,6 +342,7 @@ class DeepfakeVideo(VideoDataset):
 
 
 class DeepfakeFaceVideo(DeepfakeVideo):
+
     def __getitem__(self, index: int):
         record = self.record_set[index]
         video_dir = os.path.join(self.root, record.path)
@@ -358,7 +360,52 @@ class DeepfakeFaceVideo(DeepfakeVideo):
             label = self.target_transform(label)
 
         return frames, label
-        pass
+
+
+class DeepfakeZipVideo(DeepfakeVideo):
+
+    zip_ext = '.zip'
+
+    def __getitem__(self, index):
+        record = self.record_set[index]
+        part, video_path, label = record.part, record.path, record.label
+        with zipfile.ZipFile(os.path.join(self.root, part + self.zip_ext)) as z:
+            video_path = io.BytesIO(z.read(video_path))
+        video_length = record.num_frames or self.frame_counter(video_path)
+        frame_inds = self.sampler.sample(video_length)
+        frames = self._load_frames(video_path, frame_inds)
+
+        if self.transform is not None:
+            frames = self.transform(frames)
+        if self.target_transform is not None:
+            label = self.target_transform(label)
+
+        return frames, label
+
+
+class DeepfakeZipFaceVideo(DeepfakeFaceVideo):
+
+    zip_ext = '.zip'
+
+    def __getitem__(self, index: int):
+        record = self.record_set[index]
+        part, video_dir, label = record.part, record.path, record.label
+        face_num = np.random.choice(record.face_nums)
+        num_face_frames = record.num_face_frames[face_num]
+        frame_inds = self.sampler.sample(num_face_frames)
+
+        video_path = os.path.join(video_dir, record.face_names[face_num] + '.mp4')
+        with zipfile.ZipFile(os.path.join(self.root, part + self.zip_ext)) as z:
+            video_path = io.BytesIO(z.read(video_path))
+
+        frames = list(self._load_frames(video_path, frame_inds))
+
+        if self.transform is not None:
+            frames = self.transform(frames)
+        if self.target_transform is not None:
+            label = self.target_transform(label)
+
+        return frames, label
 
 
 def read_frames(video, fps=30, step=1):
