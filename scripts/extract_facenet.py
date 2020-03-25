@@ -191,7 +191,7 @@ def save_image(args):
 def filter_filenames(video_filenames, face_dir):
     filtered_filename = []
     for f in video_filenames:
-        frame_dir = os.path.join(face_dir, f)
+        frame_dir = os.path.join(face_dir, os.path.basename(f))
         if os.path.exists(frame_dir):
             if os.listdir(frame_dir):
                 print(f'Skipping {frame_dir}')
