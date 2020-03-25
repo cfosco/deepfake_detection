@@ -464,8 +464,8 @@ class VideoZipFile(VideoFolder):
     def __init__(self, filename, step=2, transform=None, target_file=None):
         self.filename = filename
         self.step = step
-        self.zipfile = zipfile.ZipFile(filename)
-        self.videos_filenames = sorted([f for f in self.zipfile.namelist() if f.endswith('.mp4')])
+        with zipfile.ZipFile(filename) as z:
+            self.videos_filenames = sorted([f for f in z.namelist() if f.endswith('.mp4')])
 
         if transform is None:
             transform = transforms.VideoToTensor(rescale=False)
@@ -480,7 +480,8 @@ class VideoZipFile(VideoFolder):
     def __getitem__(self, index):
         name = self.videos_filenames[index]
         with tempfile.NamedTemporaryFile() as temp:
-            temp.write(self.zipfile.read(name))
+            with zipfile.ZipFile(self.filename) as z:
+                temp.write(z.read(name))
             frames = read_frames(temp.name, step=self.step)
             if self.transform is not None:
                 frames = self.transform(frames)
