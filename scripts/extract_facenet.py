@@ -16,7 +16,7 @@ from torch.utils.data import DataLoader
 from tqdm import tqdm
 
 import pretorched
-from data import VideoFolder, video_collate_fn
+from data import VideoFolder, VideoZipFile, video_collate_fn
 from models import FaceModel, deepmmag
 from pretorched.runners.utils import AverageMeter, ProgressMeter
 from pretorched.utils import str2bool
@@ -31,6 +31,7 @@ def parse_args():
     parser.add_argument('--magnify_motion', default=False, type=str2bool)
     parser.add_argument('--overwrite', default=False, type=str2bool)
     parser.add_argument('--remove_frames', default=True, type=str2bool)
+    parser.add_argument('--use_zip', default=True, type=str2bool)
     args = parser.parse_args()
     args.video_dir = os.path.join(VIDEO_ROOT, args.part)
     args.face_dir = os.path.join(FACE_ROOT, args.part)
@@ -39,14 +40,19 @@ def parse_args():
 
 def main(video_dir, face_dir, size=360, margin=100, fdir_tmpl='face_{}', tmpl='{:06d}.jpg',
          metadata_fname='face_metadata.json', step=1, batch_size=1, chunk_size=300, num_workers=2,
-         overwrite=False, remove_frames=True, magnify_motion=False, **kwargs):
+         overwrite=False, remove_frames=True, magnify_motion=False, use_zip=True, **kwargs):
 
     os.makedirs(face_dir, exist_ok=True)
     device = 'cuda' if torch.cuda.is_available() else 'cpu'
     cudnn.benchmark = True
 
+    if use_zip:
+        video_dir = video_dir.rstrip('.zip') + '.zip'
+        dataset = VideoZipFile(video_dir, step=step)
+    else:
+        dataset = VideoFolder(video_dir, step=step)
+
     print(f'Processing: {video_dir}')
-    dataset = VideoFolder(video_dir, step=step)
     if not overwrite:
         dataset.videos_filenames = filter_filenames(dataset.videos_filenames, face_dir)
 
