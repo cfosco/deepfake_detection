@@ -3,6 +3,7 @@ import argparse
 import contextlib
 import json
 import os
+import sys
 import time
 from multiprocessing import Process
 from multiprocessing.pool import Pool, ThreadPool
@@ -20,6 +21,12 @@ from data import VideoFolder, VideoZipFile, video_collate_fn
 from models import FaceModel, deepmmag
 from pretorched.runners.utils import AverageMeter, ProgressMeter
 from pretorched.utils import str2bool
+
+try:
+    sys.path.extend(['.', '..'])
+    from config import DEFAULT_VIDEO_CODEC
+except ModuleNotFoundError:
+    raise ModuleNotFoundError
 
 DEEPFAKE_DATA_ROOT = os.path.join(os.environ['DATA_ROOT'], 'DeepfakeDetection')
 
@@ -146,7 +153,7 @@ def save_face_data(save_dir, face_images, run_motion_mag=None, size=360, margin=
 def frames_to_video(video_path):
     p = Process(target=pretorched.data.utils.frames_to_video,
                 args=(f'{video_path}/*.jpg', video_path + '.mp4'),
-                kwargs={'vcodec': 'mpeg4'})
+                kwargs={'vcodec': DEFAULT_VIDEO_CODEC})
     p.start()
     p.join()
 

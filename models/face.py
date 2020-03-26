@@ -859,10 +859,13 @@ def crop_tensor(tensor, box):
         box: coords with format: (left, top, right, bottom)
     """
     left, top, right, bottom = box
+    left, right = sorted([left, right])
+    top, bottom = sorted([top, bottom])
     return tensor[..., top:bottom, left:right]
 
 
 def crop_resize(tensor, box, size):
+
     return F.interpolate(
         crop_tensor(tensor, box).unsqueeze(0),
         size=size, mode='area')[0]

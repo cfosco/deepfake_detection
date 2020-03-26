@@ -1,5 +1,6 @@
 import argparse
 import os
+import subprocess
 from collections import defaultdict
 
 import pretorched.models as models
@@ -35,6 +36,18 @@ scheduler_defaults = {
         'T_max': 100
     }
 }
+
+
+def has_libx264():
+    out = subprocess.Popen(['ffmpeg', '-loglevel', 'error', '-codecs'],
+                           stdout=subprocess.PIPE)
+    out = subprocess.Popen(['grep', 'x264'], stdin=out.stdout, stdout=subprocess.PIPE)
+    out = subprocess.run(['wc', '-l'], stdin=out.stdout, stdout=subprocess.PIPE)
+    if out.returncode == 0:
+        return '1' == out.stdout.decode().strip()
+
+
+DEFAULT_VIDEO_CODEC = 'libx264' if has_libx264() else 'mpeg4'
 
 
 def get_root_dirs(name, dataset_type='DeepfakeFrame', resolution=224, data_root=DATA_ROOT):

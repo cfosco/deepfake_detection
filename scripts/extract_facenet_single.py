@@ -1,4 +1,5 @@
 #!/usr/bin/env python
+import argparse
 import contextlib
 import json
 import os
@@ -16,9 +17,10 @@ from torch.utils.data import DataLoader
 from tqdm import tqdm
 
 import pretorched
-from data import VideoFolder, video_collate_fn
+from data import VideoFolder, VideoZipFile, video_collate_fn
 from models import FaceModel, deepmmag
 from pretorched.runners.utils import AverageMeter, ProgressMeter
+from pretorched.utils import str2bool
 
 try:
     sys.path.extend(['.', '..'])
@@ -26,27 +28,42 @@ try:
 except ModuleNotFoundError:
     raise ModuleNotFoundError
 
-try:
-    PART = sys.argv[1]
-except IndexError:
-    PART = 'dfdc_train_part_3'
-VIDEO_ROOT = os.path.join(os.environ['DATA_ROOT'], 'DeepfakeDetection', 'videos')
-FACE_ROOT = os.path.join(os.environ['DATA_ROOT'], 'DeepfakeDetection', 'facenet_frames')
-VIDEO_DIR = os.path.join(VIDEO_ROOT, PART)
-FACE_DIR = os.path.join(FACE_ROOT, PART)
+DEEPFAKE_DATA_ROOT = os.path.join(os.environ['DATA_ROOT'], 'DeepfakeDetection')
 
 
-def main(video_dir, face_dir, size=360, margin=100, fdir_tmpl='face_{}', tmpl='{:06d}.jpg',
+def parse_args():
+    parser = argparse.ArgumentParser(description='Face Extraction')
+    parser.add_argument('--filename', type=str, default='')
+    parser.add_argument('--part', type=str, default='dfdc_train_part_0')
+    parser.add_argument('--magnify_motion', default=False, type=str2bool)
+    parser.add_argument('--overwrite', default=False, type=str2bool)
+    parser.add_argument('--remove_frames', default=True, type=str2bool)
+    parser.add_argument('--use_zip', default=True, type=str2bool)
+    parser.add_argument('--video_rootdir', default='videos', type=str)
+    parser.add_argument('--face_rootdir', default='facenet_videos', type=str)
+    parser.add_argument('--chunk_size', default=150, type=int)
+    args = parser.parse_args()
+    args.video_dir = os.path.join(DEEPFAKE_DATA_ROOT, args.video_rootdir, args.part)
+    args.face_dir = os.path.join(DEEPFAKE_DATA_ROOT, args.face_rootdir, args.part)
+    return args
+
+
+def main(filename, video_dir, face_dir, size=360, margin=100, fdir_tmpl='face_{}', tmpl='{:06d}.jpg',
          metadata_fname='face_metadata.json', step=1, batch_size=1, chunk_size=300, num_workers=2,
-         overwrite=False, remove_frames=True):
+         overwrite=False, remove_frames=True, magnify_motion=False, use_zip=True, **kwargs):
 
     os.makedirs(face_dir, exist_ok=True)
     device = 'cuda' if torch.cuda.is_available() else 'cpu'
+    cudnn.benchmark = True
 
-    print(f'Processing: {video_dir}')
-    dataset = VideoFolder(video_dir, step=step)
-    if not overwrite:
-        dataset.videos_filenames = filter_filenames(dataset.videos_filenames, face_dir)
+    if use_zip:
+        video_dir = video_dir.rstrip('.zip') + '.zip'
+        dataset = VideoZipFile(video_dir, step=step)
+    else:
+        dataset = VideoFolder(video_dir, step=step)
+
+    print(f'Processing: {filename} in {video_dir}')
+    dataset.videos_filenames = [filename]
 
     dataloader = DataLoader(dataset, batch_size=batch_size,
                             shuffle=False, num_workers=num_workers,
@@ -62,8 +79,7 @@ def main(video_dir, face_dir, size=360, margin=100, fdir_tmpl='face_{}', tmpl='{
                       select_largest=False,
                       chunk_size=chunk_size)
 
-    run_motion_mag = deepmmag.get_motion_mag()
-    cudnn.benchmark = True
+    run_motion_mag = deepmmag.get_motion_mag() if magnify_motion else None
 
     batch_time = AverageMeter('Time', ':6.3f')
     progress = ProgressMeter(len(dataset), [batch_time], prefix='Facenet Extraction and MM: ')
@@ -83,7 +99,7 @@ def main(video_dir, face_dir, size=360, margin=100, fdir_tmpl='face_{}', tmpl='{
                 torch.cuda.empty_cache()
 
                 for filename, face_images in zip(filenames, face_images):
-                    save_dir = os.path.join(face_dir, filename)
+                    save_dir = os.path.join(face_dir, os.path.basename(filename))
                     save_face_data(save_dir, face_images, run_motion_mag,
                                    size=size, margin=margin, fdir_tmpl=fdir_tmpl,
                                    tmpl=tmpl, metadata_fname=metadata_fname,
@@ -96,7 +112,7 @@ def main(video_dir, face_dir, size=360, margin=100, fdir_tmpl='face_{}', tmpl='{
                 progress.display(i)
 
 
-def save_face_data(save_dir, face_images, run_motion_mag, size=360, margin=100, fdir_tmpl='face_{}',
+def save_face_data(save_dir, face_images, run_motion_mag=None, size=360, margin=100, fdir_tmpl='face_{}',
                    tmpl='{:06d}.jpg', metadata_fname='face_metadata.json', remove_frames=False):
 
     os.makedirs(save_dir, exist_ok=True)
@@ -126,10 +142,12 @@ def save_face_data(save_dir, face_images, run_motion_mag, size=360, margin=100, 
         video_path = os.path.join(save_dir, fdir_tmpl.format(face_num))
         frames_to_video(video_path)
         # motion_magnification(video_path, remove_frames)
-        mm_out_dir = run_motion_mag(video=video_path, output=video_path + '_mm')
+        if run_motion_mag is not None:
+            mm_out_dir = run_motion_mag(video=video_path, output=video_path + '_mm')
         if remove_frames:
             os.system(f'rm -rf {video_path}')
-            os.system(f'rm -rf {mm_out_dir}')
+            if run_motion_mag is not None:
+                os.system(f'rm -rf {mm_out_dir}')
 
 
 def frames_to_video(video_path):
@@ -181,7 +199,7 @@ def save_image(args):
 def filter_filenames(video_filenames, face_dir):
     filtered_filename = []
     for f in video_filenames:
-        frame_dir = os.path.join(face_dir, f)
+        frame_dir = os.path.join(face_dir, os.path.basename(f))
         if os.path.exists(frame_dir):
             if os.listdir(frame_dir):
                 print(f'Skipping {frame_dir}')
@@ -191,4 +209,5 @@ def filter_filenames(video_filenames, face_dir):
 
 
 if __name__ == '__main__':
-    main(VIDEO_DIR, FACE_DIR)
+    args = parse_args()
+    main(**vars(args))
