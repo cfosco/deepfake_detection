@@ -19,22 +19,24 @@ from torch.nn import functional as F
 from torch.utils.data import DataLoader
 from torchvision import models
 from torchvision.ops.boxes import batched_nms
-from torchvision.transforms import functional as TF
 
-# from pretorched.data import transforms
+KAGGLE = False
 
-# TEST_VIDEO_DIR = '/kaggle/input/deepfake-detection-challenge/test_videos/'
-# SAMPLE_SUBMISSION_CSV = '/kaggle/input/deepfake-detection-challenge/sample_submission.csv'
-# WEIGHT_DIR = '/kaggle/input/deepfake-data/data'
+if KAGGLE:
+    TEST_VIDEO_DIR = '/kaggle/input/deepfake-detection-challenge/test_videos/'
+    SAMPLE_SUBMISSION_CSV = '/kaggle/input/deepfake-detection-challenge/sample_submission.csv'
+    WEIGHT_DIR = '/kaggle/input/deepfake-data/data'
 
-TEST_VIDEO_DIR = os.path.join(os.environ['DATA_ROOT'], 'DeepfakeDetection', 'test_videos')
-SAMPLE_SUBMISSION_CSV = os.path.join(os.environ['DATA_ROOT'], 'DeepfakeDetection', 'sample_submission.csv')
-TARGET_FILE = os.path.join(os.environ['DATA_ROOT'], 'DeepfakeDetection', 'test_targets.json')
-if not os.path.exists(TARGET_FILE):
-    TARGET_FILE = None
-dir_path = os.path.dirname(os.path.realpath(__file__))
-WEIGHT_DIR = os.path.join(dir_path, 'data')
-# WEIGHT_DIR = 'data'
+else:
+    TEST_VIDEO_DIR = os.path.join(os.environ['DATA_ROOT'], 'DeepfakeDetection', 'test_videos')
+    SAMPLE_SUBMISSION_CSV = os.path.join(os.environ['DATA_ROOT'], 'DeepfakeDetection', 'sample_submission.csv')
+    TARGET_FILE = os.path.join(os.environ['DATA_ROOT'], 'DeepfakeDetection', 'test_targets.json')
+    if not os.path.exists(TARGET_FILE):
+        TARGET_FILE = None
+    dir_path = os.path.dirname(os.path.realpath(__file__))
+    WEIGHT_DIR = os.path.join(dir_path, 'data')
+    # WEIGHT_DIR = 'data'
+
 NUM_WORKERS = 4
 STEP = 20
 
@@ -144,7 +146,6 @@ def read_frames(video, fps=30, step=1):
             frame = cv2.cvtColor(frame, cv2.COLOR_BGR2RGB)
             yield frame
         count += 1
-
 
 
 class VideoFolder(torch.utils.data.Dataset):
@@ -374,12 +375,6 @@ def modify_resnets(model):
     setattr(model.__class__, 'input_size', (3, 224, 224))
     setattr(model.__class__, 'mean', [0.485, 0.456, 0.406])
     setattr(model.__class__, 'std', [0.229, 0.224, 0.225])
-    # model.features = types.MethodType(features, model)
-    # model.logits = types.MethodType(logits, model)
-    # model.forward = types.MethodType(forward, model)
-    # model.features = types.MethodType(features, model)
-    # model.logits = types.MethodType(logits, model)
-    # model.forward = types.MethodType(forward, model)
     return model
 
 
@@ -387,9 +382,9 @@ def resnet18(num_classes=1000, pretrained='imagenet'):
     """Constructs a ResNet-18 model.
     """
     model = models.resnet18(pretrained=False, num_classes=num_classes)
-    if pretrained is not None:
-        settings = pretrained_settings['resnet18'][pretrained]
-        model = load_pretrained(model, num_classes, settings)
+    # if pretrained is not None:
+    #     settings = pretrained_settings['resnet18'][pretrained]
+    #     model = load_pretrained(model, num_classes, settings)
     model = modify_resnets(model)
     return model
 
@@ -398,9 +393,9 @@ def resnet34(num_classes=1000, pretrained='imagenet'):
     """Constructs a ResNet-34 model.
     """
     model = models.resnet34(pretrained=False, num_classes=num_classes)
-    if pretrained is not None:
-        settings = pretrained_settings['resnet34'][pretrained]
-        model = load_pretrained(model, num_classes, settings)
+    # if pretrained is not None:
+    #     settings = pretrained_settings['resnet34'][pretrained]
+    #     model = load_pretrained(model, num_classes, settings)
     model = modify_resnets(model)
     return model
 
@@ -409,9 +404,9 @@ def resnet50(num_classes=1000, pretrained='imagenet'):
     """Constructs a ResNet-50 model.
     """
     model = models.resnet50(pretrained=False, num_classes=num_classes)
-    if pretrained is not None:
-        settings = pretrained_settings['resnet50'][pretrained]
-        model = load_pretrained(model, num_classes, settings)
+    # if pretrained is not None:
+    #     settings = pretrained_settings['resnet50'][pretrained]
+    #     model = load_pretrained(model, num_classes, settings)
     model = modify_resnets(model)
     return model
 
@@ -420,9 +415,9 @@ def resnet101(num_classes=1000, pretrained='imagenet'):
     """Constructs a ResNet-101 model.
     """
     model = models.resnet101(pretrained=False, num_classes=num_classes)
-    if pretrained is not None:
-        settings = pretrained_settings['resnet101'][pretrained]
-        model = load_pretrained(model, num_classes, settings)
+    # if pretrained is not None:
+    #     settings = pretrained_settings['resnet101'][pretrained]
+    #     model = load_pretrained(model, num_classes, settings)
     model = modify_resnets(model)
     return model
 
@@ -431,9 +426,9 @@ def resnet152(num_classes=1000, pretrained='imagenet'):
     """Constructs a ResNet-152 model.
     """
     model = models.resnet152(pretrained=False, num_classes=num_classes)
-    if pretrained is not None:
-        settings = pretrained_settings['resnet152'][pretrained]
-        model = load_pretrained(model, num_classes, settings)
+    # if pretrained is not None:
+    #     settings = pretrained_settings['resnet152'][pretrained]
+    #     model = load_pretrained(model, num_classes, settings)
     model = modify_resnets(model)
     return model
 
@@ -456,7 +451,6 @@ class FaceModel(torch.nn.Module):
     def input_transform(self, x):
         x = x.permute(0, 2, 1, 3, 4).contiguous()  # [bs, d, nc, h, w]
         return x
-        # return x.view(-1, *x.shape[2:])            # [bs * d, nc, h, w]
 
     def get_faces(self, x):
         bs, nc, d, h, w = x.shape
@@ -1179,14 +1173,14 @@ def nms_numpy(boxes, scores, threshold, method):
     y2 = boxes[:, 3]
     s = scores
     area = (x2 - x1 + 1) * (y2 - y1 + 1)
-    I = np.argsort(s)
+    im = np.argsort(s)
     pick = np.zeros_like(s, dtype=np.int16)
     counter = 0
-    while I.size > 0:
-        i = I[-1]
+    while im.size > 0:
+        i = im[-1]
         pick[counter] = i
         counter += 1
-        idx = I[0:-1]
+        idx = im[0:-1]
         xx1 = np.maximum(x1[i], x1[idx])
         yy1 = np.maximum(y1[i], y1[idx])
         xx2 = np.minimum(x2[i], x2[idx])
@@ -1198,7 +1192,7 @@ def nms_numpy(boxes, scores, threshold, method):
             o = inter / np.minimum(area[i], area[idx])
         else:
             o = inter / (area[i] + area[idx] - inter)
-        I = I[np.where(o <= threshold)]
+        im = im[np.where(o <= threshold)]
     pick = pick[:counter]
     return pick
 
@@ -1239,10 +1233,10 @@ def rerec(bboxA):
     h = bboxA[:, 3] - bboxA[:, 1]
     w = bboxA[:, 2] - bboxA[:, 0]
 
-    l = torch.max(w, h)
-    bboxA[:, 0] = bboxA[:, 0] + w * 0.5 - l * 0.5
-    bboxA[:, 1] = bboxA[:, 1] + h * 0.5 - l * 0.5
-    bboxA[:, 2:4] = bboxA[:, :2] + l.repeat(2, 1).permute(1, 0)
+    ll = torch.max(w, h)
+    bboxA[:, 0] = bboxA[:, 0] + w * 0.5 - ll * 0.5
+    bboxA[:, 1] = bboxA[:, 1] + h * 0.5 - ll * 0.5
+    bboxA[:, 2:4] = bboxA[:, :2] + ll.repeat(2, 1).permute(1, 0)
 
     return bboxA
 
@@ -1422,43 +1416,6 @@ class FrameModel(torch.nn.Module):
         return self.model.input_size
 
 
-# class FaceModel(torch.nn.Module):
-
-#     def __init__(self, size=224, device='cuda', margin=50, keep_all=False,
-#                  post_process=False, select_largest=True):
-#         super().__init__()
-#         self.model = MTCNN(image_size=size,
-#                            device=device,
-#                            margin=margin,
-#                            keep_all=keep_all,
-#                            post_process=post_process,
-#                            select_largest=select_largest)
-
-#     def forward(self, x):
-#         """
-#         Args:
-#             x: [bs, nc, d, h, w]
-#         NOTE: For now, assume keep_all=False for 1 face per frame.
-#         lists of lists or nested tensors should be used to handle variable
-#         number of faces per example in batch (avoid this for now).
-#         """
-#         bs, nc, d, h, w = x.shape
-#         x = x.permute(0, 2, 1, 3, 4)  # [bs, d, nc, h, w]
-#         # x = x.view(-1, *x.shape[2:])  # [bs * d, nc, h, w]
-#         x = x.reshape(-1, *x.shape[2:])  # [bs * d, nc, h, w]
-#         out = self.model(x)
-#         for i, o in enumerate(out):
-#             if o is None:
-#                 try:
-#                     out[i] = out[i - 1]
-#                 except IndexError:
-#                     pass
-#         out = torch.stack(out)
-#         out = out.view(bs, d, nc, *out.shape[-2:])
-#         out = out.permute(0, 2, 1, 3, 4)  # [bs, nc, d, h, w]
-#         return out
-
-
 class DeepfakeDetector(torch.nn.Module):
 
     def __init__(self, face_model, fake_model):
@@ -1473,10 +1430,6 @@ class DeepfakeDetector(torch.nn.Module):
             print('Error finding faces')
             return 0.5 * torch.ones(x.size(0), 2)
         return self.fake_model(faces)
-        # min_faces = torch.min([f.shape[0] for f in faces])
-        # batched_faces = [torch.stack([f[i] for f in faces]) for i in range(min_faces)]
-        # return self.consensus_func(
-        # torch.stack([self.detector(f) for f in batched_faces]), dim=0)
 
 
 if __name__ == '__main__':

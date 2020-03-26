@@ -4,33 +4,24 @@ import random
 import shutil
 import time
 import warnings
+
+import cv2
 import numpy as np
 import pandas as pd
-
 import torch
+import torch.backends.cudnn as cudnn
 import torch.nn as nn
 import torch.nn.parallel
-import torch.backends.cudnn as cudnn
-import torch.distributed as dist
-import torch.multiprocessing as mp
 import torch.utils.data
 import torch.utils.data.distributed
 from torch.utils.data import DataLoader
 
+import models
 import pretorched
-from pretorched import loggers
+# from torchvideo.internal.readers import _get_videofile_frame_count, _is_video_file, default_loader
+from data import VideoFolder
 from pretorched.metrics import accuracy
 from pretorched.runners.utils import AverageMeter, ProgressMeter
-
-import core
-import models
-import config as cfg
-# from torchvideo.internal.readers import _get_videofile_frame_count, _is_video_file, default_loader
-from data import VideoFolder, video_collate_fn
-from torchvideo.transforms import PILVideoToTensor
-from data import faces
-import cv2
-
 
 # TEST_VIDEO_DIR = '/kaggle/input/deepfake-detection-challenge/test_videos/'
 # SAMPLE_SUBMISSION_CSV = '/kaggle/input/deepfake-detection-challenge/sample_submission.csv'
@@ -40,7 +31,7 @@ SAMPLE_SUBMISSION_CSV = os.path.join(os.environ['DATA_ROOT'], 'DeepfakeDetection
 TARGET_FILE = os.path.join(os.environ['DATA_ROOT'], 'DeepfakeDetection', 'test_targets.json')
 
 
-def main(video_dir, margin=100, step=1, batch_size=1, chunk_size=300, num_workers=4):
+def main(video_dir, margin=100, step=20, batch_size=1, chunk_size=300, num_workers=4):
 
     device = 'cuda' if torch.cuda.is_available() else 'cpu'
 
@@ -77,13 +68,13 @@ def main(video_dir, margin=100, step=1, batch_size=1, chunk_size=300, num_worker
     sub = sub.set_index('filename', drop=False)
 
     preds, acc, loss = validate(dataloader, model, criterion, device=device)
-    with open(f'eval_step_{step}_bs_{batch_size}_cs_{chunk_size}_num_workers_{num_workers}.txt') as f:
+    with open(f'eval_step_{step}_bs_{batch_size}_cs_{chunk_size}_num_workers_{num_workers}.txt', 'w') as f:
         f.write(f'acc: {acc}\n')
         f.write(f'loss: {loss}')
     for filename, prob in preds.items():
         sub.loc[filename, 'label'] = prob
 
-    # sub.to_csv('submission.csv', index=False)
+    sub.to_csv('submission.csv', index=False)
 
 
 def validate(val_loader, model, criterion, device='cuda', display=True, print_freq=1):
@@ -127,10 +118,9 @@ def validate(val_loader, model, criterion, device='cuda', display=True, print_fr
                 progress.display(i)
 
         if display:
-            # TODO: this should also be done with the ProgressMeter
             print(' * Acc@1 {top1.avg:.3f}'.format(top1=top1))
 
-    return preds,top1.avg, losses.avg
+    return preds, top1.avg, losses.avg
 
 
 if __name__ == '__main__':
