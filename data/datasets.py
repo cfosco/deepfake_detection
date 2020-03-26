@@ -2,7 +2,6 @@ import functools
 import io
 import json
 import os
-import shutil
 import tempfile
 import zipfile
 from collections import defaultdict
