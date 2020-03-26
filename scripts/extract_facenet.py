@@ -92,7 +92,7 @@ def main(video_dir, face_dir, size=360, margin=100, fdir_tmpl='face_{}', tmpl='{
                 torch.cuda.empty_cache()
 
                 for filename, face_images in zip(filenames, face_images):
-                    save_dir = os.path.join(face_dir, filename)
+                    save_dir = os.path.join(face_dir, os.path.basename(filename))
                     save_face_data(save_dir, face_images, run_motion_mag,
                                    size=size, margin=margin, fdir_tmpl=fdir_tmpl,
                                    tmpl=tmpl, metadata_fname=metadata_fname,
