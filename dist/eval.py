@@ -13,13 +13,11 @@ import torch.nn as nn
 import torch.nn.parallel
 import torch.utils.data
 import torch.utils.data.distributed
-import torchvision
 from PIL import Image
 from torch.nn import Parameter as P
 from torch.nn import functional as F
-from torch.nn.functional import interpolate
 from torch.utils.data import DataLoader
-from torchvision import models, transforms
+from torchvision import models
 from torchvision.ops.boxes import batched_nms
 from torchvision.transforms import functional as TF
 
@@ -77,45 +75,6 @@ def main(video_dir, margin=100, step=20, batch_size=1, chunk_size=300, num_worke
     sub = sub.set_index('filename', drop=False)
 
     preds, acc, loss = validate(dataloader, model, criterion, device=device)
-
-    # batch_time = AverageMeter('Time', ':6.3f')
-    # progress = ProgressMeter(
-    #     len(dataset),
-    #     [batch_time],
-    #     prefix='Test: ')
-
-    # # switch to evaluate mode
-    # model.eval()
-    # with torch.no_grad():
-    #     end = time.time()
-    #     for i, (filenames, images) in enumerate(dataloader):
-    #         images = images.to(device, non_blocking=True)
-    #         images.mul_(255)
-    #         print(images.shape, images.min(), images.max())
-    #         try:
-    #             # compute output
-    #             output = model(images)
-    #             print(output.shape)
-
-    #             probs = torch.softmax(output, 1)
-    #             for fn, prob in zip(filenames, probs):
-    #                 p = prob[1].item()
-    #                 if np.isnan(p):
-    #                     p = 0.5
-    #                 elif p <= 0.0:
-    #                     p = 0.0001
-    #                 elif p >= 1.0:
-    #                     p = 0.9999
-    #                 sub.loc[fn, 'label'] = p
-    #                 print(f'filename: {fn}; prob: {prob[1]:.3f}')
-    #         except Exception:
-    #             sub.loc[filenames[0], 'label'] = 0.5
-
-    #         # measure elapsed time
-    #         batch_time.update(time.time() - end)
-    #         end = time.time()
-
-    #         progress.display(i)
 
     sub.to_csv('submission.csv', index=False)
 
@@ -186,25 +145,6 @@ def read_frames(video, fps=30, step=1):
             yield frame
         count += 1
 
-
-# class VideoDataset(torch.utils.data.Dataset):
-#     def __init__(self, root, step=12, transform=None):
-#         self.root = root
-#         self.step = step
-#         self.videos_filenames = sorted([f for f in os.listdir(root) if f.endswith('.mp4')])
-#         self.transform = transform
-
-#     def __getitem__(self, index):
-#         name = self.videos_filenames[index]
-#         video_filename = os.path.join(self.root, name)
-#         frames = read_frames(video_filename, step=self.step)
-#         frames = torch.stack(list(map(TF.to_tensor, frames))).transpose(0, 1)
-#         if self.transform is not None and callable(self.transform):
-#             frames = self.transform(frames)
-#         return name, frames
-
-#     def __len__(self):
-#         return len(self.videos_filenames)
 
 
 class VideoFolder(torch.utils.data.Dataset):
