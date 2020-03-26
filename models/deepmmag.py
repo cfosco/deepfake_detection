@@ -27,7 +27,7 @@ def _run_motion_mag(args):
         os.makedirs(os.path.join(config['exp_dir'], 'sample'))
     network_type = config['architecture']['network_arch']
     exp_name = config['exp_name']
-    setproctitle.setproctitle('{}_{}_{}'.format(args.phase, network_type, exp_name))
+    # setproctitle.setproctitle('{}_{}_{}'.format(args.phase, network_type, exp_name))
     tfconfig = tf.ConfigProto(allow_soft_placement=True,
                               log_device_placement=False)
     tfconfig.gpu_options.allow_growth = True
