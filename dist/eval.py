@@ -20,6 +20,12 @@ from torch.utils.data import DataLoader
 from torchvision import models
 from torchvision.ops.boxes import batched_nms
 
+try:
+    import accimage
+except ImportError:
+    accimage = None
+
+
 KAGGLE = False
 
 if KAGGLE:
@@ -174,12 +180,6 @@ class VideoFolder(torch.utils.data.Dataset):
 
     def __len__(self):
         return len(self.videos_filenames)
-
-
-try:
-    import accimage
-except ImportError:
-    accimage = None
 
 
 def _is_pil_image(img):
