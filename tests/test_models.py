@@ -48,7 +48,9 @@ def frames():
 @pytest.fixture
 def frames3D():
     f = torch.as_tensor(_frames_np(), device=device).permute(0, 3, 1, 2).float()
-    f = torch.stack([f[::12], f[::12]])
+    # f = torch.stack([f[::12], f[::12]])
+    # f = torch.stack([f, f])[0:1]
+    f = torch.stack([f, f])
     frames = f.permute(0, 2, 1, 3, 4)
     return frames
 
@@ -62,12 +64,14 @@ def test_facenet(frames):
         print(i, f.shape)
 
 
-def test_facenet3D(frames3D):
-    facenet = models.FaceModel()
-    out = facenet(frames3D)
-    print(f'out.shape: {out.shape}; out.type: {out.dtype}; min: {out.min()}; max: {out.max()}')
+def test_facenet3D_get_faces(frames3D):
+    print(frames3D.shape)
+    facenet = models.FaceModel(keep_all=True, select_largest=False, chunk_size=100)
+    with torch.no_grad():
+        out = facenet.get_faces(frames3D)
 
 
+@pytest.mark.skip
 def test_deepfake_detector(frames3D):
     facenet = models.FaceModel(device=device)
     detector = models.FrameModel(pretorched.resnet18(num_classes=2, pretrained=None), normalize=True)
