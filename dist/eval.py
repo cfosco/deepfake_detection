@@ -1,3 +1,4 @@
+import argparse
 import json
 import os
 import time
@@ -27,6 +28,7 @@ except ImportError:
 
 
 KAGGLE = False
+SPLIT = 'dfdc_train_part_2'
 
 if KAGGLE:
     TEST_VIDEO_DIR = '/kaggle/input/deepfake-detection-challenge/test_videos/'
@@ -34,11 +36,15 @@ if KAGGLE:
     WEIGHT_DIR = '/kaggle/input/deepfake-data/data'
 
 else:
-    TEST_VIDEO_DIR = os.path.join(os.environ['DATA_ROOT'], 'DeepfakeDetection', 'test_videos')
+    DEEPFAKE_DATA_ROOT = os.path.join(os.environ['DATA_ROOT'], 'DeepfakeDetection')
+    # TEST_VIDEO_DIR = os.path.join(os.environ['DATA_ROOT'], 'DeepfakeDetection', 'test_videos')
+
+    # TEST_VIDEO_DIR = os.path.join(os.environ['DATA_ROOT'], 'DeepfakeDetection', 'videos', SPLIT)
     SAMPLE_SUBMISSION_CSV = os.path.join(os.environ['DATA_ROOT'], 'DeepfakeDetection', 'sample_submission.csv')
-    TARGET_FILE = os.path.join(os.environ['DATA_ROOT'], 'DeepfakeDetection', 'test_targets.json')
-    if not os.path.exists(TARGET_FILE):
-        TARGET_FILE = None
+    # TARGET_FILE = os.path.join(os.environ['DATA_ROOT'], 'DeepfakeDetection', 'test_targets.json')
+    # TARGET_FILE = os.path.join(os.environ['DATA_ROOT'], 'DeepfakeDetection', 'videos', SPLIT, 'test_targets.json')
+    # if not os.path.exists(TARGET_FILE):
+    # TARGET_FILE = None
     dir_path = os.path.dirname(os.path.realpath(__file__))
     WEIGHT_DIR = os.path.join(dir_path, 'data')
     # WEIGHT_DIR = 'data'
@@ -47,11 +53,31 @@ NUM_WORKERS = 4
 STEP = 20
 
 
-def main(video_dir, margin=100, step=20, batch_size=1, chunk_size=300, num_workers=4):
+def parse_args():
+    parser = argparse.ArgumentParser(description='Face Extraction')
+    parser.add_argument('--part', type=str, default=None)
+    parser.add_argument('--video_rootdir', default='videos', type=str)
+    parser.add_argument('--step', default=20, type=int)
+    parser.add_argument('--chunk_size', default=150, type=int)
+    args = parser.parse_args()
+
+    if not args.part or args.part == 'test_videos':
+        args.video_dir = os.path.join(DEEPFAKE_DATA_ROOT, 'test_videos')
+        args.target_file = os.path.join(DEEPFAKE_DATA_ROOT, 'test_targets.json')
+    else:
+        args.video_dir = os.path.join(DEEPFAKE_DATA_ROOT, args.video_rootdir, args.part)
+        args.target_file = os.path.join(DEEPFAKE_DATA_ROOT, args.video_rootdir, args.part, 'test_targets.json')
+
+    if not os.path.exists(args.target_file):
+        args.target_file = None
+    return args
+
+
+def main(video_dir, target_file=None, margin=100, step=20, batch_size=1, chunk_size=300, num_workers=4, **kwargs):
 
     device = 'cuda' if torch.cuda.is_available() else 'cpu'
 
-    dataset = VideoFolder(video_dir, step=step, target_file=TARGET_FILE)
+    dataset = VideoFolder(video_dir, step=step, target_file=target_file)
     dataloader = DataLoader(dataset, batch_size=1,
                             shuffle=False, num_workers=num_workers,
                             pin_memory=True, drop_last=False)
@@ -1433,4 +1459,5 @@ class DeepfakeDetector(torch.nn.Module):
 
 
 if __name__ == '__main__':
-    main(TEST_VIDEO_DIR)
+    args = parse_args()
+    main(**vars(args))

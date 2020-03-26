@@ -328,3 +328,21 @@ def smooth(x, amount=0.2, window='hanning'):
     y = np.convolve(w / w.sum(), s, mode='valid')
     # return y[(window_len // 2):-(window_len // 2)]
     return y[(window_len // 2 - 1):-(window_len // 2)][:data_len]
+
+
+def generate_test_targets(data_root, video_dir='videos', filename='metadata.json', outfilename='test_targets.json'):
+    label_mapping = {'FAKE': 1, 'REAL': 0}
+    video_root = os.path.join(data_root, video_dir)
+
+    for root, dirs, files in os.walk(video_root):
+        for d in dirs:
+            print(f'Processing: {d}')
+            metadata = {}
+            fname = os.path.join(root, d, filename)
+            out_fname = os.path.join(root, d, outfilename)
+            with open(fname, 'r') as f:
+                data = json.load(f)
+            for name, info in data.items():
+                metadata[name] = label_mapping[info['label']]
+            with open(out_fname, 'w') as f:
+                json.dump(metadata, f)
