@@ -761,14 +761,14 @@ def nms_numpy(boxes, scores, threshold, method):
     y2 = boxes[:, 3]
     s = scores
     area = (x2 - x1 + 1) * (y2 - y1 + 1)
-    I = np.argsort(s)
+    im = np.argsort(s)
     pick = np.zeros_like(s, dtype=np.int16)
     counter = 0
-    while I.size > 0:
-        i = I[-1]
+    while im.size > 0:
+        i = im[-1]
         pick[counter] = i
         counter += 1
-        idx = I[0:-1]
+        idx = im[0:-1]
         xx1 = np.maximum(x1[i], x1[idx])
         yy1 = np.maximum(y1[i], y1[idx])
         xx2 = np.minimum(x2[i], x2[idx])
@@ -780,7 +780,7 @@ def nms_numpy(boxes, scores, threshold, method):
             o = inter / np.minimum(area[i], area[idx])
         else:
             o = inter / (area[i] + area[idx] - inter)
-        I = I[np.where(o <= threshold)]
+        im = im[np.where(o <= threshold)]
     pick = pick[:counter]
     return pick
 
@@ -821,10 +821,10 @@ def rerec(bboxA):
     h = bboxA[:, 3] - bboxA[:, 1]
     w = bboxA[:, 2] - bboxA[:, 0]
 
-    l = torch.max(w, h)
-    bboxA[:, 0] = bboxA[:, 0] + w * 0.5 - l * 0.5
-    bboxA[:, 1] = bboxA[:, 1] + h * 0.5 - l * 0.5
-    bboxA[:, 2:4] = bboxA[:, :2] + l.repeat(2, 1).permute(1, 0)
+    ll = torch.max(w, h)
+    bboxA[:, 0] = bboxA[:, 0] + w * 0.5 - ll * 0.5
+    bboxA[:, 1] = bboxA[:, 1] + h * 0.5 - ll * 0.5
+    bboxA[:, 2:4] = bboxA[:, :2] + ll.repeat(2, 1).permute(1, 0)
 
     return bboxA
 
