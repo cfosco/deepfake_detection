@@ -18,7 +18,7 @@ from tqdm import tqdm
 
 import pretorched
 from data import VideoFolder, VideoZipFile, video_collate_fn
-from models import FaceModel
+from models import FaceModel, deepmmag
 from pretorched.runners.utils import AverageMeter, ProgressMeter
 from pretorched.utils import str2bool
 
@@ -89,11 +89,7 @@ def main(video_dir, face_dir, size=360, margin=100, fdir_tmpl='face_{}', tmpl='{
                       select_largest=False,
                       chunk_size=chunk_size)
 
-    if magnify_motion:
-        from models import deepmag
-        run_motion_mag = deepmmag.get_motion_mag()
-    else:
-        run_motion_mag = None
+    run_motion_mag = deepmmag.get_motion_mag() if magnify_motion else None
 
     batch_time = AverageMeter('Time', ':6.3f')
     progress = ProgressMeter(len(dataset), [batch_time], prefix='Facenet Extraction and MM: ')
