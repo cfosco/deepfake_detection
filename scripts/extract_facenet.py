@@ -108,7 +108,10 @@ def main(video_dir, face_dir, size=360, margin=100, fdir_tmpl='face_{}', tmpl='{
             with contextlib.suppress(RuntimeWarning):
 
                 filenames, x, _ = next(dataloader)
-                # data_time.update(time.time() - end)
+                for f in filenames:
+                    if os.path.exists(os.path.join(face_dir, os.path.basename(f))):
+                        print(f'Skipping {f}')
+                        continue
                 face_images = model.get_faces(x, to_pil=magnify_motion)
 
                 for filename, face_images in zip(filenames, face_images):
