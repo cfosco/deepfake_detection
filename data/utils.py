@@ -10,6 +10,7 @@ import numpy as np
 import torch
 from tqdm import tqdm
 
+import pretorched
 from pretorched.data.utils import frames_to_video
 
 
@@ -346,3 +347,95 @@ def generate_test_targets(data_root, video_dir='videos', filename='metadata.json
                 metadata[name] = label_mapping[info['label']]
             with open(out_fname, 'w') as f:
                 json.dump(metadata, f)
+
+
+def _process_ff_sequence(data_root, dirname, label, num_workers=12):
+    root = os.path.join(data_root, dirname)
+    vdata = {}
+    for opart in os.listdir(root):
+        for compression_level in os.listdir(os.path.join(root, opart)):
+            vroot = os.path.join(root, opart, compression_level, 'videos')
+            videos = [v for v in os.listdir(vroot) if v.endswith('.mp4')]
+            vdata = {**vdata, **{v:
+                                 {
+                                     'path': os.path.join(dirname, opart, compression_level, 'videos', v),
+                                     'filename': v,
+                                     'label': label,
+                                     'compression_level': compression_level,
+                                     'part': opart,
+                                 }
+                                 for v in videos}}
+    func = functools.partial(get_info, root=data_root)
+    with Pool(num_workers) as pool:
+        d = vdata.values()
+        data = list(tqdm(pool.imap(func, vdata.values()), total=len(d)))
+        pool.close()
+        pool.join()
+    return data
+
+
+def _procces_ff_video(video):
+    pass
+
+
+def get_info(data, root=''):
+    path = os.path.join(root, data['path'])
+    return {**data, **pretorched.data.utils.get_info(path)}
+
+
+def _process_video_dir(vdir):
+    video_filenames, video_paths = zip(*[(f, os.path.join(vdir, f)) for f in os.listdir(vdir) if f.endswith('.mp4')])
+    print(video_filenames, video_paths)
+
+
+def generate_faceforensics_metadata(data_root, num_workers=4):
+
+    # metadata = {}
+    # for opart in os.listdir(original_root):
+    #     for compression_level in os.listdir(os.path.join(original_root, opart)):
+    #         vroot = os.path.join(original_root, opart, compression_level, 'videos')
+    #         videos = [v for v in os.listdir(vroot) if v.endswith('.mp4')]
+    #         vdata = {v:
+    #                  {
+    #                      'path': os.path.join('original_sequences', opart, compression_level, 'videos', v),
+    #                      'filename': v,
+    #                      'label': 'REAL',
+    #                      'compression_level': compression_level,
+    #                      'part': opart,
+    #                  }
+    #                  for v in videos}
+    # func = functools.partial(get_info, root=data_root)
+    # with Pool(num_workers) as pool:
+    #     d = vdata.values()
+    #     data = list(tqdm(pool.imap_unordered(func, vdata.values()), total=len(d)))
+    #     pool.close()
+    #     pool.join()
+    odata = _process_ff_sequence(data_root, 'original_sequences', 'REAL')
+    with open(os.path.join(data_root, 'original_metadata.json'), 'w') as f:
+        json.dump(odata, f)
+
+    mdata = _process_ff_sequence(data_root, 'manipulated_sequences', 'FAKE')
+    with open(os.path.join(data_root, 'manipulated_metadata.json'), 'w') as f:
+        json.dump(mdata, f)
+
+    # for part in os.listdir(manipulated_root):
+
+        # for root, dirs, files in os.walk(original_root):
+        #     for name in files:
+        #         print(os.path.join(root, name))
+        #     # for d in dirs:
+        #         # print(d)
+
+        # with Pool(num_workers) as pool:
+        #     data = list(tqdm(pool.imap_unordered(_process_ff_part, parts), total=len(parts)))
+        #     pool.close()
+        #     pool.join()
+        #     print(data, len(data))
+
+
+def generate_youtubeDF_metadata(root):
+    pass
+
+
+def generate_celebdf_metadata(root):
+    pass
