@@ -301,9 +301,9 @@ class MTCNN(nn.Module):
                 boxes.append(box[inds, :4])
                 probs.append(box[inds, 4])
                 points.append(point)
-        # boxes = np.array(boxes)
-        # probs = np.array(probs)
-        # points = np.array(points)
+        boxes = np.array(boxes)
+        probs = np.array(probs)
+        points = np.array(points)
 
         if not isinstance(img, Iterable):
             boxes = boxes[0]
@@ -514,7 +514,7 @@ def smooth_data(data, amount=1.0):
     return np.convolve(data, kernel, mode='same')
 
 
-def _smooth(x, amount=0.2, window='hanning'):
+def smooth(x, amount=0.2, window='hanning'):
     """smooth the data using a window with requested size.
 
     This method is based on the convolution of a scaled window with the signal.
@@ -572,7 +572,7 @@ def _smooth(x, amount=0.2, window='hanning'):
     return y[(window_len // 2):-(window_len // 2)]
 
 
-def smooth(data, amount=1.0):
+def _smooth(data, amount=1.0):
     if not amount > 0.0:
         return data
     data_len = len(data)
@@ -582,7 +582,7 @@ def smooth(data, amount=1.0):
     return torch.nn.functional.conv1d(data, kernel, bias=None, stride=1, padding=0, dilation=1, groups=1).view(-1)
 
 
-def smooth_boxes_np(batch_boxes, amount=0.1):
+def smooth_boxes(batch_boxes, amount=0.1):
     known_coords = None
     boxes = defaultdict(list)
     for i, bb in enumerate(batch_boxes):
@@ -594,8 +594,8 @@ def smooth_boxes_np(batch_boxes, amount=0.1):
                 known_coords = bb
             added = []
             for face_num, b in enumerate(bb):
-                diff = np.abs(np.array(b) - np.array(known_coords)).sum(1)
-                face_idx = int(np.argmin(diff))
+                diff = torch.abs(b - known_coords).sum(1)
+                face_idx = int(torch.argmin(diff))
                 if face_idx not in added:
                     known_coords[face_idx] = b
                     boxes[face_idx].append(b)
@@ -606,7 +606,7 @@ def smooth_boxes_np(batch_boxes, amount=0.1):
     return list(map(np.stack, zip(*boxes.values())))
 
 
-def smooth_boxes(batch_boxes, amount=0.1):
+def _smooth_boxes(batch_boxes, amount=0.1):
     known_coords = None
     boxes = defaultdict(list)
     for i, bb in enumerate(batch_boxes):
@@ -765,7 +765,7 @@ def detect_face(imgs, minsize, pnet, rnet, onet, threshold, factor, device):
         batch_boxes.append(boxes[b_i_inds])
         batch_points.append(points[b_i_inds])
 
-    # batch_boxes, batch_points = np.array(batch_boxes), np.array(batch_points)
+    batch_boxes, batch_points = np.array(batch_boxes), np.array(batch_points)
 
     return batch_boxes, batch_points
 
