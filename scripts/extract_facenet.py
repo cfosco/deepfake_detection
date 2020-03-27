@@ -90,7 +90,7 @@ def main(video_dir, face_dir, size=360, margin=100, fdir_tmpl='face_{}', tmpl='{
                       chunk_size=chunk_size)
 
     if magnify_motion:
-        from models import deepmag
+        from models import deepmmag
         run_motion_mag = deepmmag.get_motion_mag()
     else:
         run_motion_mag = None
