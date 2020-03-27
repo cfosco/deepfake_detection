@@ -552,7 +552,7 @@ def smooth(x, amount=0.2, window='hanning'):
     return y[(window_len // 2):-(window_len // 2)]
 
 
-def smooth_boxes(batch_boxes, amount=0.5):
+def smooth_boxes(batch_boxes, amount=0.1):
     known_coords = None
     boxes = defaultdict(list)
     for i, bb in enumerate(batch_boxes):
