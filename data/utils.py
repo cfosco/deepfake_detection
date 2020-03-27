@@ -72,7 +72,7 @@ def process_video(video, video_root='', frame_root='', tmpl='%06d.jpg', fps=30, 
 
 def generate_metadata(data_root, video_dir='videos', frames_dir='frames',
                       filename='metadata.json', missing_filename='missing_data.json',
-                      faces_dirs=['face_frames', 'facenet_frames'],
+                      faces_dirs=['facenet_frames', 'facenet_videos'],
                       face_metadata_fnames=['face_metadata.json', 'face_metadata.json'],
                       with_coords=False,
                       ):
@@ -190,7 +190,7 @@ def generate_test_metadata(data_root, test_list_file='test_videos.json', video_d
     print(f'Missing test videos ({len(missing)}): {missing}')
 
 
-def verify_data(data_root, video_dir='videos', frame_dir='frames', face_dir='face_frames',
+def verify_data(data_root, video_dir='videos', frame_dir='frames', face_dir='facenet_videos',
                 missing_threshold=20):
     """Verify data."""
     video_root = os.path.join(data_root, video_dir)
@@ -349,7 +349,10 @@ def generate_test_targets(data_root, video_dir='videos', filename='metadata.json
                 json.dump(metadata, f)
 
 
-def _process_ff_sequence(data_root, dirname, label, num_workers=12):
+def _process_ff_sequence(data_root, dirname, label, num_workers=12,
+                         faces_dirs=['facenet_videos'],
+                         face_metadata_fnames=['face_metadata.json'],
+                         ):
     root = os.path.join(data_root, dirname)
     vdata = {}
     for opart in os.listdir(root):
@@ -365,13 +368,28 @@ def _process_ff_sequence(data_root, dirname, label, num_workers=12):
                                      'part': opart,
                                  }
                                  for v in videos}}
+
     func = functools.partial(get_info, root=data_root)
     with Pool(num_workers) as pool:
         d = vdata.values()
         data = list(tqdm(pool.imap(func, vdata.values()), total=len(d)))
         pool.close()
         pool.join()
-    return data
+
+    metadata = {}
+    missing_faces = defaultdict(list)
+    for face_dir, face_metadata_fname in zip(faces_dirs, face_metadata_fnames):
+        for i, d in enumerate(data):
+            fd = os.path.join(root, d['part'], d['compression_level'], face_dir, d['filename'])
+            try:
+                with open(os.path.join(fd, face_metadata_fname)) as f:
+                    fdata = json.load(f)
+                    d[face_dir] = fdata
+            except Exception:
+                missing_faces[face_dir].append(d['filename'])
+            metadata[d['filename']] = d
+
+    return metadata, missing_faces
 
 
 def _procces_ff_video(video):
@@ -390,47 +408,25 @@ def _process_video_dir(vdir):
 
 def generate_faceforensics_metadata(data_root, num_workers=4):
 
-    # metadata = {}
-    # for opart in os.listdir(original_root):
-    #     for compression_level in os.listdir(os.path.join(original_root, opart)):
-    #         vroot = os.path.join(original_root, opart, compression_level, 'videos')
-    #         videos = [v for v in os.listdir(vroot) if v.endswith('.mp4')]
-    #         vdata = {v:
-    #                  {
-    #                      'path': os.path.join('original_sequences', opart, compression_level, 'videos', v),
-    #                      'filename': v,
-    #                      'label': 'REAL',
-    #                      'compression_level': compression_level,
-    #                      'part': opart,
-    #                  }
-    #                  for v in videos}
-    # func = functools.partial(get_info, root=data_root)
-    # with Pool(num_workers) as pool:
-    #     d = vdata.values()
-    #     data = list(tqdm(pool.imap_unordered(func, vdata.values()), total=len(d)))
-    #     pool.close()
-    #     pool.join()
-    odata = _process_ff_sequence(data_root, 'original_sequences', 'REAL')
+    odata, omissing = _process_ff_sequence(data_root, 'original_sequences', 'REAL')
     with open(os.path.join(data_root, 'original_metadata.json'), 'w') as f:
-        json.dump(odata, f)
+        json.dump(odata, f, indent=4)
 
-    mdata = _process_ff_sequence(data_root, 'manipulated_sequences', 'FAKE')
+    with open(os.path.join(data_root, 'original_missing.json'), 'w') as f:
+        json.dump(omissing, f, indent=4)
+
+    for n, m in omissing.items():
+        print(n, len(m))
+
+    mdata, mmissing = _process_ff_sequence(data_root, 'manipulated_sequences', 'FAKE')
     with open(os.path.join(data_root, 'manipulated_metadata.json'), 'w') as f:
-        json.dump(mdata, f)
+        json.dump(mdata, f, indent=4)
 
-    # for part in os.listdir(manipulated_root):
+    with open(os.path.join(data_root, 'manipulated_missing.json'), 'w') as f:
+        json.dump(mmissing, f, indent=4)
 
-        # for root, dirs, files in os.walk(original_root):
-        #     for name in files:
-        #         print(os.path.join(root, name))
-        #     # for d in dirs:
-        #         # print(d)
-
-        # with Pool(num_workers) as pool:
-        #     data = list(tqdm(pool.imap_unordered(_process_ff_part, parts), total=len(parts)))
-        #     pool.close()
-        #     pool.join()
-        #     print(data, len(data))
+    for n, m in mmissing.items():
+        print(n, len(m))
 
 
 def generate_youtubeDF_metadata(root):
