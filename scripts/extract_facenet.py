@@ -30,8 +30,6 @@ try:
 except ModuleNotFoundError:
     raise ModuleNotFoundError
 
-DEEPFAKE_DATA_ROOT = os.path.join(os.environ['DATA_ROOT'], 'DeepfakeDetection')
-
 
 def parse_args():
     parser = argparse.ArgumentParser(description='Face Extraction')
@@ -97,8 +95,9 @@ def main(video_dir, face_dir, size=360, margin=100, fdir_tmpl='face_{}', tmpl='{
     else:
         run_motion_mag = None
 
-    batch_time = AverageMeter('Time', ':6.3f')
-    progress = ProgressMeter(len(dataset), [batch_time], prefix='Facenet Extraction and MM: ')
+    # batch_time = AverageMeter('Time', ':6.3f')
+    # data_time = AverageMeter('Time', ':6.3f')
+    # progress = ProgressMeter(len(dataset), [batch_time, data_time], prefix='Facenet Extraction and MM: ')
 
     # switch to evaluate mode
     model.eval()
@@ -109,10 +108,8 @@ def main(video_dir, face_dir, size=360, margin=100, fdir_tmpl='face_{}', tmpl='{
             with contextlib.suppress(RuntimeWarning):
 
                 filenames, x, _ = next(dataloader)
-                # print(f'Extracting faces from: {filenames}')
-
+                # data_time.update(time.time() - end)
                 face_images = model.get_faces(x, to_pil=magnify_motion)
-                torch.cuda.empty_cache()
 
                 for filename, face_images in zip(filenames, face_images):
                     save_dir = os.path.join(face_dir, os.path.basename(filename))
@@ -122,7 +119,7 @@ def main(video_dir, face_dir, size=360, margin=100, fdir_tmpl='face_{}', tmpl='{
                                    remove_frames=remove_frames)
 
                 # measure elapsed time
-                batch_time.update(time.time() - end)
+                # batch_time.update(time.time() - end)
                 end = time.time()
 
                 # progress.display(i)

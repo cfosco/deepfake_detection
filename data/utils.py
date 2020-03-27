@@ -434,8 +434,58 @@ def generate_faceforensics_metadata(data_root, num_workers=4):
 
 
 def generate_youtubeDF_metadata(root):
-    pass
+    metadata = {}
+    val_metadata = {}
+    for split in ['fake', 'real']:
+        d = os.path.join(root, 'videos', split)
+        for f in os.listdir(d):
+            if not f.endswith('.mp4'):
+                continue
+
+            path = os.path.join(split, f)
+            metadata[f] = {
+                'filename': f,
+                'path': path,
+                'label': split.upper(),
+                'split': 'train',
+                **pretorched.data.utils.get_info(os.path.join(d, f))
+            }
+        val_d = os.path.join(root, 'videos', 'val', split)
+        for f in os.listdir(val_d):
+            path = os.path.join('val', split, f)
+            dd = {
+                'filename': f,
+                'path': path,
+                'label': split.upper(),
+                'split': 'train',
+                **pretorched.data.utils.get_info(os.path.join(val_d, f))
+            }
+            metadata[f] = dd
+            val_metadata[f] = dd
+
+    with open(os.path.join(root, 'metadata.json'), 'w') as f:
+        json.dump(metadata, f)
+
+    with open(os.path.join(root, 'val_metadata.json'), 'w') as f:
+        json.dump(val_metadata, f)
 
 
-def generate_celebdf_metadata(root):
-    pass
+def generate_CelebDF_metadata(root):
+    metadata = {}
+    for vdir, label in [('Celeb-real', 'REAL'), ('Celeb-synthesis', 'FAKE'), ('YouTube-real', 'REAL')]:
+        d = os.path.join(root, 'videos', vdir)
+        for f in os.listdir(d):
+            if not f.endswith('.mp4'):
+                continue
+
+            path = os.path.join(vdir, f)
+            metadata[f] = {
+                'filename': f,
+                'path': path,
+                'label': label,
+                'split': 'train',
+                **pretorched.data.utils.get_info(os.path.join(d, f))
+            }
+
+    with open(os.path.join(root, 'metadata.json'), 'w') as f:
+        json.dump(metadata, f)

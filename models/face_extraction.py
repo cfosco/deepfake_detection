@@ -33,7 +33,6 @@ class FaceModel(torch.nn.Module):
     def input_transform(self, x):
         x = x.permute(0, 2, 1, 3, 4).contiguous()  # [bs, d, nc, h, w]
         return x
-        # return x.view(-1, *x.shape[2:])            # [bs * d, nc, h, w]
 
     def get_faces(self, x, to_pil=True):
         bs, nc, d, h, w = x.shape
