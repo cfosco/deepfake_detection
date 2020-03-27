@@ -35,7 +35,7 @@ class FaceModel(torch.nn.Module):
         return x
         # return x.view(-1, *x.shape[2:])            # [bs * d, nc, h, w]
 
-    def get_faces(self, x):
+    def get_faces(self, x, to_pil=True):
         bs, nc, d, h, w = x.shape
         batched_face_images = []
         for x in self.input_transform(x):
@@ -46,8 +46,13 @@ class FaceModel(torch.nn.Module):
 
             min_face = min([f.shape[1] for f in faces_out])
             faces_out = torch.cat([f[:, :min_face] for f in faces_out])
-            face_images = {i: [Image.fromarray(ff.permute(1, 2, 0).numpy().astype(np.uint8)) for ff in f]
-                           for i, f in enumerate(faces_out.permute(1, 0, 2, 3, 4))}
+            if to_pil:
+                face_images = {i: [Image.fromarray(ff.permute(1, 2, 0).numpy().astype(np.uint8)) for ff in f]
+                               for i, f in enumerate(faces_out.permute(1, 0, 2, 3, 4))}
+
+            else:
+                face_images = {i: [ff.permute(1, 2, 0).numpy().astype(np.uint8) for ff in f]
+                               for i, f in enumerate(faces_out.permute(1, 0, 2, 3, 4))}
             batched_face_images.append(face_images)
         return batched_face_images
 

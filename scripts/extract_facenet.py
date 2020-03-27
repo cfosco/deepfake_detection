@@ -8,6 +8,8 @@ import time
 from multiprocessing import Process
 from multiprocessing.pool import Pool, ThreadPool
 
+import ffmpeg
+import numpy as np
 import torch
 import torch.backends.cudnn as cudnn
 import torch.nn.parallel
@@ -107,9 +109,9 @@ def main(video_dir, face_dir, size=360, margin=100, fdir_tmpl='face_{}', tmpl='{
             with contextlib.suppress(RuntimeWarning):
 
                 filenames, x, _ = next(dataloader)
-                print(f'Extracting faces from: {filenames}')
+                # print(f'Extracting faces from: {filenames}')
 
-                face_images = model.get_faces(x)
+                face_images = model.get_faces(x, to_pil=magnify_motion)
                 torch.cuda.empty_cache()
 
                 for filename, face_images in zip(filenames, face_images):
@@ -123,7 +125,7 @@ def main(video_dir, face_dir, size=360, margin=100, fdir_tmpl='face_{}', tmpl='{
                 batch_time.update(time.time() - end)
                 end = time.time()
 
-                progress.display(i)
+                # progress.display(i)
 
 
 def save_face_data(save_dir, face_images, run_motion_mag=None, size=360, margin=100, fdir_tmpl='face_{}',
@@ -148,20 +150,53 @@ def save_face_data(save_dir, face_images, run_motion_mag=None, size=360, margin=
         json.dump(metadata, f)
 
     for face_num, faces in face_images.items():
-        num_images = len(faces)
-        out_filename = os.path.join(save_dir, fdir_tmpl.format(face_num), tmpl)
-        names = (out_filename.format(i) for i in range(1, num_images + 1))
-        save_images(faces, names, num_workers=num_images)
-
         video_path = os.path.join(save_dir, fdir_tmpl.format(face_num))
-        frames_to_video(video_path)
-        # motion_magnification(video_path, remove_frames)
-        if run_motion_mag is not None:
-            mm_out_dir = run_motion_mag(video=video_path, output=video_path + '_mm')
-        if remove_frames:
-            os.system(f'rm -rf {video_path}')
+        if run_motion_mag is None:
+            array_to_video(faces, video_path + '.mp4')
+        else:
+            num_images = len(faces)
+            out_filename = os.path.join(save_dir, fdir_tmpl.format(face_num), tmpl)
+            names = (out_filename.format(i) for i in range(1, num_images + 1))
+            save_images(faces, names, num_workers=num_images)
+
+            video_path = os.path.join(save_dir, fdir_tmpl.format(face_num))
+            frames_to_video(video_path)
+            # motion_magnification(video_path, remove_frames)
             if run_motion_mag is not None:
-                os.system(f'rm -rf {mm_out_dir}')
+                mm_out_dir = run_motion_mag(video=video_path, output=video_path + '_mm')
+            if remove_frames:
+                os.system(f'rm -rf {video_path}')
+                if run_motion_mag is not None:
+                    os.system(f'rm -rf {mm_out_dir}')
+
+
+def vidwrite(images, filename, framerate=30, vcodec='libx264'):
+    if not isinstance(images, np.ndarray):
+        images = np.asarray(images)
+    n, height, width, channels = images.shape
+    process = (
+        ffmpeg
+        .input('pipe:', format='rawvideo', pix_fmt='rgb24', s='{}x{}'.format(width, height))
+        .output(filename, pix_fmt='yuv420p', vcodec=vcodec, r=framerate)
+        .global_args('-loglevel', 'error')
+        .overwrite_output()
+        .run_async(pipe_stdin=True)
+    )
+    for frame in images:
+        process.stdin.write(
+            frame
+            .astype(np.uint8)
+            .tobytes()
+        )
+    process.stdin.close()
+    process.wait()
+
+
+def array_to_video(images, filename):
+    p = Process(target=vidwrite,
+                args=(images, filename),
+                kwargs={'vcodec': DEFAULT_VIDEO_CODEC})
+    p.start()
 
 
 def frames_to_video(video_path):
@@ -173,6 +208,7 @@ def frames_to_video(video_path):
 
 
 def motion_magnification(video_path, remove_frames):
+    from models import deepmmag
     p = Process(target=deepmmag.motion_magnify,
                 kwargs={'video': video_path,
                         'output': video_path + '_mm',
@@ -182,6 +218,7 @@ def motion_magnification(video_path, remove_frames):
 
 
 def _motion_magnification(video_path, remove_frames):
+    from models import deepmmag
     with Pool(2) as pool:
         res = pool.apply_async(deepmmag.motion_magnify,
                                kwds={'video': video_path,
