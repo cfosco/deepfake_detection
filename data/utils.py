@@ -75,7 +75,7 @@ def generate_metadata(data_root, video_dir='videos', frames_dir='frames',
                       faces_dirs=['facenet_frames', 'facenet_videos'],
                       face_metadata_fnames=['face_metadata.json', 'face_metadata.json'],
                       with_coords=False,
-                      num_workers=12,
+                      num_workers=20,
                       ):
     metadata = {}
     video_root = os.path.join(data_root, video_dir)
@@ -503,24 +503,24 @@ def generate_CelebDF_metadata(
     video_root = os.path.join(root, 'videos')
     for vdir, label in [('Celeb-real', 'REAL'), ('Celeb-synthesis', 'FAKE'), ('YouTube-real', 'REAL')]:
         d = os.path.join(root, 'videos', vdir)
-        for f in os.listdir(d):
-            if not f.endswith('.mp4'):
+        for filename in os.listdir(d):
+            if not filename.endswith('.mp4'):
                 continue
-            path = os.path.join(vdir, f)
-            metadata[f] = {
-                'filename': f,
+            path = os.path.join(vdir, filename)
+            metadata[filename] = {
+                'filename': filename,
                 'path': path,
                 'label': label,
                 'split': 'train',
             }
             for face_dir, face_metadata_fname in zip(faces_dirs, face_metadata_fnames):
-                fd = os.path.join(root, face_dir, vdir, f)
+                fd = os.path.join(root, face_dir, vdir, filename)
                 try:
                     with open(os.path.join(fd, face_metadata_fname)) as f:
                         fdata = json.load(f)
-                        metadata[f][face_dir] = fdata
+                        metadata[filename][face_dir] = fdata
                 except Exception:
-                    missing_faces[face_dir].append(f)
+                    missing_faces[face_dir].append(filename)
 
     func = functools.partial(get_info, root=video_root)
     with Pool(num_workers) as pool:
