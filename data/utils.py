@@ -74,7 +74,7 @@ def generate_metadata(data_root, video_dir='videos', frames_dir='frames',
                       filename='metadata.json', missing_filename='missing_data.json',
                       faces_dirs=['facenet_frames', 'facenet_videos'],
                       face_metadata_fnames=['face_metadata.json', 'face_metadata.json'],
-                      with_coords=False,
+                      with_coords=False, with_framecount=True, dry_run=False,
                       num_workers=24,
                       ):
     metadata = {}
@@ -116,30 +116,28 @@ def generate_metadata(data_root, video_dir='videos', frames_dir='frames',
                         except Exception:
                             missing_faces[face_dir].append((d, name))
 
-            func = functools.partial(get_info, root=video_root)
-            with Pool(num_workers) as pool:
-                dv = data.values()
-                data = list(tqdm(pool.imap(func, dv), total=len(dv)))
-                pool.close()
-                pool.join()
-            # dd = {}
-            # for k in data:
-            #     if 'num_frames' not in k:
-            #         k['num_frames'] = 299
-            #     dd[k['filename']] = k
-            data = {k['filename']: k for k in data}
-            metadata[d] = data
+            if with_framecount:
+                func = functools.partial(get_info, root=video_root)
+                with Pool(num_workers) as pool:
+                    dv = data.values()
+                    data = list(tqdm(pool.imap(func, dv), total=len(dv)))
+                    pool.close()
+                    pool.join()
 
-    filename = 'coords_' + filename if with_coords else filename
-    with open(os.path.join(data_root, filename), 'w') as f:
-        json.dump(metadata, f)
+                data = {k['filename']: k for k in data}
+                metadata[d] = data
 
     missing_data = {
         'frames': missing_frames,
         'faces': missing_faces,
     }
-    with open(os.path.join(data_root, missing_filename), 'w') as f:
-        json.dump(missing_data, f, indent=4)
+    if not dry_run:
+        filename = 'coords_' + filename if with_coords else filename
+        with open(os.path.join(data_root, filename), 'w') as f:
+            json.dump(metadata, f)
+
+        with open(os.path.join(data_root, missing_filename), 'w') as f:
+            json.dump(missing_data, f, indent=4)
 
     frame_counter = defaultdict(int)
     face_counter = {k: defaultdict(int) for k in faces_dirs}
