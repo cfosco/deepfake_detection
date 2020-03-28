@@ -444,11 +444,13 @@ def generate_FaceForensics_metadata(data_root, num_workers=4):
         print(f'\t {n}: {len(m)}')
 
     all_metadata = {**odata, **mdata}
+    # print('all_metadata', len(all_metadata))
     parts = set([d['part'] for d in all_metadata.values()])
     m = {part: {k: v for k, v in all_metadata.items() if v['part'] == part} for part in parts}
+    # print(m, len(m))
 
-    with open(os.path.join(data_root, 'metadata.json'), 'w') as f:
-        json.dump(m, f)
+    with open(os.path.join(data_root, 'metadata.json'), 'w') as ff:
+        json.dump(m, ff)
 
     split_data = {}
     for split_file in os.listdir(os.path.join(data_root, 'splits')):

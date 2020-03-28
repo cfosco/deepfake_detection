@@ -52,6 +52,7 @@ def test_get_dataset_video(name, split, num_frames, size, dataset_type, record_s
     Dataset = getattr(data, dataset_type, 'ImageFolder')
     transform = data.get_transform(split=split, size=size)
     dataset = Dataset(root, record_set, sampler, transform=transform)
+    print(f'Dataset {name}-{split} has len: {len(dataset)}')
     for i, (frames, label) in enumerate(dataset):
         if not (i < MAX_ITERS):
             break
