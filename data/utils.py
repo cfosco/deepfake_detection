@@ -113,6 +113,9 @@ def generate_metadata(data_root, video_dir='videos', frames_dir='frames',
                                     fdata.pop('face_coords')
                             data[name][face_dir] = fdata
                         except Exception:
+                            # except Exception as e:
+                            # if d == 'dfdc_train_part_35' and face_dir == 'facenet_videos':
+                                # print(e)
                             missing_faces[face_dir].append((d, name))
 
                 metadata[d] = data
@@ -466,8 +469,14 @@ def generate_youtubeDF_metadata(root):
         json.dump(val_metadata, f)
 
 
-def generate_CelebDF_metadata(root):
+def generate_CelebDF_metadata(
+    root,
+    faces_dirs=['facenet_videos'],
+    face_metadata_fnames=['face_metadata.json'],
+    missing_filename='missing_data.json',
+):
     metadata = {}
+    missing_faces = defaultdict(list)
     for vdir, label in [('Celeb-real', 'REAL'), ('Celeb-synthesis', 'FAKE'), ('YouTube-real', 'REAL')]:
         d = os.path.join(root, 'videos', vdir)
         for f in os.listdir(d):
@@ -482,6 +491,20 @@ def generate_CelebDF_metadata(root):
                 'split': 'train',
                 **pretorched.data.utils.get_info(os.path.join(d, f))
             }
+            for face_dir, face_metadata_fname in zip(faces_dirs, face_metadata_fnames):
+                fd = os.path.join(root, face_dir, vdir, f)
+                try:
+                    with open(os.path.join(fd, face_metadata_fname)) as f:
+                        fdata = json.load(f)
+                        metadata[f][face_dir] = fdata
+                except Exception:
+                    missing_faces[face_dir].append(f)
 
     with open(os.path.join(root, 'metadata.json'), 'w') as f:
         json.dump(metadata, f)
+
+    with open(os.path.join(root, missing_filename), 'w') as f:
+        json.dump(missing_faces)
+
+    for n, m in missing_faces.items():
+        print(n, len(m))
