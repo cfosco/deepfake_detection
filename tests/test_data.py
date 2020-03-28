@@ -23,6 +23,22 @@ SKIP_VIDEO_ZIP = False
     ('DFDC', 'val', 16, 224, 'DeepfakeVideo', 'DeepfakeSet'),
     ('DFDC', 'train', 16, 224, 'DeepfakeFaceVideo', 'DeepfakeFaceSet'),
     ('DFDC', 'val', 16, 224, 'DeepfakeFaceVideo', 'DeepfakeFaceSet'),
+
+    ('FaceForensics', 'train', 16, 224, 'DeepfakeVideo', 'DeepfakeSet'),
+    ('FaceForensics', 'val', 16, 224, 'DeepfakeVideo', 'DeepfakeSet'),
+    ('FaceForensics', 'train', 16, 224, 'DeepfakeFaceVideo', 'DeepfakeFaceSet'),
+    ('FaceForensics', 'val', 16, 224, 'DeepfakeFaceVideo', 'DeepfakeFaceSet'),
+
+    ('CelebDF', 'train', 16, 224, 'DeepfakeVideo', 'DeepfakeSet'),
+    ('CelebDF', 'val', 16, 224, 'DeepfakeVideo', 'DeepfakeSet'),
+    ('CelebDF', 'train', 16, 224, 'DeepfakeFaceVideo', 'DeepfakeFaceSet'),
+    ('CelebDF', 'val', 16, 224, 'DeepfakeFaceVideo', 'DeepfakeFaceSet'),
+
+    ('YouTubeDeepfakes', 'train', 16, 224, 'DeepfakeVideo', 'DeepfakeSet'),
+    ('YouTubeDeepfakes', 'val', 16, 224, 'DeepfakeVideo', 'DeepfakeSet'),
+    ('YouTubeDeepfakes', 'train', 16, 224, 'DeepfakeFaceVideo', 'DeepfakeFaceSet'),
+    ('YouTubeDeepfakes', 'val', 16, 224, 'DeepfakeFaceVideo', 'DeepfakeFaceSet'),
+
 ])
 def test_get_dataset_video(name, split, num_frames, size, dataset_type, record_set_type):
     metadata = cfg.get_metadata(name, split=split, dataset_type=dataset_type,

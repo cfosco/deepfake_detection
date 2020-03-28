@@ -530,6 +530,7 @@ def generate_CelebDF_metadata(
                 'path': path,
                 'label': label,
                 'split': 'train',
+                'part': vdir,
             }
             for face_dir, face_metadata_fname in zip(faces_dirs, face_metadata_fnames):
                 fd = os.path.join(root, face_dir, vdir, filename)
@@ -548,6 +549,8 @@ def generate_CelebDF_metadata(
         pool.join()
 
         metadata = {k['filename']: k for k in data}
+        parts = set([d['part'] for d in metadata.values()])
+        metadata = {part: {k: v for k, v in metadata.items() if v['part'] == part} for part in parts}
 
     with open(os.path.join(root, 'metadata.json'), 'w') as f:
         json.dump(metadata, f)
@@ -555,5 +558,6 @@ def generate_CelebDF_metadata(
     with open(os.path.join(root, missing_filename), 'w') as f:
         json.dump(missing_faces, f)
 
+    print(f'CelebDF missing:')
     for n, m in missing_faces.items():
-        print(n, len(m))
+        print(f'\t {n}: {len(m)}')
