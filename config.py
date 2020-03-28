@@ -83,6 +83,24 @@ def get_metadata(name, split='train', dataset_type='DeepfakeFrame', record_set_t
             'DeepfakeFaceFrame': defaultdict(lambda: os.path.join(data_root, 'DeepfakeDetection/facenet_frames'), {}),
             'DeepfakeFaceCropFrame': defaultdict(lambda: os.path.join(data_root, 'DeepfakeDetection/frames'), {}),
         },
+        'FaceForensics': {
+            'DeepfakeVideo': defaultdict(lambda: os.path.join(data_root, 'FaceForensics'), {}),
+            'DeepfakeZipVideo': defaultdict(lambda: os.path.join(data_root, 'FaceForensics'), {}),
+            'DeepfakeFaceVideo': defaultdict(lambda: os.path.join(data_root, 'FaceForensics'), {}),
+            'DeepfakeZipFaceVideo': defaultdict(lambda: os.path.join(data_root, 'FaceForensics'), {}),
+        },
+        'CelebDF': {
+            'DeepfakeVideo': defaultdict(lambda: os.path.join(data_root, 'CelebDF/videos'), {}),
+            'DeepfakeZipVideo': defaultdict(lambda: os.path.join(data_root, 'CelebDF/videos'), {}),
+            'DeepfakeFaceVideo': defaultdict(lambda: os.path.join(data_root, 'CelebDF/facenet_videos'), {}),
+            'DeepfakeZipFaceVideo': defaultdict(lambda: os.path.join(data_root, 'CelebDF/facenet_videos'), {}),
+        },
+        'YouTubeDeepfakes': {
+            'DeepfakeVideo': defaultdict(lambda: os.path.join(data_root, 'YouTubeDeepfakes/videos'), {}),
+            'DeepfakeZipVideo': defaultdict(lambda: os.path.join(data_root, 'YouTubeDeepfakes/videos'), {}),
+            'DeepfakeFaceVideo': defaultdict(lambda: os.path.join(data_root, 'YouTubeDeepfakes/facenet_videos'), {}),
+            'DeepfakeZipFaceVideo': defaultdict(lambda: os.path.join(data_root, 'YouTubeDeepfakes/facenet_videos'), {})
+        },
         'ImageNet': {
             'ImageHDF5': defaultdict(lambda: os.path.join(data_root, 'ImageNet'), {}),
             'ImageFolder': defaultdict(lambda: os.path.join(data_root, 'ImageNet'), {}),
