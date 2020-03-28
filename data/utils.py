@@ -75,7 +75,7 @@ def generate_metadata(data_root, video_dir='videos', frames_dir='frames',
                       faces_dirs=['facenet_frames', 'facenet_videos'],
                       face_metadata_fnames=['face_metadata.json', 'face_metadata.json'],
                       with_coords=False,
-                      num_workers=20,
+                      num_workers=24,
                       ):
     metadata = {}
     video_root = os.path.join(data_root, video_dir)
@@ -428,8 +428,10 @@ def generate_FaceForensics_metadata(data_root, num_workers=4):
     with open(os.path.join(data_root, 'original_missing.json'), 'w') as f:
         json.dump(omissing, f, indent=4)
 
+    print(f'FaceForensics original missing:')
     for n, m in omissing.items():
-        print(n, len(m))
+        print(f'\t {n}: {len(m)}')
+        # print(n, len(m))
 
     mdata, mmissing = _process_ff_sequence(data_root, 'manipulated_sequences', 'FAKE')
     with open(os.path.join(data_root, 'manipulated_metadata.json'), 'w') as f:
@@ -438,8 +440,16 @@ def generate_FaceForensics_metadata(data_root, num_workers=4):
     with open(os.path.join(data_root, 'manipulated_missing.json'), 'w') as f:
         json.dump(mmissing, f, indent=4)
 
+    print(f'FaceForensics manipulated missing:')
     for n, m in mmissing.items():
-        print(n, len(m))
+        print(f'\t {n}: {len(m)}')
+
+    all_metadata = {**odata, **mdata}
+    parts = set([d['part'] for d in all_metadata.values()])
+    m = {part: {k: v for k, v in all_metadata.items() if v['part'] == part} for part in parts}
+
+    with open(os.path.join(data_root, 'metadata.json'), 'w') as f:
+        json.dump(m, f)
 
 
 def generate_YouTubeDeepfakes_metadata(root, num_workers=12):
