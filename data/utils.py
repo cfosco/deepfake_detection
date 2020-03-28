@@ -453,39 +453,40 @@ def generate_FaceForensics_metadata(data_root, num_workers=4):
 
 
 def generate_YouTubeDeepfakes_metadata(root, num_workers=12):
-    metadata = {}
+    train_metadata = {}
     val_metadata = {}
     video_root = os.path.join(root, 'videos')
-    for split in ['fake', 'real']:
-        d = os.path.join(root, 'videos', split)
+    for label in ['fake', 'real']:
+        d = os.path.join(root, 'videos', label)
         for f in os.listdir(d):
             if not f.endswith('.mp4'):
                 continue
 
-            path = os.path.join(split, f)
-            metadata[f] = {
+            path = os.path.join(label, f)
+            train_metadata[f] = {
                 'filename': f,
                 'path': path,
-                'label': split.upper(),
+                'label': label.upper(),
                 'split': 'train',
+                'part': label,
             }
-        val_d = os.path.join(root, 'videos', 'val', split)
+        val_d = os.path.join(root, 'videos', 'val', label)
         for f in os.listdir(val_d):
-            path = os.path.join('val', split, f)
+            path = os.path.join('val', label, f)
             dd = {
                 'filename': f,
                 'path': path,
-                'label': split.upper(),
-                'split': 'train',
+                'label': label.upper(),
+                'split': 'val',
+                'part': 'val',
             }
-            metadata[f] = dd
             val_metadata[f] = dd
 
     func = functools.partial(get_info, root=video_root)
     with Pool(num_workers) as pool:
-        dv = metadata.values()
+        dv = train_metadata.values()
         data = list(tqdm(pool.imap(func, dv), total=len(dv)))
-        metadata = {k['filename']: k for k in data}
+        train_metadata = {k['filename']: k for k in data}
 
         vdv = val_metadata.values()
         vdata = list(tqdm(pool.imap(func, vdv), total=len(vdv)))
@@ -494,8 +495,15 @@ def generate_YouTubeDeepfakes_metadata(root, num_workers=12):
         pool.close()
         pool.join()
 
+    all_metadata = {**train_metadata, **val_metadata}
+    parts = set([d['part'] for d in all_metadata.values()])
+    m = {part: {k: v for k, v in all_metadata.items() if v['part'] == part} for part in parts}
+
     with open(os.path.join(root, 'metadata.json'), 'w') as f:
-        json.dump(metadata, f)
+        json.dump(m, f)
+
+    with open(os.path.join(root, 'train_metadata.json'), 'w') as f:
+        json.dump(train_metadata, f)
 
     with open(os.path.join(root, 'val_metadata.json'), 'w') as f:
         json.dump(val_metadata, f)
