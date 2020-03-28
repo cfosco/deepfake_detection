@@ -450,35 +450,60 @@ def generate_FaceForensics_metadata(data_root, num_workers=4):
         json.dump(m, f)
 
 
-def generate_YouTubeDeepfakes_metadata(root, num_workers=12):
+def generate_YouTubeDeepfakes_metadata(
+        root,
+        faces_dirs=['facenet_videos'],
+        face_metadata_fnames=['face_metadata.json'],
+        num_workers=12):
+    missing_faces = defaultdict(list)
     train_metadata = {}
     val_metadata = {}
     video_root = os.path.join(root, 'videos')
     for label in ['fake', 'real']:
         d = os.path.join(root, 'videos', label)
-        for f in os.listdir(d):
-            if not f.endswith('.mp4'):
+        for filename in os.listdir(d):
+            if not filename.endswith('.mp4'):
                 continue
 
-            path = os.path.join(label, f)
-            train_metadata[f] = {
-                'filename': f,
+            path = os.path.join(label, filename)
+            train_metadata[filename] = {
+                'filename': filename,
                 'path': path,
                 'label': label.upper(),
                 'split': 'train',
                 'part': label,
             }
+            for face_dir, face_metadata_fname in zip(faces_dirs, face_metadata_fnames):
+                fd = os.path.join(root, face_dir, label, filename)
+                try:
+                    with open(os.path.join(fd, face_metadata_fname)) as f:
+                        fdata = json.load(f)
+                        train_metadata[filename][face_dir] = fdata
+                except Exception:
+                    missing_faces[face_dir].append(filename)
+
         val_d = os.path.join(root, 'videos', 'val', label)
-        for f in os.listdir(val_d):
-            path = os.path.join('val', label, f)
-            dd = {
-                'filename': f,
+        for filename in os.listdir(val_d):
+            path = os.path.join('val', label, filename)
+            val_metadata[filename] = {
+                'filename': filename,
                 'path': path,
                 'label': label.upper(),
                 'split': 'val',
                 'part': 'val',
             }
-            val_metadata[f] = dd
+            for face_dir, face_metadata_fname in zip(faces_dirs, face_metadata_fnames):
+                fd = os.path.join(root, face_dir, 'val', label, filename)
+                try:
+                    with open(os.path.join(fd, face_metadata_fname)) as f:
+                        fdata = json.load(f)
+                        val_metadata[filename][face_dir] = fdata
+                except Exception:
+                    missing_faces[face_dir].append(filename)
+
+    print(f'YouTubeDeepfakes missing:')
+    for n, m in missing_faces.items():
+        print(f'\t {n}: {len(m)}')
 
     func = functools.partial(get_info, root=video_root)
     with Pool(num_workers) as pool:
@@ -496,6 +521,8 @@ def generate_YouTubeDeepfakes_metadata(root, num_workers=12):
     all_metadata = {**train_metadata, **val_metadata}
     parts = set([d['part'] for d in all_metadata.values()])
     m = {part: {k: v for k, v in all_metadata.items() if v['part'] == part} for part in parts}
+    train_metadata = {k: v for k, v in m.items() if k in ['real', 'fake']}
+    val_metadata = {k: v for k, v in m.items() if k in ['val']}
 
     with open(os.path.join(root, 'metadata.json'), 'w') as f:
         json.dump(m, f)
@@ -509,8 +536,15 @@ def generate_YouTubeDeepfakes_metadata(root, num_workers=12):
     with open(os.path.join(root, 'val_videos.json'), 'w') as f:
         json.dump(list(val_metadata.keys()), f)
 
-    os.symlink(os.path.join(root, 'val_metadata.json'), os.path.join(root, 'test_metadata.json'))
-    os.symlink(os.path.join(root, 'val_videos.json'), os.path.join(root, 'test_videos.json'))
+    link_name = os.path.join(root, 'test_metadata.json')
+    with contextlib.suppress(FileNotFoundError):
+        os.remove(link_name)
+    os.symlink(os.path.join(root, 'val_metadata.json'), link_name)
+
+    link_name = os.path.join(root, 'test_videos.json')
+    with contextlib.suppress(FileNotFoundError):
+        os.remove(link_name)
+    os.symlink(os.path.join(root, 'val_videos.json'), link_name)
 
 
 def generate_CelebDF_metadata(
