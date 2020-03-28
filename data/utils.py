@@ -409,7 +409,7 @@ def _process_video_dir(vdir):
     print(video_filenames, video_paths)
 
 
-def generate_faceforensics_metadata(data_root, num_workers=4):
+def generate_FaceForensics_metadata(data_root, num_workers=4):
 
     odata, omissing = _process_ff_sequence(data_root, 'original_sequences', 'REAL')
     with open(os.path.join(data_root, 'original_metadata.json'), 'w') as f:
@@ -432,7 +432,7 @@ def generate_faceforensics_metadata(data_root, num_workers=4):
         print(n, len(m))
 
 
-def generate_youtubeDF_metadata(root):
+def generate_YouTubeDeepfakes_metadata(root):
     metadata = {}
     val_metadata = {}
     for split in ['fake', 'real']:

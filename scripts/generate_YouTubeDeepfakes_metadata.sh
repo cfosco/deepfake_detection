@@ -1,8 +1,8 @@
 #!/usr/bin/env bash
 
-ROOT=${DATA_ROOT}/FaceForensics/
+ROOT=${DATA_ROOT}/YouTubeDeepfakes/
 
 # Start from parent directory of script
 cd "$(dirname "${BASH_SOURCE[0]}")/.."
 
-python -m fire data.utils generate_faceforensics_metadata $ROOT
+python -m fire data.utils generate_youtubeDF_metadata $ROOT
