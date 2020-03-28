@@ -506,6 +506,12 @@ def generate_YouTubeDeepfakes_metadata(root, num_workers=12):
     with open(os.path.join(root, 'val_metadata.json'), 'w') as f:
         json.dump(val_metadata, f)
 
+    with open(os.path.join(root, 'val_videos.json'), 'w') as f:
+        json.dump(list(val_metadata.keys()), f)
+
+    os.symlink(os.path.join(root, 'val_metadata.json'), os.path.join(root, 'test_metadata.json'))
+    os.symlink(os.path.join(root, 'val_videos.json'), os.path.join(root, 'test_videos.json'))
+
 
 def generate_CelebDF_metadata(
     root,
