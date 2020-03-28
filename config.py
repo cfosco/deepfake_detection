@@ -17,6 +17,9 @@ num_classes_dict = {
     'Hybrid1365': 1365,
     'Moments': 339,
     'DFDC': 2,
+    'FaceForensics': 2,
+    'CelebDF': 2,
+    'YouTubeDeepfakes': 2,
 }
 
 root_dirs = {
@@ -124,9 +127,21 @@ def get_metadata(name, split='train', dataset_type='DeepfakeFrame', record_set_t
             'DeepfakeSet': defaultdict(lambda: os.path.join(data_root, 'DeepfakeDetection', fname), {}),
             'DeepfakeFaceSet': defaultdict(lambda: os.path.join(data_root, 'DeepfakeDetection', fname), {}),
         },
+        'FaceForensics': {
+            'DeepfakeSet': defaultdict(lambda: os.path.join(data_root, 'FaceForensics', fname), {}),
+            'DeepfakeFaceSet': defaultdict(lambda: os.path.join(data_root, 'FaceForensics', fname), {}),
+        },
+        'CelebDF': {
+            'DeepfakeSet': defaultdict(lambda: os.path.join(data_root, 'CelebDF', fname), {}),
+            'DeepfakeFaceSet': defaultdict(lambda: os.path.join(data_root, 'CelebDF', fname), {}),
+        },
+        'YouTubeDeepfakes': {
+            'DeepfakeSet': defaultdict(lambda: os.path.join(data_root, 'YouTubeDeepfakes', fname), {}),
+            'DeepfakeFaceSet': defaultdict(lambda: os.path.join(data_root, 'YouTubeDeepfakes', fname), {}),
+        },
     }
     metafile = metafiles[name][record_set_type][resolution]
-    blacklist_file = os.path.join(data_root, 'DeepfakeDetection', 'test_videos.json') if split == 'train' else None
+    blacklist_file = os.path.join(data_root, 'DeepfakeDetection', 'test_videos.json') if (split == 'train' and name == 'DFDC') else None
 
     return {'root': root, 'metafile': metafile, 'blacklist_file': blacklist_file}
 
