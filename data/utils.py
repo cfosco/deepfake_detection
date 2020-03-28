@@ -391,11 +391,12 @@ def _process_ff_sequence(data_root, dirname, label, num_workers=12,
     missing_faces = defaultdict(list)
     for face_dir, face_metadata_fname in zip(faces_dirs, face_metadata_fnames):
         for i, d in enumerate(data):
-            fd = os.path.join(root, d['part'], d['compression_level'], face_dir, d['filename'])
+            path = os.path.join(dirname, d['part'], d['compression_level'], face_dir, d['filename'])
+            fd = os.path.join(data_root, path)
             try:
                 with open(os.path.join(fd, face_metadata_fname)) as f:
                     fdata = json.load(f)
-                    d[face_dir] = fdata
+                    d[face_dir] = {**fdata, 'path': path}
             except Exception:
                 missing_faces[face_dir].append(d['filename'])
             metadata[d['filename']] = d

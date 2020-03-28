@@ -112,6 +112,10 @@ class DeepfakeFaceRecord(DeepfakeRecord):
     def face_data(self):
         return self.data[self.face_data_key]
 
+    @property
+    def face_path(self):
+        return self.face_data.get('path', self.path)
+
 
 class DeepfakeSet:
 
@@ -346,7 +350,7 @@ class DeepfakeFaceVideo(DeepfakeVideo):
 
     def __getitem__(self, index: int):
         record = self.record_set[index]
-        video_dir = os.path.join(self.root, record.path)
+        video_dir = os.path.join(self.root, record.face_path)
         face_num = np.random.choice(record.face_nums)
         num_face_frames = record.num_face_frames[face_num]
         frame_inds = self.sampler.sample(num_face_frames)
@@ -390,7 +394,7 @@ class DeepfakeZipFaceVideo(DeepfakeFaceVideo):
 
     def __getitem__(self, index: int):
         record = self.record_set[index]
-        part, video_dir, label = record.part, record.path, record.label
+        part, video_dir, label = record.part, record.face_path, record.label
         face_num = np.random.choice(record.face_nums)
         num_face_frames = record.num_face_frames[face_num]
         frame_inds = self.sampler.sample(num_face_frames)
