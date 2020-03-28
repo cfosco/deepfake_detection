@@ -559,3 +559,16 @@ def generate_CelebDF_metadata(
     print(f'CelebDF missing:')
     for n, m in missing_faces.items():
         print(f'\t {n}: {len(m)}')
+
+    with open(os.path.join(root, 'List_of_testing_videos.txt')) as f:
+        testing_videos = [x.strip().split(' ')[1].split('/')[1] for x in f]
+
+    with open(os.path.join(root, 'test_videos.json'), 'w') as f:
+        json.dump(testing_videos, f)
+
+    test_metadata = {}
+    for part, part_data in metadata.items():
+        test_metadata[part] = {name: info for name, info in part_data.items() if name in testing_videos}
+
+    with open(os.path.join(root, 'test_metadata.json'), 'w') as f:
+        json.dump(test_metadata, f)
