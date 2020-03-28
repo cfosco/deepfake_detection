@@ -143,21 +143,48 @@ def get_transform(name='DFDC', split='train', size=224, resolution=256,
     return transform
 
 
-def get_dataset(name, root, metafile, split='train', size=224, resolution=256, num_frames=16,
+def get_dataset(name, data_root, split='train', size=224, resolution=256, num_frames=16,
                 dataset_type='DeepfakeFrame', sampler_type='TemporalSegmentSampler',
-                record_set_type='DeepfakeSet',
+                record_set_type='DeepfakeSet', segment_count=None,
                 **kwargs):
 
-    Dataset = getattr(data, dataset_type, 'ImageFolder')
-    record_set = getattr(data, record_set_type, 'DeepfakeSet')
+    if isinstance(name, (list, tuple)):
+        return torch.utils.data.ConcatDataset([
+            get_dataset(n, data_root, split=split, size=size, resolution=resolution,
+                        num_frames=num_frames, dataset_type=dataset_type, sampler_type=sampler_type,
+                        record_set_type=record_set_type, segment_count=segment_count, **kwargs)
+            for n in name
+        ])
+    elif name.lower() in ['all', 'full']:
+        names = cfg.ALL_DATASETS
+        return get_dataset(names, data_root, split=split, size=size, resolution=resolution,
+                           num_frames=num_frames, dataset_type=dataset_type, sampler_type=sampler_type,
+                           record_set_type=record_set_type, segment_count=segment_count, **kwargs)
 
-    sampler = getattr(samplers, sampler_type)(num_frames)
+    segment_count = num_frames if segment_count is None else segment_count
 
-    kwargs = {'root': root,
-              'metafile': os.path.join(root, f'{split}.txt'),
-              'transform': get_transform(name, split, size, resolution),
-              **kwargs}
-    dataset_kwargs, _ = utils.split_kwargs_by_func(Dataset, kwargs)
+    metadata = cfg.get_metadata(name,
+                                split=split,
+                                dataset_type=dataset_type,
+                                record_set_type=record_set_type,
+                                data_root=data_root)
+    kwargs = {**metadata, **kwargs, 'segment_count': segment_count}
+
+    Dataset = getattr(data, dataset_type, 'DeepfakeFrame')
+    RecSet = getattr(data, record_set_type, 'DeepfakeSet')
+    Sampler = getattr(samplers, sampler_type, 'TSNFrameSampler')
+
+    r_kwargs, _ = utils.split_kwargs_by_func(RecSet, kwargs)
+    s_kwargs, _ = utils.split_kwargs_by_func(Sampler, kwargs)
+    record_set = RecSet(**r_kwargs)
+    sampler = Sampler(**s_kwargs)
+    full_kwargs = {
+        'record_set': record_set,
+        'sampler': sampler,
+        'transform': data.get_transform(split=split, size=size),
+        **kwargs,
+    }
+    dataset_kwargs, _ = utils.split_kwargs_by_func(Dataset, full_kwargs)
     return Dataset(**dataset_kwargs)
 
 

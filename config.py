@@ -11,6 +11,13 @@ model_names = sorted(name for name in models.__dict__
 
 DATA_ROOT = os.getenv('DATA_ROOT')
 
+ALL_DATASETS = [
+    'DFDC',
+    'FaceForensics',
+    'CelebDF',
+    'YouTubeDeepfakes',
+]
+
 num_classes_dict = {
     'ImageNet': 1000,
     'Places365': 365,
@@ -20,6 +27,7 @@ num_classes_dict = {
     'FaceForensics': 2,
     'CelebDF': 2,
     'YouTubeDeepfakes': 2,
+    'all': 2,
 }
 
 root_dirs = {
@@ -75,7 +83,8 @@ def get_root_dirs(name, dataset_type='DeepfakeFrame', resolution=224, data_root=
     return root_dirs[name][dataset_type][resolution]
 
 
-def get_metadata(name, split='train', dataset_type='DeepfakeFrame', record_set_type='DeepfakeSet', resolution=224, data_root=DATA_ROOT):
+def get_metadata(name, split='train', dataset_type='DeepfakeFrame',
+                 record_set_type='DeepfakeSet', resolution=224, data_root=DATA_ROOT):
     root_dirs = {
         'DFDC': {
             'DeepfakeVideo': defaultdict(lambda: os.path.join(data_root, 'DeepfakeDetection/videos'), {}),
@@ -141,7 +150,9 @@ def get_metadata(name, split='train', dataset_type='DeepfakeFrame', record_set_t
         },
     }
     metafile = metafiles[name][record_set_type][resolution]
-    blacklist_file = os.path.join(data_root, 'DeepfakeDetection', 'test_videos.json') if (split == 'train' and name == 'DFDC') else None
+    blacklist_file = os.path.join(
+        data_root, 'DeepfakeDetection', 'test_videos.json') if (
+        split == 'train' and name == 'DFDC') else None
 
     return {'root': root, 'metafile': metafile, 'blacklist_file': blacklist_file}
 
