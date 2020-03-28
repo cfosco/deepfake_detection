@@ -74,7 +74,7 @@ class DeepfakeRecord:
 
 class DeepfakeFaceRecord(DeepfakeRecord):
 
-    def __init__(self, part, name, data, face_data_key='facenet_frames'):
+    def __init__(self, part, name, data, face_data_key='facenet_videos'):
         self.part = part
         self.name = name
         self.data = data
