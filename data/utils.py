@@ -450,6 +450,24 @@ def generate_FaceForensics_metadata(data_root, num_workers=4):
     with open(os.path.join(data_root, 'metadata.json'), 'w') as f:
         json.dump(m, f)
 
+    split_data = {}
+    for split_file in os.listdir(os.path.join(data_root, 'splits')):
+        split, _ = os.path.splitext(split_file)
+        split_path = os.path.join(data_root, 'splits', split_file)
+        with open(split_path) as f:
+            data = json.load(f)
+            split_data[split] = ['_'.join(reversed(d)) + '.mp4' for d in data]
+        with open(os.path.join(data_root, f'{split}_videos.json'), 'w') as f:
+            json.dump(split_data[split], f)
+        with open(os.path.join(data_root, f'{split}_metadata.json'), 'w') as f:
+            split_metadata = defaultdict(dict)
+            for part, part_data in m.items():
+                for filename in split_data[split]:
+                    if filename in part_data:
+                        split_metadata[part] = {**split_metadata[part], filename: part_data[filename]}
+            print(f'Total of {sum([len(d) for d in split_metadata.values()])} videos in {split} split')
+            json.dump(split_metadata, f)
+
 
 def generate_YouTubeDeepfakes_metadata(
         root,
