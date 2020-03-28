@@ -75,6 +75,7 @@ def generate_metadata(data_root, video_dir='videos', frames_dir='frames',
                       faces_dirs=['facenet_frames', 'facenet_videos'],
                       face_metadata_fnames=['face_metadata.json', 'face_metadata.json'],
                       with_coords=False,
+                      num_workers=12,
                       ):
     metadata = {}
     video_root = os.path.join(data_root, video_dir)
@@ -113,12 +114,21 @@ def generate_metadata(data_root, video_dir='videos', frames_dir='frames',
                                     fdata.pop('face_coords')
                             data[name][face_dir] = fdata
                         except Exception:
-                            # except Exception as e:
-                            # if d == 'dfdc_train_part_35' and face_dir == 'facenet_videos':
-                                # print(e)
                             missing_faces[face_dir].append((d, name))
 
-                metadata[d] = data
+            func = functools.partial(get_info, root=video_root)
+            with Pool(num_workers) as pool:
+                dv = data.values()
+                data = list(tqdm(pool.imap(func, dv), total=len(dv)))
+                pool.close()
+                pool.join()
+            # dd = {}
+            # for k in data:
+            #     if 'num_frames' not in k:
+            #         k['num_frames'] = 299
+            #     dd[k['filename']] = k
+            data = {k['filename']: k for k in data}
+            metadata[d] = data
 
     filename = 'coords_' + filename if with_coords else filename
     with open(os.path.join(data_root, filename), 'w') as f:
@@ -432,9 +442,10 @@ def generate_FaceForensics_metadata(data_root, num_workers=4):
         print(n, len(m))
 
 
-def generate_YouTubeDeepfakes_metadata(root):
+def generate_YouTubeDeepfakes_metadata(root, num_workers=12):
     metadata = {}
     val_metadata = {}
+    video_root = os.path.join(root, 'videos')
     for split in ['fake', 'real']:
         d = os.path.join(root, 'videos', split)
         for f in os.listdir(d):
@@ -447,7 +458,6 @@ def generate_YouTubeDeepfakes_metadata(root):
                 'path': path,
                 'label': split.upper(),
                 'split': 'train',
-                **pretorched.data.utils.get_info(os.path.join(d, f))
             }
         val_d = os.path.join(root, 'videos', 'val', split)
         for f in os.listdir(val_d):
@@ -457,10 +467,22 @@ def generate_YouTubeDeepfakes_metadata(root):
                 'path': path,
                 'label': split.upper(),
                 'split': 'train',
-                **pretorched.data.utils.get_info(os.path.join(val_d, f))
             }
             metadata[f] = dd
             val_metadata[f] = dd
+
+    func = functools.partial(get_info, root=video_root)
+    with Pool(num_workers) as pool:
+        dv = metadata.values()
+        data = list(tqdm(pool.imap(func, dv), total=len(dv)))
+        metadata = {k['filename']: k for k in data}
+
+        vdv = val_metadata.values()
+        vdata = list(tqdm(pool.imap(func, vdv), total=len(vdv)))
+        val_metadata = {k['filename']: k for k in vdata}
+
+        pool.close()
+        pool.join()
 
     with open(os.path.join(root, 'metadata.json'), 'w') as f:
         json.dump(metadata, f)
@@ -474,22 +496,22 @@ def generate_CelebDF_metadata(
     faces_dirs=['facenet_videos'],
     face_metadata_fnames=['face_metadata.json'],
     missing_filename='missing_data.json',
+    num_workers=12,
 ):
     metadata = {}
     missing_faces = defaultdict(list)
+    video_root = os.path.join(root, 'videos')
     for vdir, label in [('Celeb-real', 'REAL'), ('Celeb-synthesis', 'FAKE'), ('YouTube-real', 'REAL')]:
         d = os.path.join(root, 'videos', vdir)
         for f in os.listdir(d):
             if not f.endswith('.mp4'):
                 continue
-
             path = os.path.join(vdir, f)
             metadata[f] = {
                 'filename': f,
                 'path': path,
                 'label': label,
                 'split': 'train',
-                **pretorched.data.utils.get_info(os.path.join(d, f))
             }
             for face_dir, face_metadata_fname in zip(faces_dirs, face_metadata_fnames):
                 fd = os.path.join(root, face_dir, vdir, f)
@@ -500,11 +522,20 @@ def generate_CelebDF_metadata(
                 except Exception:
                     missing_faces[face_dir].append(f)
 
+    func = functools.partial(get_info, root=video_root)
+    with Pool(num_workers) as pool:
+        dv = metadata.values()
+        data = list(tqdm(pool.imap(func, dv), total=len(dv)))
+        pool.close()
+        pool.join()
+
+        metadata = {k['filename']: k for k in data}
+
     with open(os.path.join(root, 'metadata.json'), 'w') as f:
         json.dump(metadata, f)
 
     with open(os.path.join(root, missing_filename), 'w') as f:
-        json.dump(missing_faces)
+        json.dump(missing_faces, f)
 
     for n, m in missing_faces.items():
         print(n, len(m))
