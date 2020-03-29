@@ -108,10 +108,10 @@ def main(video_dir, face_dir, size=360, margin=100, fdir_tmpl='face_{}', tmpl='{
             with contextlib.suppress(RuntimeWarning):
 
                 filenames, x, _ = next(dataloader)
-                for f in filenames:
-                    if os.path.exists(os.path.join(face_dir, os.path.basename(f))):
-                        print(f'Skipping {f}')
-                        continue
+                # for f in filenames:
+                    # if os.path.exists(os.path.join(face_dir, os.path.basename(f))):
+                        # print(f'Skipping {f}')
+                        # continue
                 face_images = model.get_faces(x, to_pil=magnify_motion)
 
                 for filename, face_images in zip(filenames, face_images):
@@ -247,13 +247,22 @@ def save_image(args):
         pass
 
 
-def filter_filenames(video_filenames, face_dir):
+def filter_filenames(video_filenames, face_root):
     filtered_filename = []
     for f in video_filenames:
-        frame_dir = os.path.join(face_dir, os.path.basename(f))
-        if os.path.exists(frame_dir):
-            if os.listdir(frame_dir):
-                print(f'Skipping {frame_dir}')
+        face_dir = os.path.join(face_root, os.path.basename(f))
+        if os.path.exists(face_dir):
+            fm = os.path.join(face_dir, 'face_metadata.json')
+            try:
+                with open(fm) as jf:
+                    metadata = json.load(jf)
+                for face_name in metadata['face_names']:
+                    if not os.path.exists(os.path.join(face_dir, face_name + '.mp4')):
+                        raise FileNotFoundError
+            except FileNotFoundError:
+                pass
+            else:
+                print(f'Skipping {face_dir}')
                 continue
         filtered_filename.append(f)
     return filtered_filename
