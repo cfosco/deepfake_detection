@@ -435,7 +435,7 @@ def read_frames(video, fps=30, step=1):
 
 
 class VideoFolder(torch.utils.data.Dataset):
-    def __init__(self, root, step=2, transform=None, target_file=None):
+    def __init__(self, root, step=2, transform=None, target_file=None, default_target=0):
         self.root = root
         self.step = step
         self.videos_filenames = sorted([f for f in os.listdir(root) if f.endswith('.mp4')])
@@ -449,13 +449,15 @@ class VideoFolder(torch.utils.data.Dataset):
         else:
             self.targets = {}
 
+        self.default_target = default_target
+
     def __getitem__(self, index):
         name = self.videos_filenames[index]
         video_filename = os.path.join(self.root, name)
         frames = read_frames(video_filename, step=self.step)
         if self.transform is not None:
             frames = self.transform(frames)
-        target = int(self.targets.get(name, 0))
+        target = int(self.targets.get(name, self.default_target))
         return name, frames, target
 
     def __len__(self):
@@ -464,7 +466,7 @@ class VideoFolder(torch.utils.data.Dataset):
 
 class VideoZipFile(VideoFolder):
 
-    def __init__(self, filename, step=2, transform=None, target_file=None):
+    def __init__(self, filename, step=2, transform=None, target_file=None, default_target=0):
         self.filename = filename
         self.step = step
         with zipfile.ZipFile(filename) as z:
@@ -480,6 +482,8 @@ class VideoZipFile(VideoFolder):
         else:
             self.targets = {}
 
+        self.default_target = default_target
+
     def __getitem__(self, index):
         name = self.videos_filenames[index]
         with tempfile.NamedTemporaryFile() as temp:
@@ -488,7 +492,7 @@ class VideoZipFile(VideoFolder):
             frames = read_frames(temp.name, step=self.step)
             if self.transform is not None:
                 frames = self.transform(frames)
-        target = int(self.targets.get(name, 0))
+        target = int(self.targets.get(name, self.default_target))
         return name, frames, target
 
 
