@@ -124,6 +124,12 @@ def get_metadata(name, split='train', dataset_type='DeepfakeFrame',
         'Hybrid1365': {
             'ImageHDF5': defaultdict(lambda: data_root, {}),
             'ImageFolder': defaultdict(lambda: data_root, {}),
+        },
+        'all': {
+            'DeepfakeVideo': defaultdict(lambda: data_root, {}),
+            'DeepfakeZipVideo': defaultdict(lambda: data_root, {}),
+            'DeepfakeFaceVideo': defaultdict(lambda: data_root, {}),
+            'DeepfakeZipFaceVideo': defaultdict(lambda: data_root, {})
         }
     }
     root = root_dirs[name][dataset_type][resolution]
@@ -148,11 +154,15 @@ def get_metadata(name, split='train', dataset_type='DeepfakeFrame',
             'DeepfakeSet': defaultdict(lambda: os.path.join(data_root, 'YouTubeDeepfakes', fname), {}),
             'DeepfakeFaceSet': defaultdict(lambda: os.path.join(data_root, 'YouTubeDeepfakes', fname), {}),
         },
+        'all': {
+            'DeepfakeSet': defaultdict(lambda: data_root, {}),
+            'DeepfakeFaceSet': defaultdict(lambda: data_root, {}),
+        },
     }
     metafile = metafiles[name][record_set_type][resolution]
     blacklist_file = os.path.join(
-        data_root, 'DeepfakeDetection', 'test_videos.json') if (
-        split == 'train' and name == 'DFDC') else None
+        data_root, {'DFDC': 'DeepfakeDetection'}.get(name, name), 'test_videos.json') if (
+        split == 'train') else None
 
     return {'root': root, 'metafile': metafile, 'blacklist_file': blacklist_file}
 
@@ -168,7 +178,7 @@ def parse_args():
                         ' | '.join(model_names) +
                         ' (default: resnet3d50)')
     parser.add_argument('--segment_count', type=int, default=16)
-    parser.add_argument('--dataset_type', type=str, default='DeepfakeFaceFrame')
+    parser.add_argument('--dataset_type', type=str, default='DeepfakeFaceVideo')
     parser.add_argument('--record_set_type', type=str, default='DeepfakeFaceSet')
     parser.add_argument('--sampler_type', type=str, default='TSNFrameSampler')
     parser.add_argument('--pretrained', type=str, default=None, dest='pretrained',
