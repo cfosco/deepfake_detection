@@ -230,35 +230,12 @@ def get_dataloader(name, data_root=None, split='train', num_frames=16, size=224,
                    distributed=False, segment_count=None,
                    **kwargs):
 
-    segment_count = num_frames if segment_count is None else segment_count
-
-    metadata = cfg.get_metadata(name,
-                                split=split,
-                                dataset_type=dataset_type,
-                                record_set_type=record_set_type,
-                                data_root=data_root)
-    kwargs = {**metadata, **kwargs, 'segment_count': segment_count}
-
-    Dataset = getattr(data, dataset_type, 'DeepfakeFrame')
-    RecSet = getattr(data, record_set_type, 'DeepfakeSet')
-    Sampler = getattr(samplers, sampler_type, 'TSNFrameSampler')
-
-    r_kwargs, _ = utils.split_kwargs_by_func(RecSet, kwargs)
-    s_kwargs, _ = utils.split_kwargs_by_func(Sampler, kwargs)
-    record_set = RecSet(**r_kwargs)
-    sampler = Sampler(**s_kwargs)
-    full_kwargs = {
-        'record_set': record_set,
-        'sampler': sampler,
-        'transform': data.get_transform(split=split, size=size),
-        **kwargs,
-    }
-    dataset_kwargs, _ = utils.split_kwargs_by_func(Dataset, full_kwargs)
-    dataset = Dataset(**dataset_kwargs)
-
+    dataset = get_dataset(name, data_root, split=split, size=size, resolution=resolution,
+                          num_frames=num_frames, segment_count=segment_count, dataset_type=dataset_type,
+                          sampler_type=sampler_type, record_set_type=record_set_type)
     loader_sampler = DistributedSampler(dataset) if (distributed and split == 'train') else None
     return DataLoader(dataset, batch_size=batch_size, sampler=loader_sampler,
-                      shuffle=(sampler is None and shuffle), num_workers=num_workers,
+                      shuffle=(loader_sampler is None and shuffle), num_workers=num_workers,
                       pin_memory=pin_memory, drop_last=drop_last)
 
 
@@ -281,15 +258,17 @@ def _get_dataloader(name, data_root=None, split='train', size=224, resolution=25
 
 
 def get_dataloaders(name, root, dataset_type='ImageFolder', size=224, resolution=256,
-                    batch_size=32, num_workers=12, shuffle=True, distributed=False,
+                    batch_size=32, num_workers=12, shuffle=[True, False], distributed=False,
                     load_in_mem=False, pin_memory=True, drop_last=False,
                     splits=['train', 'val'], **kwargs):
+    if not isinstance(shuffle, list):
+        shuffle = len(splits) * [shuffle]
     dataloaders = {
         split: get_dataloader(name, data_root=root, split=split, size=size, resolution=resolution,
                               dataset_type=dataset_type, batch_size=batch_size, num_workers=num_workers,
-                              shuffle=shuffle, load_in_mem=load_in_mem, pin_memory=pin_memory, drop_last=drop_last,
+                              shuffle=shuffle[i], load_in_mem=load_in_mem, pin_memory=pin_memory, drop_last=drop_last,
                               distributed=distributed, **kwargs)
-        for split in splits}
+        for i, split in enumerate(splits)}
     return dataloaders
 
 
