@@ -105,6 +105,7 @@ class MTCNN(nn.Module):
         self, image_size=160, margin=0, min_face_size=20,
         thresholds=[0.6, 0.7, 0.7, 0.98], factor=0.709, post_process=True,
         select_largest=True, keep_all=False, device=None, chunk_size=None,
+        relax_landmarks=True,
     ):
         super().__init__()
 
@@ -117,6 +118,7 @@ class MTCNN(nn.Module):
         self.select_largest = select_largest
         self.keep_all = keep_all
         self.chunk_size = chunk_size
+        self.relax_landmarks = relax_landmarks
 
         self.pnet = PNet(pretrained=os.path.join(WEIGHT_DIR, 'pnet.pth'))
         self.rnet = RNet(pretrained=os.path.join(WEIGHT_DIR, 'rnet.pth'))
@@ -275,7 +277,7 @@ class MTCNN(nn.Module):
                 img, self.min_face_size,
                 self.pnet, self.rnet, self.onet,
                 self.thresholds, self.factor,
-                self.device
+                self.device, self.relax_landmarks
             )
         boxes, probs, points = [], [], []
         for box, point in zip(batch_boxes, batch_points):
@@ -631,7 +633,7 @@ def _smooth_boxes(batch_boxes, amount=0.1):
     return list(map(torch.stack, zip(*boxes.values())))
 
 
-def detect_face(imgs, minsize, pnet, rnet, onet, threshold, factor, device):
+def detect_face(imgs, minsize, pnet, rnet, onet, threshold, factor, device, relax_landmarks=True):
     if not isinstance(imgs, Iterable):
         imgs = [imgs]
     if any(img.shape != imgs[0].shape for img in imgs):
@@ -737,6 +739,8 @@ def detect_face(imgs, minsize, pnet, rnet, onet, threshold, factor, device):
         score = out2[1, :]
         points = out1
         ipass = score > threshold[2]
+        if not all(ipass) and relax_landmarks:
+            ipass = score == score.max()
         points = points[:, ipass]
         boxes = torch.cat((boxes[ipass, :4], score[ipass].unsqueeze(1)), dim=1)
         image_inds = image_inds[ipass]
