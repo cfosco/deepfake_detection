@@ -44,7 +44,7 @@ optimizer_defaults = {
 
 scheduler_defaults = {
     'CosineAnnealingLR': {
-        'T_max': 100
+        'T_max': 60
     }
 }
 

@@ -55,6 +55,7 @@ STEP = 20
 
 def parse_args():
     parser = argparse.ArgumentParser(description='Face Extraction')
+    parser.add_argument('--dataset', type=str, default='DeepfakeDetection')
     parser.add_argument('--part', type=str, default=None)
     parser.add_argument('--video_rootdir', default='videos', type=str)
     parser.add_argument('--step', default=20, type=int)
@@ -63,13 +64,19 @@ def parse_args():
     parser.add_argument('--default_target', default=0, type=str)
     args = parser.parse_args()
 
+    DEEPFAKE_DATA_ROOT = os.path.join(os.environ['DATA_ROOT'], args.dataset)
     if not args.part or args.part == 'test_videos':
         args.video_dir = os.path.join(DEEPFAKE_DATA_ROOT, 'test_videos')
         args.target_file = os.path.join(DEEPFAKE_DATA_ROOT, 'test_targets.json')
+    elif args.dataset == 'DeepfakeDetection':
+        args.video_dir = os.path.join(DEEPFAKE_DATA_ROOT, args.video_rootdir, args.part)
+        args.target_file = os.path.join(DEEPFAKE_DATA_ROOT, args.video_rootdir, args.part, 'test_targets.json')
+    elif args.dataset == 'FaceForensics':
+        args.video_dir = os.path.join(DEEPFAKE_DATA_ROOT, args.part, args.video_rootdir)
+        args.target_file = os.path.join(DEEPFAKE_DATA_ROOT, args.part, args.video_rootdir, 'test_targets.json')
     else:
         args.video_dir = os.path.join(DEEPFAKE_DATA_ROOT, args.video_rootdir, args.part)
         args.target_file = os.path.join(DEEPFAKE_DATA_ROOT, args.video_rootdir, args.part, 'test_targets.json')
-
     if not os.path.exists(args.target_file):
         args.target_file = None
     return args
