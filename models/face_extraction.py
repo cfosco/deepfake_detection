@@ -739,7 +739,7 @@ def detect_face(imgs, minsize, pnet, rnet, onet, threshold, factor, device, rela
         score = out2[1, :]
         points = out1
         ipass = score > threshold[2]
-        if (not all(ipass)) and relax_landmarks:
+        if (not any(ipass)) and relax_landmarks:
             ipass = score == score.max()
         points = points[:, ipass]
         boxes = torch.cat((boxes[ipass, :4], score[ipass].unsqueeze(1)), dim=1)
