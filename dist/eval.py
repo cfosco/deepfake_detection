@@ -59,6 +59,8 @@ def parse_args():
     parser.add_argument('--video_rootdir', default='videos', type=str)
     parser.add_argument('--step', default=20, type=int)
     parser.add_argument('--chunk_size', default=150, type=int)
+    parser.add_argument('--results_dir', default='results', type=str)
+    parser.add_argument('--default_target', default=0, type=str)
     args = parser.parse_args()
 
     if not args.part or args.part == 'test_videos':
@@ -73,11 +75,14 @@ def parse_args():
     return args
 
 
-def main(video_dir, target_file=None, margin=100, step=20, batch_size=1, chunk_size=300, num_workers=4, **kwargs):
+def main(video_dir, target_file=None, default_target=0, margin=100,
+         step=20, batch_size=1, chunk_size=300, num_workers=4, **kwargs):
 
     device = 'cuda' if torch.cuda.is_available() else 'cpu'
 
-    dataset = VideoFolder(video_dir, step=step, target_file=target_file)
+    dataset = VideoFolder(video_dir, step=step,
+                          target_file=target_file,
+                          default_target=default_target)
     dataloader = DataLoader(dataset, batch_size=1,
                             shuffle=False, num_workers=num_workers,
                             pin_memory=True, drop_last=False)
@@ -109,6 +114,11 @@ def main(video_dir, target_file=None, margin=100, step=20, batch_size=1, chunk_s
     sub = sub.set_index('filename', drop=False)
 
     preds, acc, loss = validate(dataloader, model, criterion, device=device)
+    with open(f'eval_step_{step}_bs_{batch_size}_cs_{chunk_size}_num_workers_{num_workers}.txt', 'w') as f:
+        f.write(f'acc: {acc}\n')
+        f.write(f'loss: {loss}')
+    for filename, prob in preds.items():
+        sub.loc[filename, 'label'] = prob
 
     sub.to_csv('submission.csv', index=False)
 
@@ -181,7 +191,7 @@ def read_frames(video, fps=30, step=1):
 
 
 class VideoFolder(torch.utils.data.Dataset):
-    def __init__(self, root, step=2, transform=None, target_file=None):
+    def __init__(self, root, step=2, transform=None, target_file=None, default_target=0):
         self.root = root
         self.step = step
         self.videos_filenames = sorted([f for f in os.listdir(root) if f.endswith('.mp4')])
@@ -195,13 +205,15 @@ class VideoFolder(torch.utils.data.Dataset):
         else:
             self.targets = {}
 
+        self.default_target = default_target
+
     def __getitem__(self, index):
         name = self.videos_filenames[index]
         video_filename = os.path.join(self.root, name)
         frames = read_frames(video_filename, step=self.step)
         if self.transform is not None:
             frames = self.transform(frames)
-        target = int(self.targets.get(name, 0))
+        target = int(self.targets.get(name, self.default_target))
         return name, frames, target
 
     def __len__(self):
