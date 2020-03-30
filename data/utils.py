@@ -11,7 +11,7 @@ import torch
 from tqdm import tqdm
 
 import pretorched
-from pretorched.data.utils import frames_to_video
+from pretorched.data.utils import frames_to_video, encode_video
 
 
 def videos_to_frames(video_root, frame_root, num_workers=32):
@@ -633,3 +633,47 @@ def generate_CelebDF_metadata(
 
     with open(os.path.join(root, 'test_metadata.json'), 'w') as f:
         json.dump(test_metadata, f)
+
+
+def augment_dir(filename, outdir, augmentation):
+    os.makedirs(outdir, exist_ok=True)
+    outname = os.path.join(outdir, os.path.basename(filename))
+    if os.path.exists(outname):
+        return
+    encode_video(filename, outname, **augmentation)
+
+
+def make_aug_testset(data_root,
+                     video_dirname='aug_test_videos',
+                     parts=['original', 'dfdc_train_part_33'],
+                     augmentations=[
+                         {'fps': 15},
+                         {'scale': 0.25},
+                         {'crf': 33}],
+                     metadata_fname='metadata.json',
+                     num_workers=4,
+                     ):
+    metadata = {}
+    video_root = os.path.join(data_root, video_dirname)
+    for part in parts:
+        partdir = os.path.join(video_root, part)
+        video_filenames = [os.path.join(partdir, f) for f in os.listdir(partdir) if f.endswith('.mp4')]
+        for aug in augmentations:
+            func = functools.partial(
+                augment_dir,
+                outdir=f'{partdir}_{"_".join([f"{k}{v}" for k, v in aug.items()])}',
+                augmentation=aug)
+            with Pool(num_workers) as pool:
+                list(tqdm(pool.imap_unordered(func, video_filenames), total=len(video_filenames)))
+                pool.close()
+                pool.join()
+
+
+def make_aug_testset_metadata(data_root, video_dirname, metadata_fname='metadata.json'):
+    metadata = {}
+    video_root = os.path.join(data_root, video_dirname)
+    for part in os.listdir(video_root):
+        with open(os.path.join(video_root, part, metadata_fname)) as f:
+            metadata[part] = json.load(f)
+    with open(os.path.join(data_root, 'aug_test_metadata.json'), 'w') as f:
+        json.dump(metadata, f)
