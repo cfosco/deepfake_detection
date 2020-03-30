@@ -669,11 +669,28 @@ def make_aug_testset(data_root,
                 pool.join()
 
 
-def make_aug_testset_metadata(data_root, video_dirname, metadata_fname='metadata.json'):
+def make_aug_testset_metadata(data_root, video_dirname='aug_test_videos', metadata_fname='metadata.json'):
     metadata = {}
+    aug_test_videos = []
     video_root = os.path.join(data_root, video_dirname)
     for part in os.listdir(video_root):
         with open(os.path.join(video_root, part, metadata_fname)) as f:
             metadata[part] = json.load(f)
+            aug_test_videos.extend([x['filename'] for x in metadata[part]])
     with open(os.path.join(data_root, 'aug_test_metadata.json'), 'w') as f:
+        json.dump(metadata, f)
+
+    with open(os.path.join(data_root, 'aug_test_videos.json'), 'w') as f:
+        json.dump(aug_test_videos, f)
+
+
+def make_metadata(video_dir, num_workers=12):
+    video_filenames = [os.path.join(video_dir, f) for f in os.listdir(video_dir) if f.endswith('.mp4')]
+
+    with Pool(num_workers) as pool:
+        data = list(tqdm(pool.imap(pretorched.data.utils.get_info, video_filenames), total=len(video_filenames)))
+        pool.close()
+        pool.join()
+    metadata = {os.path.basename(f): d for f, d in zip(video_filenames, data)}
+    with open(os.path.join(video_dir, 'metadata.json'), 'w') as f:
         json.dump(metadata, f)
