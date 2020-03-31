@@ -68,7 +68,9 @@ def parse_args():
     parser.add_argument(
         '--checkpoint_file',
         type=str,
-        default='resnet18_all_seg_count-16_init-imagenet-ortho_optim-SGD_lr-0.001_sched-CosineAnnealingLR_bs-128_best.pth.tar')
+        # default='resnet18_all_seg_count-16_init-imagenet-ortho_optim-SGD_lr-0.001_sched-CosineAnnealingLR_bs-128_best.pth.tar',
+        default='resnet18_dfdc_seg_count-24_init-imagenet-ortho_optim-Ranger_lr-0.001_sched-CosineAnnealingLR_bs-64_best.pth.tar',
+        )
     args = parser.parse_args()
 
     DEEPFAKE_DATA_ROOT = os.path.join(os.environ['DATA_ROOT'], args.dataset)
@@ -97,7 +99,7 @@ def main(video_dir, target_file=None, default_target=0, margin=100, checkpoint_f
     os.makedirs(results_dir, exist_ok=True)
     results_file = os.path.join(
         results_dir,
-        f'eval_dataset_{kwargs["dataset"]}_part_{os.path.basename(video_dir)}_step_{step}_bs_{batch_size}_cs_{chunk_size}_.txt')
+        f'eval_dataset_{kwargs["dataset"]}_part_{kwargs["part"]}_checkpoint_{checkpoint_file}_step_{step}_bs_{batch_size}_cs_{chunk_size}_.txt')
     if os.path.exists(results_file) and (not overwrite):
         print(f'Skipping {results_file}')
         return

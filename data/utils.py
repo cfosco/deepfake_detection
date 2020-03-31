@@ -669,6 +669,53 @@ def make_aug_testset(data_root,
                 pool.join()
 
 
+def aug_facenet_dir(video_dir, augmentations, metadata_fname='face_metadata.json'):
+    with open(os.path.join(video_dir, metadata_fname)) as f:
+        data = json.load(f)
+
+    aug_face_names = []
+    aug_num_frames = []
+
+    for aug in augmentations:
+        for face_name in data['face_names']:
+            name = os.path.join(video_dir, face_name)
+            filename = name + '.mp4'
+            outname = f'{name}_{"_".join([f"{k}{v}" for k, v in aug.items()])}'
+            aug_face_names.append(os.path.basename(outname))
+            if not os.path.exists(outname + '.mp4'):
+                encode_video(filename, outname + '.mp4', **aug)
+            num_frames = pretorched.data.utils.get_info(outname + '.mp4')['num_frames']
+            aug_num_frames.append(num_frames)
+
+    data['aug_num_frames'] = aug_num_frames
+    data['aug_face_names'] = aug_face_names
+    data['aug_num_faces'] = len(aug_face_names)
+    with open(os.path.join(video_dir, 'aug_' + metadata_fname), 'w') as f:
+        json.dump(data, f)
+
+
+def make_aug_facenet_videos(data_root,
+                            video_dirname='facenet_videos',
+                            augmentations=[
+                                {'fps': 15},
+                                {'scale': 0.25},
+                                {'crf': 33}],
+                            metadata_fname='metadata.json',
+                            num_workers=4,
+                            ):
+    video_root = os.path.join(data_root, video_dirname)
+    for part in os.listdir(video_root):
+        if 'zip' in part:
+            continue
+        partdir = os.path.join(video_root, part)
+        video_filenames = [os.path.join(partdir, f) for f in os.listdir(partdir) if f.endswith('.mp4')]
+        func = functools.partial(aug_facenet_dir, augmentations=augmentations)
+        with Pool(num_workers) as pool:
+            list(tqdm(pool.imap_unordered(func, video_filenames), total=len(video_filenames)))
+            pool.close()
+            pool.join()
+
+
 def make_aug_testset_metadata(data_root, video_dirname='aug_test_videos', metadata_fname='metadata.json'):
     metadata = {}
     aug_test_videos = []
