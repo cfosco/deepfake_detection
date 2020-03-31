@@ -33,7 +33,10 @@ SPLIT = 'dfdc_train_part_2'
 if KAGGLE:
     TEST_VIDEO_DIR = '/kaggle/input/deepfake-detection-challenge/test_videos/'
     SAMPLE_SUBMISSION_CSV = '/kaggle/input/deepfake-detection-challenge/sample_submission.csv'
+    TARGET_FILE = '/kaggle/input/dfdc-test-targets/test_targets.json'
     WEIGHT_DIR = '/kaggle/input/deepfake-data/data'
+    if not os.path.exists(TARGET_FILE):
+        TARGET_FILE = None
 
 else:
     DEEPFAKE_DATA_ROOT = os.path.join(os.environ['DATA_ROOT'], 'DeepfakeDetection')
@@ -83,7 +86,7 @@ def parse_args():
 
 
 def main(video_dir, target_file=None, default_target=0, margin=100,
-         step=20, batch_size=1, chunk_size=300, num_workers=4, **kwargs):
+         step=20, batch_size=1, chunk_size=150, num_workers=2, **kwargs):
 
     device = 'cuda' if torch.cuda.is_available() else 'cpu'
 
@@ -121,9 +124,9 @@ def main(video_dir, target_file=None, default_target=0, margin=100,
     sub = sub.set_index('filename', drop=False)
 
     preds, acc, loss = validate(dataloader, model, criterion, device=device)
-    with open(f'eval_step_{step}_bs_{batch_size}_cs_{chunk_size}_num_workers_{num_workers}.txt', 'w') as f:
-        f.write(f'acc: {acc}\n')
-        f.write(f'loss: {loss}')
+    # with open(f'eval_step_{step}_bs_{batch_size}_cs_{chunk_size}_num_workers_{num_workers}.txt', 'w') as f:
+    # f.write(f'acc: {acc}\n')
+    # f.write(f'loss: {loss}')
     for filename, prob in preds.items():
         sub.loc[filename, 'label'] = prob
 
@@ -150,29 +153,33 @@ def validate(val_loader, model, criterion, device='cuda', display=True, print_fr
                 images = images.to(device, non_blocking=True)
             target = target.to(device, non_blocking=True)
 
-            # compute output
-            output = model(images)
-            loss = criterion(output, target)
+            try:
+                # compute output
+                output = model(images)
+                loss = criterion(output, target)
 
-            # measure accuracy and record loss
-            acc1 = accuracy(output, target, topk=(1,))[0]
-            losses.update(loss.item(), images.size(0))
-            top1.update(acc1.item(), images.size(0))
+                # measure accuracy and record loss
+                acc1 = accuracy(output, target, topk=(1,))[0]
+                losses.update(loss.item(), images.size(0))
+                top1.update(acc1.item(), images.size(0))
 
-            probs = torch.softmax(output, 1)
-            for fn, prob in zip(filenames, probs):
-                preds[fn] = prob[1].item()
+                probs = torch.softmax(output, 1)
+                for fn, prob in zip(filenames, probs):
+                    preds[fn] = prob[1].item()
 
-            # measure elapsed time
-            batch_time.update(time.time() - end)
-            end = time.time()
+                # measure elapsed time
+                batch_time.update(time.time() - end)
+                end = time.time()
 
-            if i % print_freq == 0 and display:
-                progress.display(i)
+                if i % print_freq == 0 and display:
+                    progress.display(i)
+
+            except Exception:
+                for fn in filenames:
+                    preds[fn] = np.random.rand()
 
         if display:
             print(' * Acc@1 {top1.avg:.3f}'.format(top1=top1))
-
     return preds, top1.avg, losses.avg
 
 
@@ -497,7 +504,7 @@ class FaceModel(torch.nn.Module):
         x = x.permute(0, 2, 1, 3, 4).contiguous()  # [bs, d, nc, h, w]
         return x
 
-    def get_faces(self, x):
+    def get_faces(self, x, to_pil=True):
         bs, nc, d, h, w = x.shape
         batched_face_images = []
         for x in self.input_transform(x):
@@ -508,8 +515,13 @@ class FaceModel(torch.nn.Module):
 
             min_face = min([f.shape[1] for f in faces_out])
             faces_out = torch.cat([f[:, :min_face] for f in faces_out])
-            face_images = {i: [Image.fromarray(ff.permute(1, 2, 0).numpy().astype(np.uint8)) for ff in f]
-                           for i, f in enumerate(faces_out.permute(1, 0, 2, 3, 4))}
+            if to_pil:
+                face_images = {i: [Image.fromarray(ff.permute(1, 2, 0).numpy().astype(np.uint8)) for ff in f]
+                               for i, f in enumerate(faces_out.permute(1, 0, 2, 3, 4))}
+
+            else:
+                face_images = {i: [ff.permute(1, 2, 0).numpy().astype(np.uint8) for ff in f]
+                               for i, f in enumerate(faces_out.permute(1, 0, 2, 3, 4))}
             batched_face_images.append(face_images)
         return batched_face_images
 
@@ -563,6 +575,7 @@ class MTCNN(nn.Module):
         self, image_size=160, margin=0, min_face_size=20,
         thresholds=[0.6, 0.7, 0.7, 0.98], factor=0.709, post_process=True,
         select_largest=True, keep_all=False, device=None, chunk_size=None,
+        relax_landmarks=True,
     ):
         super().__init__()
 
@@ -575,6 +588,7 @@ class MTCNN(nn.Module):
         self.select_largest = select_largest
         self.keep_all = keep_all
         self.chunk_size = chunk_size
+        self.relax_landmarks = relax_landmarks
 
         self.pnet = PNet(pretrained=os.path.join(WEIGHT_DIR, 'pnet.pth'))
         self.rnet = RNet(pretrained=os.path.join(WEIGHT_DIR, 'rnet.pth'))
@@ -733,18 +747,19 @@ class MTCNN(nn.Module):
                 img, self.min_face_size,
                 self.pnet, self.rnet, self.onet,
                 self.thresholds, self.factor,
-                self.device
+                self.device, self.relax_landmarks
             )
         boxes, probs, points = [], [], []
         for box, point in zip(batch_boxes, batch_points):
-            box = np.array(box)
-            point = np.array(point)
+            # box = np.array(box)
+            # point = np.array(point)
             if len(box) == 0:
                 boxes.append(None)
                 probs.append([None])
                 points.append(None)
             elif self.select_largest:
-                box_order = np.argsort((box[:, 2] - box[:, 0]) * (box[:, 3] - box[:, 1]))[::-1]
+                # box_order = np.argsort((box[:, 2] - box[:, 0]) * (box[:, 3] - box[:, 1]))[::-1]
+                box_order = torch.argsort((box[:, 2] - box[:, 0]) * (box[:, 3] - box[:, 1])).flip(0)
                 box = box[box_order]
                 point = point[box_order]
                 boxes.append(box[:, :4])
@@ -934,6 +949,21 @@ def interp_nans(arr):
     return arr
 
 
+def interp_negs(arr):
+    arr = torch.tensor(arr).view(-1)
+    # arr = arr.type(torch.DoubleTensor)
+    missing = arr < 0
+    n = len(arr)
+    # missing = torch.isnan(arr.type(torch.DoubleTensor))
+    if sum(missing) == 0 or all(missing):
+        return arr
+    inds = np.arange(n)[missing]
+    x = np.arange(n)[~missing]
+    out = np.interp(inds, x, arr[x])
+    arr[inds] = torch.from_numpy(out).float()
+    return arr
+
+
 def fixed_image_standardization(image_tensor):
     processed_tensor = (image_tensor - 127.5) / 128.0
     return processed_tensor
@@ -1014,7 +1044,17 @@ def smooth(x, amount=0.2, window='hanning'):
     return y[(window_len // 2):-(window_len // 2)]
 
 
-def smooth_boxes(batch_boxes, amount=0.5):
+def _smooth(data, amount=1.0):
+    if not amount > 0.0:
+        return data
+    data_len = len(data)
+    ksize = max(1, int(amount * (data_len // 2)))
+    kernel = torch.ones(1, 1, ksize, device='cuda') / ksize
+    data = data.view(1, 1, -1).cuda()
+    return torch.nn.functional.conv1d(data, kernel, bias=None, stride=1, padding=0, dilation=1, groups=1).view(-1)
+
+
+def smooth_boxes(batch_boxes, amount=0.1):
     known_coords = None
     boxes = defaultdict(list)
     for i, bb in enumerate(batch_boxes):
@@ -1026,8 +1066,8 @@ def smooth_boxes(batch_boxes, amount=0.5):
                 known_coords = bb
             added = []
             for face_num, b in enumerate(bb):
-                diff = np.abs(np.array(b) - np.array(known_coords)).sum(1)
-                face_idx = int(np.argmin(diff))
+                diff = torch.abs(b - known_coords).sum(1)
+                face_idx = int(torch.argmin(diff))
                 if face_idx not in added:
                     known_coords[face_idx] = b
                     boxes[face_idx].append(b)
@@ -1038,7 +1078,32 @@ def smooth_boxes(batch_boxes, amount=0.5):
     return list(map(np.stack, zip(*boxes.values())))
 
 
-def detect_face(imgs, minsize, pnet, rnet, onet, threshold, factor, device):
+def _smooth_boxes(batch_boxes, amount=0.1):
+    known_coords = None
+    boxes = defaultdict(list)
+    for i, bb in enumerate(batch_boxes):
+        if bb is None:
+            for face_num in boxes:
+                boxes[face_num].append(-1 * torch.ones(4))
+        else:
+            if known_coords is None:
+                known_coords = bb
+            added = []
+            for face_num, b in enumerate(bb):
+                # diff = torch.abs(np.array(b) - np.array(known_coords)).sum(1)
+                diff = torch.abs(b - known_coords).sum(1)
+                face_idx = int(torch.argmin(diff))
+                if face_idx not in added:
+                    known_coords[face_idx] = b
+                    boxes[face_idx].append(b)
+                    added.append(face_idx)
+    for face_num, coords in boxes.items():
+        out = [torch.tensor(x) for x in zip(*[smooth(interp_negs(dim), amount=amount) for dim in zip(*coords)])]
+        boxes[face_num] = out
+    return list(map(torch.stack, zip(*boxes.values())))
+
+
+def detect_face(imgs, minsize, pnet, rnet, onet, threshold, factor, device, relax_landmarks=True):
     if not isinstance(imgs, Iterable):
         imgs = [imgs]
     if any(img.shape != imgs[0].shape for img in imgs):
@@ -1079,7 +1144,7 @@ def detect_face(imgs, minsize, pnet, rnet, onet, threshold, factor, device):
         all_i += batch_size
 
     boxes = torch.cat(boxes, dim=0)
-    image_inds = torch.cat(image_inds, dim=0).cpu()
+    image_inds = torch.cat(image_inds, dim=0)
     all_inds = torch.cat(all_inds, dim=0)
 
     # NMS within each scale + image
@@ -1144,6 +1209,8 @@ def detect_face(imgs, minsize, pnet, rnet, onet, threshold, factor, device):
         score = out2[1, :]
         points = out1
         ipass = score > threshold[2]
+        if (not any(ipass)) and relax_landmarks:
+            ipass = score == score.max()
         points = points[:, ipass]
         boxes = torch.cat((boxes[ipass, :4], score[ipass].unsqueeze(1)), dim=1)
         image_inds = image_inds[ipass]
@@ -1157,17 +1224,18 @@ def detect_face(imgs, minsize, pnet, rnet, onet, threshold, factor, device):
         boxes = bbreg(boxes, mv)
 
         # NMS within each image using "Min" strategy
-        # pick = batched_nms(boxes[:, :4], boxes[:, 4], image_inds, 0.7)
-        pick = batched_nms_numpy(boxes[:, :4], boxes[:, 4], image_inds, 0.7, 'Min')
+        pick = batched_nms(boxes[:, :4], boxes[:, 4], image_inds, 0.7)
+        # pick = batched_nms_numpy(boxes[:, :4], boxes[:, 4], image_inds, 0.7, 'Min')
         boxes, image_inds, points = boxes[pick], image_inds[pick], points[pick]
 
-    boxes = boxes.cpu().numpy()
-    points = points.cpu().numpy()
+    # boxes = boxes.cpu().numpy()
+    # points = points.cpu().numpy()
 
     batch_boxes = []
     batch_points = []
     for b_i in range(batch_size):
-        b_i_inds = np.where(image_inds == b_i)
+        # b_i_inds = np.where(image_inds == b_i)
+        b_i_inds = torch.where(image_inds == b_i)
         batch_boxes.append(boxes[b_i_inds])
         batch_points.append(points[b_i_inds])
 
@@ -1471,12 +1539,15 @@ class DeepfakeDetector(torch.nn.Module):
     def forward(self, x):
         try:
             faces = self.face_model(x)
-        except TypeError:
+        except Exception:
             print('Error finding faces')
             return 0.5 * torch.ones(x.size(0), 2)
         return self.fake_model(faces)
 
 
 if __name__ == '__main__':
-    args = parse_args()
-    main(**vars(args))
+    if KAGGLE:
+        main(TEST_VIDEO_DIR, target_file=TARGET_FILE)
+    else:
+        args = parse_args()
+        main(**vars(args))
