@@ -137,6 +137,9 @@ def get_metadata(name, split='train', dataset_type='DeepfakeFrame',
         'train': 'metadata.json',
         'val': 'test_metadata.json'
     }.get(split, 'train')
+    if name == 'DFDC' and split == 'val':
+        fname = 'aug_test_metadata.json'
+
     metafiles = {
         'DFDC': {
             'DeepfakeSet': defaultdict(lambda: os.path.join(data_root, 'DeepfakeDetection', fname), {}),
@@ -163,7 +166,8 @@ def get_metadata(name, split='train', dataset_type='DeepfakeFrame',
     blacklist_file = os.path.join(
         data_root, {'DFDC': 'DeepfakeDetection'}.get(name, name), 'test_videos.json') if (
         split == 'train') else None
-
+    if name == 'DFDC' and split == 'train':
+        blacklist_file = os.path.join(data_root, 'DeepfakeDetection', 'aug_test_videos.json' )
     return {'root': root, 'metafile': metafile, 'blacklist_file': blacklist_file}
 
 
@@ -186,6 +190,7 @@ def parse_args():
     parser.add_argument('--optimizer', type=str, default='Adam')
     parser.add_argument('--scheduler', type=str, default='CosineAnnealingLR')
     parser.add_argument('--init', type=str, default='ortho')
+    parser.add_argument('--test_split')
 
     parser.add_argument('--version', '-v', default=None)
     parser.add_argument('-j', '--num_workers', default=12, type=int, metavar='N',

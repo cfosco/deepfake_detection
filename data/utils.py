@@ -674,9 +674,12 @@ def make_aug_testset_metadata(data_root, video_dirname='aug_test_videos', metada
     aug_test_videos = []
     video_root = os.path.join(data_root, video_dirname)
     for part in os.listdir(video_root):
+        if not os.path.isdir(os.path.join(video_root, part)):
+            continue
         with open(os.path.join(video_root, part, metadata_fname)) as f:
             metadata[part] = json.load(f)
-            aug_test_videos.extend([x['filename'] for x in metadata[part]])
+            print(metadata[part])
+            aug_test_videos.extend([x for x in metadata[part]])
     with open(os.path.join(data_root, 'aug_test_metadata.json'), 'w') as f:
         json.dump(metadata, f)
 
