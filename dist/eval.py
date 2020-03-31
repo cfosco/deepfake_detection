@@ -65,6 +65,10 @@ def parse_args():
     parser.add_argument('--chunk_size', default=150, type=int)
     parser.add_argument('--results_dir', default='results', type=str)
     parser.add_argument('--default_target', default=0, type=str)
+    parser.add_argument(
+        '--checkpoint_file',
+        type=str,
+        default='resnet18_all_seg_count-16_init-imagenet-ortho_optim-SGD_lr-0.001_sched-CosineAnnealingLR_bs-128_best.pth.tar')
     args = parser.parse_args()
 
     DEEPFAKE_DATA_ROOT = os.path.join(os.environ['DATA_ROOT'], args.dataset)
@@ -72,8 +76,10 @@ def parse_args():
         args.video_dir = os.path.join(DEEPFAKE_DATA_ROOT, 'test_videos')
         args.target_file = os.path.join(DEEPFAKE_DATA_ROOT, 'test_targets.json')
     elif args.dataset == 'DeepfakeDetection':
-        args.video_dir = os.path.join(DEEPFAKE_DATA_ROOT, args.video_rootdir, args.part)
-        args.target_file = os.path.join(DEEPFAKE_DATA_ROOT, args.video_rootdir, args.part, 'test_targets.json')
+        # args.video_dir = os.path.join(DEEPFAKE_DATA_ROOT, args.video_rootdir, args.part)
+        # args.target_file = os.path.join(DEEPFAKE_DATA_ROOT, args.video_rootdir, args.part, 'test_targets.json')
+        args.video_dir = os.path.join(DEEPFAKE_DATA_ROOT, args.part)
+        args.target_file = os.path.join(DEEPFAKE_DATA_ROOT, args.part, 'test_targets.json')
     elif args.dataset == 'FaceForensics':
         args.video_dir = os.path.join(DEEPFAKE_DATA_ROOT, args.part, args.video_rootdir)
         args.target_file = os.path.join(DEEPFAKE_DATA_ROOT, args.part, args.video_rootdir, 'test_targets.json')
@@ -85,9 +91,16 @@ def parse_args():
     return args
 
 
-def main(video_dir, target_file=None, default_target=0, margin=100,
-         step=20, batch_size=1, chunk_size=150, num_workers=2, **kwargs):
+def main(video_dir, target_file=None, default_target=0, margin=100, checkpoint_file='',
+         step=20, batch_size=1, chunk_size=150, num_workers=2, results_dir='results', overwrite=False, **kwargs):
 
+    os.makedirs(results_dir, exist_ok=True)
+    results_file = os.path.join(
+        results_dir,
+        f'eval_dataset_{kwargs["dataset"]}_part_{os.path.basename(video_dir)}_step_{step}_bs_{batch_size}_cs_{chunk_size}_.txt')
+    if os.path.exists(results_file) and (not overwrite):
+        print(f'Skipping {results_file}')
+        return
     device = 'cuda' if torch.cuda.is_available() else 'cpu'
 
     dataset = VideoFolder(video_dir, step=step,
@@ -99,10 +112,11 @@ def main(video_dir, target_file=None, default_target=0, margin=100,
 
     fakenet = resnet18(num_classes=2, pretrained=None)
     fakenet.load_state_dict({k.replace('module.model.', ''): v
-                             for k, v in torch.load(WEIGHT_DIR + '/'
-                                                    'resnet18_dfdc_seg_count-24_init-imagenet-'
-                                                    'ortho_optim-Ranger_lr-0.001_sched-CosineAnnealingLR_bs'
-                                                    '-64_best.pth.tar')['state_dict'].items()})
+                             for k, v in torch.load(os.path.join(WEIGHT_DIR, checkpoint_file))['state_dict'].items()})
+    #  for k, v in torch.load(WEIGHT_DIR + '/'
+    # 'resnet18_dfdc_seg_count-24_init-imagenet-'
+    # 'ortho_optim-Ranger_lr-0.001_sched-CosineAnnealingLR_bs'
+    # '-64_best.pth.tar')['state_dict'].items()})
     facenet = FaceModel(size=fakenet.input_size[-1],
                         device=device,
                         margin=margin,
@@ -123,10 +137,13 @@ def main(video_dir, target_file=None, default_target=0, margin=100,
     sub.label = 0.5
     sub = sub.set_index('filename', drop=False)
 
-    preds, acc, loss = validate(dataloader, model, criterion, device=device)
+    preds, acc, loss, exceptions = validate(dataloader, model, criterion, device=device)
+
     # with open(f'eval_step_{step}_bs_{batch_size}_cs_{chunk_size}_num_workers_{num_workers}.txt', 'w') as f:
-    # f.write(f'acc: {acc}\n')
-    # f.write(f'loss: {loss}')
+    with open(results_file, 'w') as f:
+        f.write(f'acc: {acc}\n')
+        f.write(f'loss: {loss}\n')
+        f.write(f'Exceptions: {exceptions}')
     for filename, prob in preds.items():
         sub.loc[filename, 'label'] = prob
 
@@ -143,6 +160,7 @@ def validate(val_loader, model, criterion, device='cuda', display=True, print_fr
         prefix='Test: ')
 
     preds = {}
+    exceptions = []
 
     # switch to evaluate mode
     model.eval()
@@ -174,13 +192,14 @@ def validate(val_loader, model, criterion, device='cuda', display=True, print_fr
                 if i % print_freq == 0 and display:
                     progress.display(i)
 
-            except Exception:
+            except Exception as e:
+                exceptions.append(filenames, e)
                 for fn in filenames:
                     preds[fn] = np.random.rand()
 
         if display:
             print(' * Acc@1 {top1.avg:.3f}'.format(top1=top1))
-    return preds, top1.avg, losses.avg
+    return preds, top1.avg, losses.avg, exceptions
 
 
 def read_frames(video, fps=30, step=1):
