@@ -61,16 +61,16 @@ def parse_args():
     parser.add_argument('--dataset', type=str, default='DeepfakeDetection')
     parser.add_argument('--part', type=str, default=None)
     parser.add_argument('--video_rootdir', default='videos', type=str)
-    parser.add_argument('--step', default=20, type=int)
+    parser.add_argument('--step', default=50, type=int)
     parser.add_argument('--chunk_size', default=150, type=int)
     parser.add_argument('--results_dir', default='results', type=str)
     parser.add_argument('--default_target', default=0, type=str)
     parser.add_argument(
         '--checkpoint_file',
         type=str,
-        # default='resnet18_all_seg_count-16_init-imagenet-ortho_optim-SGD_lr-0.001_sched-CosineAnnealingLR_bs-128_best.pth.tar',
-        default='resnet18_dfdc_seg_count-24_init-imagenet-ortho_optim-Ranger_lr-0.001_sched-CosineAnnealingLR_bs-64_best.pth.tar',
-        )
+        default='resnet18_all_seg_count-16_init-imagenet-ortho_optim-SGD_lr-0.001_sched-CosineAnnealingLR_bs-128_best.pth.tar',
+        # default='resnet18_dfdc_seg_count-24_init-imagenet-ortho_optim-Ranger_lr-0.001_sched-CosineAnnealingLR_bs-64_best.pth.tar',
+    )
     args = parser.parse_args()
 
     DEEPFAKE_DATA_ROOT = os.path.join(os.environ['DATA_ROOT'], args.dataset)
@@ -93,13 +93,13 @@ def parse_args():
     return args
 
 
-def main(video_dir, target_file=None, default_target=0, margin=100, checkpoint_file='',
-         step=20, batch_size=1, chunk_size=150, num_workers=2, results_dir='results', overwrite=False, **kwargs):
+def main(video_dir, target_file=None, default_target=0, margin=100, checkpoint_file=None,
+         step=50, batch_size=1, chunk_size=150, num_workers=2, results_dir='results', overwrite=True, **kwargs):
 
     os.makedirs(results_dir, exist_ok=True)
     results_file = os.path.join(
         results_dir,
-        f'eval_dataset_{kwargs["dataset"]}_part_{kwargs["part"]}_checkpoint_{checkpoint_file}_step_{step}_bs_{batch_size}_cs_{chunk_size}_.txt')
+        f'eval_dataset_{kwargs["dataset"]}_part_{kwargs["part"].replace("/", "_")}_checkpoint_{checkpoint_file}_step_{step}_bs_{batch_size}_cs_{chunk_size}_.txt')
     if os.path.exists(results_file) and (not overwrite):
         print(f'Skipping {results_file}')
         return
@@ -148,6 +148,7 @@ def main(video_dir, target_file=None, default_target=0, margin=100, checkpoint_f
         f.write(f'Exceptions: {exceptions}')
     for filename, prob in preds.items():
         sub.loc[filename, 'label'] = prob
+        print(f'Setting {filename} to {prob}')
 
     sub.to_csv('submission.csv', index=False)
 
@@ -195,7 +196,7 @@ def validate(val_loader, model, criterion, device='cuda', display=True, print_fr
                     progress.display(i)
 
             except Exception as e:
-                exceptions.append(filenames, e)
+                exceptions.append((filenames, e))
                 for fn in filenames:
                     preds[fn] = np.random.rand()
 
@@ -1560,9 +1561,9 @@ class DeepfakeDetector(torch.nn.Module):
     def forward(self, x):
         try:
             faces = self.face_model(x)
-        except Exception:
-            print('Error finding faces')
-            return 0.5 * torch.ones(x.size(0), 2)
+        except Exception as e:
+            print('Error finding faces', e)
+            return 0.5 * torch.ones(x.size(0), 2).to(x.device)
         return self.fake_model(faces)
 
 
