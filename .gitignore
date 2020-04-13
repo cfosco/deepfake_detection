@@ -10,7 +10,6 @@ __pycache__/
 .Python
 build/
 develop-eggs/
-dist/
 downloads/
 eggs/
 .eggs/
@@ -128,9 +127,23 @@ dmypy.json
 # Pyre type checker
 .pyre/
 
+# vscode settings
+.vscode
+
 # Project Specific
+dev
 logs
 weights
+archive
+dist/data
+dist/data.zip
+submissions
+models/data
+scripts/data
+scripts/models
 notebooks/data
 notebooks/models
 notebooks/DeepfakeDetection
+TODO
+
+*.lock

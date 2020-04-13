@@ -14,6 +14,7 @@ import torch.multiprocessing as mp
 import torch.utils.data
 import torch.utils.data.distributed
 
+from pretorched import loggers
 from pretorched.metrics import accuracy
 from pretorched.runners.utils import AverageMeter, ProgressMeter
 
@@ -71,6 +72,7 @@ def main_worker(gpu, ngpus_per_node, args):
 
     save_name = '_'.join([args.arch,
                           args.dataset.lower(),
+                          f'seg_count-{args.segment_count}',
                           f'init-{"-".join([args.pretrained, args.init]) if args.pretrained else args.init}',
                           f'optim-{args.optimizer}',
                           f'lr-{args.lr}',
@@ -145,31 +147,37 @@ def main_worker(gpu, ngpus_per_node, args):
                 checkpoint = torch.load(args.resume)
             else:
                 # Map model to be loaded to specified single gpu.
-                loc = 'cuda:{}'.format(args.gpu)
+                # loc = 'cuda:{}'.format(args.gpu)
+                loc = 'cpu'
                 checkpoint = torch.load(args.resume, map_location=loc)
             args.start_epoch = checkpoint['epoch']
             best_acc1 = checkpoint['best_acc1']
-            if args.gpu is not None:
+            # if args.gpu is not None:
                 # best_acc1 may be from a checkpoint from a different GPU
-                best_acc1 = best_acc1.to(args.gpu)
+                # best_acc1 = best_acc1.to(args.gpu)
             model.load_state_dict(checkpoint['state_dict'])
             optimizer.load_state_dict(checkpoint['optimizer'])
             print("=> loaded checkpoint '{}' (epoch {})"
                   .format(args.resume, checkpoint['epoch']))
         else:
             print("=> no checkpoint found at '{}'".format(args.resume))
-
+        torch.cuda.empty_cache()
     cudnn.benchmark = True
 
     # Data loading code
     dataloaders = core.get_dataloaders(args.dataset, args.data_root,
                                        dataset_type=args.dataset_type,
+                                       record_set_type=args.record_set_type,
+                                       segment_count=args.segment_count,
                                        batch_size=args.batch_size,
                                        num_workers=args.num_workers,
                                        distributed=args.distributed,
                                        size=input_size)
     train_loader, val_loader = dataloaders['train'], dataloaders['val']
     train_sampler = train_loader.sampler
+
+    logger = loggers.TensorBoardLogger(args.logs_dir, name=save_name, rank=args.rank,
+                                       version=args.version)
 
     if args.evaluate:
         validate(val_loader, model, criterion, args)
@@ -192,7 +200,8 @@ def main_worker(gpu, ngpus_per_node, args):
         # Train for one epoch.
         train_acc1, train_loss = train(train_loader, model,
                                        criterion, optimizer,
-                                       epoch, args, display)
+                                       logger, epoch, args,
+                                       display)
 
         history['acc'].append(train_acc1.item())
         history['loss'].append(train_loss)
@@ -203,6 +212,13 @@ def main_worker(gpu, ngpus_per_node, args):
         history['val_acc'].append(val_acc1)
         history['val_loss'].append(val_loss)
         history['epoch'].append(epoch + 1)
+
+        logger.log_metrics({
+            'EpochAccuracy/train': train_acc1,
+            'EpochLoss/train': train_loss,
+            'EpochAccuracy/val': val_acc1,
+            'EpochLoss/val': val_loss,
+        }, step=epoch + 1)
 
         # Update the learning rate.
         if type(scheduler).__name__ == 'ReduceLROnPlateau':
@@ -233,7 +249,7 @@ def is_rank0(args, ngpus_per_node):
                                                     and args.rank % ngpus_per_node == 0)
 
 
-def train(train_loader, model, criterion, optimizer, epoch, args, display=True):
+def train(train_loader, model, criterion, optimizer, logger, epoch, args, display=True):
     batch_time = AverageMeter('Time', ':6.3f')
     data_time = AverageMeter('Data', ':6.3f')
     losses = AverageMeter('Loss', ':.4e')
@@ -243,6 +259,7 @@ def train(train_loader, model, criterion, optimizer, epoch, args, display=True):
         [batch_time, data_time, losses, top1],
         prefix="Epoch: [{}]".format(epoch))
 
+    itr = epoch * len(train_loader)
     # switch to train mode
     model.train()
 
@@ -250,6 +267,7 @@ def train(train_loader, model, criterion, optimizer, epoch, args, display=True):
     for i, (images, target) in enumerate(train_loader):
         # measure data loading time
         data_time.update(time.time() - end)
+        itr += 1
 
         if args.gpu is not None:
             images = images.cuda(args.gpu, non_blocking=True)
@@ -275,6 +293,12 @@ def train(train_loader, model, criterion, optimizer, epoch, args, display=True):
 
         if i % args.print_freq == 0 and display:
             progress.display(i)
+            logger.log_metrics({
+                'Accuracy/train': acc1,
+                'Loss/train': loss
+            }, step=itr)
+
+            # logger.save()
 
     return top1.avg, losses.avg
 
@@ -290,7 +314,6 @@ def validate(val_loader, model, criterion, args, display=True):
 
     # switch to evaluate mode
     model.eval()
-
     with torch.no_grad():
         end = time.time()
         for i, (images, target) in enumerate(val_loader):

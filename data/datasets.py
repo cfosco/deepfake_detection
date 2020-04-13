@@ -1,17 +1,26 @@
+import functools
+import io
 import json
 import os
+import tempfile
+import zipfile
 from collections import defaultdict
 from pathlib import Path
-from typing import Tuple, Union
+from typing import Callable, Optional, Tuple, Union
 
+import cv2
 import numpy as np
 import torch
 import torch.utils.data as data
 from numpy.random import randint
 from PIL import Image
 
+from torchvideo.datasets import VideoDataset
+from torchvideo.internal.readers import _get_videofile_frame_count
 from torchvideo.samplers import FrameSampler, _default_sampler
 from torchvideo.transforms import PILVideoToTensor
+
+from . import transforms
 
 
 class DeepfakeRecord:
@@ -63,11 +72,57 @@ class DeepfakeRecord:
             return False
 
 
+class DeepfakeFaceRecord(DeepfakeRecord):
+
+    def __init__(self, part, name, data, face_data_key='facenet_videos'):
+        self.part = part
+        self.name = name
+        self.data = data
+        self.face_data_key = face_data_key
+
+    @property
+    def num_faces(self):
+        return self.face_data['num_faces']
+
+    @property
+    def face_names(self):
+        return self.face_data['face_names']
+
+    @property
+    def face_nums(self):
+        return self.face_data['face_nums']
+
+    @property
+    def num_face_frames(self):
+        return self.face_data['num_frames']
+
+    @property
+    def face_locations(self):
+        return self.face_data['face_coords']
+
+    @property
+    def size(self):
+        return self.face_data['size']
+
+    @property
+    def has_face_data(self):
+        return self.face_data_key in self.data
+
+    @property
+    def face_data(self):
+        return self.data[self.face_data_key]
+
+    @property
+    def face_path(self):
+        return self.face_data.get('path', self.path)
+
+
 class DeepfakeSet:
 
-    def __init__(self, metafile, blacklist_file=None):
+    def __init__(self, metafile, blacklist_file=None, record_func=DeepfakeRecord):
         self.records = []
         self.metafile = metafile
+        self.record_func = record_func
         with open(metafile) as f:
             self.data = json.load(f)
 
@@ -81,7 +136,10 @@ class DeepfakeSet:
         self.blacklist_records = []
         for part, part_data in self.data.items():
             for name, rec in part_data.items():
-                record = DeepfakeRecord(part, name, rec)
+                record = self.record_func(part, name, rec)
+                if issubclass(self.record_func, DeepfakeFaceRecord):
+                    if not record.has_face_data:
+                        continue
 
                 if name not in self.blacklist:
                     self.records.append(record)
@@ -96,7 +154,13 @@ class DeepfakeSet:
         return len(self.records)
 
 
+DeepfakeFaceSet = functools.partial(DeepfakeSet, record_func=DeepfakeFaceRecord)
+
+
 class DeepfakeFrame(data.Dataset):
+
+    offset = 1
+
     def __init__(
             self,
             root: Union[str, Path],
@@ -119,6 +183,7 @@ class DeepfakeFrame(data.Dataset):
         self.target_transform = target_transform
 
     def _load_image(self, directory, idx):
+        idx += self.offset
         filename_tmpl = os.path.join(self.root, directory, self.image_tmpl)
         try:
             return Image.open(filename_tmpl.format(idx)).convert('RGB')
@@ -127,13 +192,13 @@ class DeepfakeFrame(data.Dataset):
             return Image.open(filename_tmpl.format(1)).convert('RGB')
 
     def _load_frames(self, frame_dir, frame_inds):
-        return [self._load_image(frame_dir, idx) for idx in frame_inds]
+        return (self._load_image(frame_dir, idx) for idx in frame_inds)
 
     def __getitem__(self, index: int) -> Union[torch.Tensor, Tuple[torch.Tensor, int]]:
         record = self.record_set[index]
         frame_path = os.path.join(self.root, record.path)
         frame_inds = self.sampler.sample(record.num_frames)
-        frames = self._load_frames(frame_path, frame_inds)
+        frames = list(self._load_frames(frame_path, frame_inds))
         label = record.label
 
         if self.transform is not None:
@@ -147,8 +212,305 @@ class DeepfakeFrame(data.Dataset):
         return len(self.record_set)
 
 
+class DeepfakeFaceFrame(DeepfakeFrame):
+    def __init__(
+            self,
+            root: Union[str, Path],
+            record_set: DeepfakeSet,
+            sampler: FrameSampler = _default_sampler(),
+            image_tmpl: str = '{:06d}.jpg',
+            crop_faces: bool = False,
+            margin=100,
+            transform=None, target_transform=None):
+
+        self.root = root
+        self.sampler = sampler
+        self.record_set = record_set
+        self.image_tmpl = image_tmpl
+        self.crop_faces = crop_faces
+        self.margin = margin
+
+        if transform is None:
+            transform = PILVideoToTensor()
+        self.transform = transform
+
+        if target_transform is None:
+            target_transform = int
+        self.target_transform = target_transform
+
+    def _get_face_frames(self, index: int) -> Union[torch.Tensor, Tuple[torch.Tensor, int]]:
+        # TODO
+        record = self.record_set[index]
+        frame_path = os.path.join(self.root, record.path)
+        frame_inds = self.sampler.sample(record.num_frames)
+        frames = self._load_frames(frame_path, frame_inds)
+        label = record.label
+
+        if self.transform is not None:
+            frames = self.transform(frames)
+        if self.target_transform is not None:
+            label = self.target_transform(label)
+
+        return frames, label
+
+    def _crop_frame(self, frame, coords, size=360):
+        top, right, bottom, left = coords
+        mtop = max(top - self.margin, 0)
+        mbottom = min(bottom + self.margin, frame.size[0])
+        mleft = max(left - self.margin, 0)
+        mright = min(right + self.margin, frame.size[1])
+        return frame.crop((mleft, mtop, mright, mbottom)).resize((size, size))
+
+    def __getitem__(self, index: int) -> Union[torch.Tensor, Tuple[torch.Tensor, int]]:
+        record = self.record_set[index]
+        frame_path = os.path.join(self.root, record.path)
+        face_num = np.random.choice(record.face_nums)
+        num_face_frames = record.num_face_frames[face_num]
+        frame_inds = self.sampler.sample(num_face_frames)
+
+        if not self.crop_faces:
+            frame_path = os.path.join(frame_path, record.face_names[face_num])
+        frames = list(self._load_frames(frame_path, frame_inds))
+        if self.crop_faces:
+            face_coords = [record.face_locations[str(face_num)][idx] for idx in frame_inds]
+            frames = [self._crop_frame(f, c, record.size) for f, c in zip(frames, face_coords)]
+        label = record.label
+
+        if self.transform is not None:
+            frames = self.transform(frames)
+        if self.target_transform is not None:
+            label = self.target_transform(label)
+
+        return frames, label
+
+
+class DeepfakeFaceCropFrame(DeepfakeFaceFrame):
+    def __init__(self, root, record_set, sampler=_default_sampler(),
+                 image_tmpl='{:06d}.jpg', margin=100, transform=None, target_transform=None):
+        super().__init__(
+            root,
+            record_set,
+            sampler=sampler,
+            image_tmpl=image_tmpl,
+            crop_faces=True,
+            margin=margin,
+            transform=transform,
+            target_transform=target_transform)
+
+
+class DeepfakeVideo(VideoDataset):
+
+    def __init__(
+        self,
+        root: Union[str, Path],
+        record_set: DeepfakeSet,
+        sampler: FrameSampler = _default_sampler(),
+        transform: Optional[Callable] = None,
+        target_transform: Optional[Callable] = None,
+        frame_counter: Optional[Callable[[Path], int]] = None,
+    ) -> None:
+
+        self.root = root
+        self.record_set = record_set
+        self.sampler = sampler
+
+        if frame_counter is None:
+            frame_counter = _get_videofile_frame_count
+        self.frame_counter = frame_counter
+
+        if transform is None:
+            transform = PILVideoToTensor()
+        self.transform = transform
+
+        if target_transform is None:
+            target_transform = int
+        self.target_transform = target_transform
+
+    def __getitem__(self, index: int) -> Union[torch.Tensor, Tuple[torch.Tensor, int]]:
+        record = self.record_set[index]
+        video_path = os.path.join(self.root, record.path)
+        # video_length = self.frame_counter(video_path)
+        video_length = record.num_frames
+        frame_inds = self.sampler.sample(video_length)
+        frames = self._load_frames(video_path, frame_inds)
+        label = record.label
+
+        if self.transform is not None:
+            frames = self.transform(frames)
+        if self.target_transform is not None:
+            label = self.target_transform(label)
+
+        return frames, label
+
+    def __len__(self):
+        return len(self.record_set)
+
+
+class DeepfakeFaceVideo(DeepfakeVideo):
+
+    def __getitem__(self, index: int):
+        record = self.record_set[index]
+        video_dir = os.path.join(self.root, record.face_path)
+        face_num = np.random.choice(record.face_nums)
+        num_face_frames = record.num_face_frames[face_num]
+        frame_inds = self.sampler.sample(num_face_frames)
+
+        video_path = os.path.join(video_dir, record.face_names[face_num] + '.mp4')
+        frames = list(self._load_frames(video_path, frame_inds))
+        label = record.label
+
+        if self.transform is not None:
+            frames = self.transform(frames)
+        if self.target_transform is not None:
+            label = self.target_transform(label)
+
+        return frames, label
+
+
+class DeepfakeZipVideo(DeepfakeVideo):
+
+    zip_ext = '.zip'
+
+    def __getitem__(self, index):
+        record = self.record_set[index]
+        part, video_path, label = record.part, record.path, record.label
+        with zipfile.ZipFile(os.path.join(self.root, part + self.zip_ext)) as z:
+            video_path = io.BytesIO(z.read(video_path))
+        video_length = record.num_frames or self.frame_counter(video_path)
+        frame_inds = self.sampler.sample(video_length)
+        frames = self._load_frames(video_path, frame_inds)
+
+        if self.transform is not None:
+            frames = self.transform(frames)
+        if self.target_transform is not None:
+            label = self.target_transform(label)
+
+        return frames, label
+
+
+class DeepfakeZipFaceVideo(DeepfakeFaceVideo):
+
+    zip_ext = '.zip'
+
+    def __getitem__(self, index: int):
+        record = self.record_set[index]
+        part, video_dir, label = record.part, record.face_path, record.label
+        face_num = np.random.choice(record.face_nums)
+        num_face_frames = record.num_face_frames[face_num]
+        frame_inds = self.sampler.sample(num_face_frames)
+
+        video_path = os.path.join(video_dir, record.face_names[face_num] + '.mp4')
+        with zipfile.ZipFile(os.path.join(self.root, part + self.zip_ext)) as z:
+            video_path = io.BytesIO(z.read(video_path))
+
+        frames = list(self._load_frames(video_path, frame_inds))
+
+        if self.transform is not None:
+            frames = self.transform(frames)
+        if self.target_transform is not None:
+            label = self.target_transform(label)
+
+        return frames, label
+
+
+def read_frames(video, fps=30, step=1):
+    # Open video file
+    video_capture = cv2.VideoCapture(video)
+    video_capture.set(cv2.CAP_PROP_FPS, fps)
+
+    count = 0
+    while video_capture.isOpened():
+        # Grab a single frame of video
+        ret = video_capture.grab()
+
+        # Bail out when the video file ends
+        if not ret:
+            break
+        if count % step == 0:
+            # Convert the image from BGR color (which OpenCV uses) to RGB color (which face_recognition uses)
+            ret, frame = video_capture.retrieve()
+            frame = cv2.cvtColor(frame, cv2.COLOR_BGR2RGB)
+            yield frame
+        count += 1
+
+
+class VideoFolder(torch.utils.data.Dataset):
+    def __init__(self, root, step=2, transform=None, target_file=None, default_target=0):
+        self.root = root
+        self.step = step
+        self.videos_filenames = sorted([f for f in os.listdir(root) if f.endswith('.mp4')])
+        if transform is None:
+            transform = transforms.VideoToTensor(rescale=False)
+        self.transform = transform
+
+        if target_file is not None:
+            with open(target_file) as f:
+                self.targets = json.load(f)
+        else:
+            self.targets = {}
+
+        self.default_target = default_target
+
+    def __getitem__(self, index):
+        name = self.videos_filenames[index]
+        video_filename = os.path.join(self.root, name)
+        frames = read_frames(video_filename, step=self.step)
+        if self.transform is not None:
+            frames = self.transform(frames)
+        target = int(self.targets.get(name, self.default_target))
+        return name, frames, target
+
+    def __len__(self):
+        return len(self.videos_filenames)
+
+
+class VideoZipFile(VideoFolder):
+
+    def __init__(self, filename, step=2, transform=None, target_file=None, default_target=0):
+        self.filename = filename
+        self.step = step
+        with zipfile.ZipFile(filename) as z:
+            self.videos_filenames = sorted([f for f in z.namelist() if f.endswith('.mp4')])
+
+        if transform is None:
+            transform = transforms.VideoToTensor(rescale=False)
+        self.transform = transform
+
+        if target_file is not None:
+            with open(target_file) as f:
+                self.targets = json.load(f)
+        else:
+            self.targets = {}
+
+        self.default_target = default_target
+
+    def __getitem__(self, index):
+        name = self.videos_filenames[index]
+        with tempfile.NamedTemporaryFile() as temp:
+            with zipfile.ZipFile(self.filename) as z:
+                temp.write(z.read(name))
+            frames = read_frames(temp.name, step=self.step)
+            if self.transform is not None:
+                frames = self.transform(frames)
+        target = int(self.targets.get(name, self.default_target))
+        return name, frames, target
+
+
+def video_collate_fn(batch):
+    names, frames, targets = zip(*batch)
+    nc, _, h, w = frames[0].shape
+    num_frames = [f.size(1) for f in frames]
+    max_len = max(num_frames)
+    frames = torch.stack([
+        torch.cat([f, f[:, -1:].expand(nc, max_len - nf, h, w)], 1)
+        for f, nf in zip(frames, num_frames)
+    ])
+    return names, frames, targets
+
+
 class Record(object):
     """Represents a record.
+
     A record has the following properties:
         path (str): path to file.
         label (int): primary label associated with video.
