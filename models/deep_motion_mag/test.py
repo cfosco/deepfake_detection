@@ -182,7 +182,7 @@ def main():
 
     # save frames
     mag_frames = np.concatenate(mag_frames, 0)
-    out_name = os.path.join(save_dir, f'{os.path.basename(args.video_path)}_{args.mode}_{args.amp}.mp4')
+    out_name = os.path.join(save_dir, '%s_%s_%s.mp4' % (os.path.basename(args.video_path), args.mode, args.amp))
     vidwrite(mag_frames, out_name)
 
 
