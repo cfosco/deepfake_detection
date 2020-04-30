@@ -6,13 +6,22 @@ need to check
 
 import torch
 import torch.nn as nn
-
+import numpy as np
 
 def _make_layer(block, in_planes, out_planes, num_layers, kernel_size=3, stride=1):
     layers = []
     for i in range(num_layers):
         layers.append(block(in_planes, out_planes, kernel_size, stride))
     return nn.Sequential(*layers)
+
+def gaussian(shape_x, shape_y, mu_x=0.0, mu_y=0.0, sig_x=1.0, sig_y=1.0):
+       
+    x = np.linspace(-1.0, 1.0, shape_x)
+    y = np.linspace(-1.0, 1.0, shape_y)
+    X, Y = np.meshgrid(x, y)
+    g = np.exp(-0.5*(((X-mu_x) / sig_x)**2 + ((Y-mu_y) / sig_y)**2))
+    
+    return g
 
 
 class ResBlock(nn.Module):
@@ -99,10 +108,25 @@ class Manipulator(nn.Module):
         self.convblks = _make_layer(ConvBlock, 32, 32, 1, kernel_size=7, stride=1)
         self.convblks_after = _make_layer(ConvBlockAfter, 32, 32, 1, kernel_size=3, stride=1)
         self.resblks = _make_layer(ResBlock, 32, 32, num_resblk, kernel_size=3, stride=1)
+        
+        # testing embedding manipulation
+        g = gaussian(shape_x=180, shape_y=180, mu_x=0.0, mu_y=0.4, sig_x=0.7, sig_y=0.3)
+        import matplotlib.pyplot as plt
+        plt.imshow(g)
+        plt.show()
+        self.gaussian_tensor = torch.from_numpy(g).float().repeat(1,32,1,1).to('cuda')
+        
+        print("self.gaussian_tensor.shape",self.gaussian_tensor.shape)
 
     def forward(self, x_a, x_b, amp):
         diff = x_b - x_a
         diff = self.convblks(diff)
+        
+#         print("diff",diff.shape)
+        
+        # testing embedding manipulation
+        diff = diff * self.gaussian_tensor
+        
         diff = (amp - 1.0) * diff
         diff = self.convblks_after(diff)
         diff = self.resblks(diff)
