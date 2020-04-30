@@ -1,7 +1,9 @@
 import argparse
 import json
 import os
+import tempfile
 import time
+import zipfile
 from collections import defaultdict
 from collections.abc import Iterable
 
@@ -65,6 +67,7 @@ def parse_args():
     parser.add_argument('--chunk_size', default=150, type=int)
     parser.add_argument('--results_dir', default='results', type=str)
     parser.add_argument('--default_target', default=0, type=str)
+    parser.add_argument('--use_zip', action='store_true')
     parser.add_argument(
         '--checkpoint_file',
         type=str,
@@ -94,20 +97,30 @@ def parse_args():
 
 
 def main(video_dir, target_file=None, default_target=0, margin=100, checkpoint_file=None,
-         step=50, batch_size=1, chunk_size=150, num_workers=2, results_dir='results', overwrite=True, **kwargs):
+         step=50, batch_size=1, chunk_size=150, num_workers=2, results_dir='results', overwrite=True, use_zip=False, **kwargs):
 
     os.makedirs(results_dir, exist_ok=True)
     results_file = os.path.join(
         results_dir,
         f'eval_dataset_{kwargs["dataset"]}_part_{kwargs["part"].replace("/", "_")}_checkpoint_{checkpoint_file}_step_{step}_bs_{batch_size}_cs_{chunk_size}_.txt')
+    json_file = os.path.join(
+        results_dir,
+        f'predictions_{kwargs["dataset"]}_part_{kwargs["part"].replace("/", "_")}.json')
     if os.path.exists(results_file) and (not overwrite):
         print(f'Skipping {results_file}')
         return
     device = 'cuda' if torch.cuda.is_available() else 'cpu'
 
-    dataset = VideoFolder(video_dir, step=step,
-                          target_file=target_file,
-                          default_target=default_target)
+    if use_zip:
+        video_dir = video_dir.rstrip('.zip') + '.zip'
+        dataset = VideoZipFile(video_dir, step=step,
+                               target_file=target_file,
+                               default_target=default_target)
+    else:
+        dataset = VideoFolder(video_dir, step=step,
+                              target_file=target_file,
+                              default_target=default_target)
+
     dataloader = DataLoader(dataset, batch_size=1,
                             shuffle=False, num_workers=num_workers,
                             pin_memory=True, drop_last=False)
@@ -139,18 +152,21 @@ def main(video_dir, target_file=None, default_target=0, margin=100, checkpoint_f
     sub.label = 0.5
     sub = sub.set_index('filename', drop=False)
 
-    preds, acc, loss, exceptions = validate(dataloader, model, criterion, device=device)
+    preds, outputs, acc, loss, exceptions = validate(dataloader, model, criterion, device=device)
 
     # with open(f'eval_step_{step}_bs_{batch_size}_cs_{chunk_size}_num_workers_{num_workers}.txt', 'w') as f:
     with open(results_file, 'w') as f:
         f.write(f'acc: {acc}\n')
         f.write(f'loss: {loss}\n')
         f.write(f'Exceptions: {exceptions}')
+
     for filename, prob in preds.items():
         sub.loc[filename, 'label'] = prob
         print(f'Setting {filename} to {prob}')
+    # sub.to_csv('submission.csv', index=False)
 
-    sub.to_csv('submission.csv', index=False)
+    with open(json_file, 'w') as f:
+        json.dump(outputs, f)
 
 
 def validate(val_loader, model, criterion, device='cuda', display=True, print_freq=1):
@@ -163,6 +179,7 @@ def validate(val_loader, model, criterion, device='cuda', display=True, print_fr
         prefix='Test: ')
 
     preds = {}
+    outputs = {}
     exceptions = []
 
     # switch to evaluate mode
@@ -178,15 +195,18 @@ def validate(val_loader, model, criterion, device='cuda', display=True, print_fr
                 # compute output
                 output = model(images)
                 loss = criterion(output, target)
-
                 # measure accuracy and record loss
                 acc1 = accuracy(output, target, topk=(1,))[0]
                 losses.update(loss.item(), images.size(0))
                 top1.update(acc1.item(), images.size(0))
 
                 probs = torch.softmax(output, 1)
-                for fn, prob in zip(filenames, probs):
+                for fn, prob, trg in zip(filenames, probs, target):
                     preds[fn] = prob[1].item()
+                    outputs[fn] = {
+                        'label': trg.item(),
+                        'prob': prob[1].item()
+                    }
 
                 # measure elapsed time
                 batch_time.update(time.time() - end)
@@ -202,7 +222,7 @@ def validate(val_loader, model, criterion, device='cuda', display=True, print_fr
 
         if display:
             print(' * Acc@1 {top1.avg:.3f}'.format(top1=top1))
-    return preds, top1.avg, losses.avg, exceptions
+    return preds, outputs, top1.avg, losses.avg, exceptions
 
 
 def read_frames(video, fps=30, step=1):
@@ -412,6 +432,39 @@ class VideoToTensor:
                 rescale=self.rescale, ordering=self.ordering
             )
         )
+
+
+class VideoZipFile(VideoFolder):
+
+    def __init__(self, filename, step=2, transform=None, target_file=None, default_target=0):
+        self.filename = filename
+        self.step = step
+        with zipfile.ZipFile(filename) as z:
+            self.videos_filenames = sorted([f for f in z.namelist() if f.endswith('.mp4')])
+
+        if transform is None:
+            transform = VideoToTensor(rescale=False)
+        self.transform = transform
+
+        if target_file is not None:
+            with open(target_file) as f:
+                self.targets = json.load(f)
+        else:
+            self.targets = {}
+
+        self.default_target = default_target
+
+    def __getitem__(self, index):
+        name = self.videos_filenames[index]
+        basename = os.path.basename(name)
+        with tempfile.NamedTemporaryFile() as temp:
+            with zipfile.ZipFile(self.filename) as z:
+                temp.write(z.read(name))
+            frames = read_frames(temp.name, step=self.step)
+            if self.transform is not None:
+                frames = self.transform(frames)
+        target = int(self.targets.get(basename, self.default_target))
+        return name, frames, target
 
 
 def modify_resnets(model):
