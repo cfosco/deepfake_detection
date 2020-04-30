@@ -744,3 +744,12 @@ def make_metadata(video_dir, num_workers=12):
     metadata = {os.path.basename(f): d for f, d in zip(video_filenames, data)}
     with open(os.path.join(video_dir, 'metadata.json'), 'w') as f:
         json.dump(metadata, f)
+
+
+def split_metadata(root):
+    with open(os.path.join(root, 'metadata.json')) as f:
+        metadata = json.load(f)
+
+    for name, data in metadata.items():
+        with open(os.path.join(root, 'videos', name, 'metadata.json'), 'w') as f:
+            json.dump(data, f)
