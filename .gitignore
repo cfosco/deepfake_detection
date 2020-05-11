@@ -139,6 +139,9 @@ dist/data
 dist/data.zip
 submissions
 models/data
+models/deep_motion_mag/test_data
+models/deep_motion_mag/test_output
+models/deep_motion_mag/demo
 scripts/data
 scripts/models
 notebooks/data
@@ -147,3 +150,5 @@ notebooks/DeepfakeDetection
 TODO
 
 *.lock
+data/gan_dataset.py
+dist/results
