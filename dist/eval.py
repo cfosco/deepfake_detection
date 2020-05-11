@@ -63,7 +63,7 @@ def parse_args():
     parser.add_argument('--dataset', type=str, default='DeepfakeDetection')
     parser.add_argument('--part', type=str, default=None)
     parser.add_argument('--video_rootdir', default='videos', type=str)
-    parser.add_argument('--step', default=50, type=int)
+    parser.add_argument('--step', default=15, type=int)
     parser.add_argument('--chunk_size', default=150, type=int)
     parser.add_argument('--results_dir', default='results', type=str)
     parser.add_argument('--default_target', default=0, type=str)
@@ -71,8 +71,8 @@ def parse_args():
     parser.add_argument(
         '--checkpoint_file',
         type=str,
-        default='resnet18_all_seg_count-16_init-imagenet-ortho_optim-SGD_lr-0.001_sched-CosineAnnealingLR_bs-128_best.pth.tar',
-        # default='resnet18_dfdc_seg_count-24_init-imagenet-ortho_optim-Ranger_lr-0.001_sched-CosineAnnealingLR_bs-64_best.pth.tar',
+        # default='resnet18_all_seg_count-16_init-imagenet-ortho_optim-SGD_lr-0.001_sched-CosineAnnealingLR_bs-128_best.pth.tar',
+        default='resnet18_dfdc_seg_count-24_init-imagenet-ortho_optim-Ranger_lr-0.001_sched-CosineAnnealingLR_bs-64_best.pth.tar',
     )
     args = parser.parse_args()
 
