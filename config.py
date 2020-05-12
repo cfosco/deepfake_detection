@@ -9,7 +9,7 @@ model_names = sorted(name for name in models.__dict__
                      if name.islower() and not name.startswith("__")
                      and callable(models.__dict__[name]))
 
-DATA_ROOT = os.getenv('DATA_ROOT')
+DATA_ROOT = os.getenv('DATA_ROOT', '.')
 
 ALL_DATASETS = [
     'DFDC',
@@ -167,7 +167,7 @@ def get_metadata(name, split='train', dataset_type='DeepfakeFrame',
         data_root, {'DFDC': 'DeepfakeDetection'}.get(name, name), 'test_videos.json') if (
         split == 'train') else None
     if name == 'DFDC' and split == 'train':
-        blacklist_file = os.path.join(data_root, 'DeepfakeDetection', 'aug_test_videos.json' )
+        blacklist_file = os.path.join(data_root, 'DeepfakeDetection', 'aug_test_videos.json')
     return {'root': root, 'metafile': metafile, 'blacklist_file': blacklist_file}
 
 

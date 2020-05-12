@@ -136,6 +136,7 @@ logs
 weights
 archive
 dist/data
+dist/predictions
 dist/data.zip
 submissions
 models/data
@@ -147,6 +148,7 @@ scripts/models
 notebooks/data
 notebooks/models
 notebooks/DeepfakeDetection
+notebooks/cam_videos
 TODO
 
 *.lock
