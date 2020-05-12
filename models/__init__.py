@@ -1,7 +1,7 @@
-from .xception import xception, Xception
-from .base import FrameModel, DeepfakeDetector, Normalize
-# from .face import FaceModel, MTCNN
-from .face_extraction import FaceModel, MTCNN
+from .base import DeepfakeDetector, FrameModel, ManipulatorDetector, Normalize
+from .face_extraction import MTCNN, FaceModel
+from .xception import Xception, xception
+from .deep_motion_mag.network import MagNet, Manipulator
 
 __all__ = [
     'xception',
@@ -10,5 +10,8 @@ __all__ = [
     'FaceModel',
     'DeepfakeDetector',
     'MTCNN',
-    'Normalize'
+    'Normalize',
+    'ManipulatorDectector',
+    'MagNet',
+    'Manipulator',
 ]

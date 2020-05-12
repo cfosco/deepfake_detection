@@ -6,19 +6,22 @@ from pretorched.utils import chunk
 
 
 class Normalize(nn.Module):
-    def __init__(self, mean=[0.485, 0.456, 0.406], std=[0.229, 0.224, 0.225],
-                 shape=(1, -1, 1, 1, 1), rescale=True):
+    def __init__(
+        self,
+        mean=[0.485, 0.456, 0.406],
+        std=[0.229, 0.224, 0.225],
+        shape=(1, -1, 1, 1, 1),
+        rescale=True,
+    ):
         super().__init__()
         self.shape = shape
-        self.mean = P(torch.tensor(mean).view(shape),
-                      requires_grad=False)
-        self.std = P(torch.tensor(std).view(shape),
-                     requires_grad=False)
+        self.mean = P(torch.tensor(mean).view(shape), requires_grad=False)
+        self.std = P(torch.tensor(std).view(shape), requires_grad=False)
         self.rescale = rescale
 
     def forward(self, x, rescale=None):
         rescale = self.rescale if rescale is None else rescale
-        x.div_(255.) if rescale else None
+        x.div_(255.0) if rescale else None
         return (x - self.mean) / self.std
 
 
@@ -43,7 +46,6 @@ class FrameModel(torch.nn.Module):
 
 
 class DeepfakeDetector(torch.nn.Module):
-
     def __init__(self, face_model, fake_model):
         super().__init__()
         self.face_model = face_model
@@ -56,3 +58,15 @@ class DeepfakeDetector(torch.nn.Module):
         # batched_faces = [torch.stack([f[i] for f in faces]) for i in range(min_faces)]
         # return self.consensus_func(
         # torch.stack([self.detector(f) for f in batched_faces]), dim=0)
+
+
+class ManipulatorDetector(torch.nn.Module):
+    def __init__(self, manipulator_model, detector_model):
+        super().__init__()
+        self.manipulator_model = manipulator_model
+        self.detector_model = detector_model
+
+    def forward(self, x):
+        x = torch.stack([self.manipulator_model.manipulate(f.transpose(0, 1)) for f in x]).transpose(1, 2)
+        x = self.detector_model(x)
+        return x
