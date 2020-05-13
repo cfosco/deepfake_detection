@@ -181,6 +181,8 @@ def parse_args():
                         help='model architecture: ' +
                         ' | '.join(model_names) +
                         ' (default: resnet3d50)')
+    parser.add_argument('--model_name', type=str, default='FrameModel')
+    parser.add_argument('--basemodel_name', type=str, default='resnet18')
     parser.add_argument('--segment_count', type=int, default=16)
     parser.add_argument('--dataset_type', type=str, default='DeepfakeFaceVideo')
     parser.add_argument('--record_set_type', type=str, default='DeepfakeFaceSet')

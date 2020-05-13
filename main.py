@@ -96,9 +96,12 @@ def main_worker(gpu, ngpus_per_node, args):
         dist.init_process_group(backend=args.dist_backend, init_method=args.dist_url,
                                 world_size=args.world_size, rank=args.rank)
 
-    model = core.get_model(args.arch, args.num_classes,
-                           pretrained=args.pretrained,
-                           init_name=args.init)
+    model = core.get_model(
+        args.model_name,
+        args.basemodel_name,
+        num_classes=args.num_classes,
+        pretrained=args.pretrained,
+        init_name=args.init)
     input_size = model.input_size[-1]
 
     if args.distributed:
