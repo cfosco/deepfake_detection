@@ -70,15 +70,7 @@ def main_worker(gpu, ngpus_per_node, args):
     os.makedirs(args.weights_dir, exist_ok=True)
     os.makedirs(args.logs_dir, exist_ok=True)
 
-    save_name = '_'.join([args.arch,
-                          args.dataset.lower(),
-                          f'seg_count-{args.segment_count}',
-                          f'init-{"-".join([args.pretrained, args.init]) if args.pretrained else args.init}',
-                          f'optim-{args.optimizer}',
-                          f'lr-{args.lr}',
-                          f'sched-{args.scheduler}',
-                          f'bs-{args.batch_size}',
-                          ])
+    save_name = core.name_from_args(args)
     print(f'Starting: {save_name}')
 
     args.log_file = os.path.join(args.logs_dir, save_name + '.json')

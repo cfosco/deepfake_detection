@@ -451,6 +451,23 @@ def step_fn(input, target, model, criterion, optimizer=None, mode='train', **kwa
     return output, loss
 
 
+def name_from_args(args):
+    name = '_'.join(
+        [
+            args.model_name,
+            args.basemodel_name,
+            args.dataset.lower(),
+            f'seg_count-{args.segment_count}',
+            f'init-{"-".join([args.pretrained, args.init]) if args.pretrained else args.init}',
+            f'optim-{args.optimizer}',
+            f'lr-{args.lr}',
+            f'sched-{args.scheduler}',
+            f'bs-{args.batch_size}',
+        ]
+    )
+    return name
+
+
 def train_gandataset(train_loader, model, gan, criterion, optimizer, epoch, args, display=True):
     batch_time = AverageMeter('Time', ':6.3f')
     data_time = AverageMeter('Data', ':6.3f')
