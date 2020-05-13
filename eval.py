@@ -50,7 +50,9 @@ else:
     # TEST_VIDEO_DIR = os.path.join(os.environ['DATA_ROOT'], 'DeepfakeDetection', 'test_videos')
 
     # TEST_VIDEO_DIR = os.path.join(os.environ['DATA_ROOT'], 'DeepfakeDetection', 'videos', SPLIT)
-    SAMPLE_SUBMISSION_CSV = os.path.join(os.environ['DATA_ROOT'], 'DeepfakeDetection', 'sample_submission.csv')
+    SAMPLE_SUBMISSION_CSV = os.path.join(
+        os.environ['DATA_ROOT'], 'DeepfakeDetection', 'sample_submission.csv'
+    )
     # TARGET_FILE = os.path.join(os.environ['DATA_ROOT'], 'DeepfakeDetection', 'test_targets.json')
     # TARGET_FILE = os.path.join(os.environ['DATA_ROOT'], 'DeepfakeDetection', 'videos', SPLIT, 'test_targets.json')
     # if not os.path.exists(TARGET_FILE):
@@ -93,96 +95,113 @@ def parse_args():
         args.target_file = os.path.join(DEEPFAKE_DATA_ROOT, args.part, 'test_targets.json')
     elif args.dataset == 'FaceForensics':
         args.video_dir = os.path.join(DEEPFAKE_DATA_ROOT, args.part, args.video_rootdir)
-        args.target_file = os.path.join(DEEPFAKE_DATA_ROOT, args.part, args.video_rootdir, 'test_targets.json')
+        args.target_file = os.path.join(
+            DEEPFAKE_DATA_ROOT, args.part, args.video_rootdir, 'test_targets.json'
+        )
     else:
         args.video_dir = os.path.join(DEEPFAKE_DATA_ROOT, args.video_rootdir, args.part)
-        args.target_file = os.path.join(DEEPFAKE_DATA_ROOT, args.video_rootdir, args.part, 'test_targets.json')
+        args.target_file = os.path.join(
+            DEEPFAKE_DATA_ROOT, args.video_rootdir, args.part, 'test_targets.json'
+        )
     if not os.path.exists(args.target_file):
         args.target_file = None
     return args
 
 
-def main(video_dir, target_file=None, default_target=0, margin=100, checkpoint_file=None,
-         step=50, batch_size=1, chunk_size=150, num_workers=2, results_dir='results', overwrite=True, use_zip=False, **kwargs):
+def main(
+    video_dir,
+    target_file=None,
+    default_target=0,
+    margin=100,
+    checkpoint_file=None,
+    step=50,
+    batch_size=1,
+    chunk_size=150,
+    num_workers=2,
+    results_dir='results',
+    overwrite=True,
+    use_zip=False,
+    **kwargs,
+):
+
+    cudnn.benchmark = True
+    device = 'cuda' if torch.cuda.is_available() else 'cpu'
+    dataset_name, part = kwargs.get('dataset'), kwargs.get('part')
 
     os.makedirs(results_dir, exist_ok=True)
     results_file = os.path.join(
         results_dir,
-        f'eval_dataset_{kwargs["dataset"]}_part_{kwargs["part"].replace("/", "_")}_checkpoint_{checkpoint_file}_step_{step}_bs_{batch_size}_cs_{chunk_size}_.txt')
-    json_file = os.path.join(
-        results_dir,
-        f'predictions_{kwargs["dataset"]}_part_{kwargs["part"].replace("/", "_")}.json')
+        '_'.join([dataset_name, part.replace('/', '_'), checkpoint_file, f'step_{step}']) + '.json',
+    )
     if os.path.exists(results_file) and (not overwrite):
         print(f'Skipping {results_file}')
         return
-    device = 'cuda' if torch.cuda.is_available() else 'cpu'
 
     if use_zip:
         video_dir = video_dir.rstrip('.zip') + '.zip'
-        dataset = VideoZipFile(video_dir, step=step,
-                               target_file=target_file,
-                               default_target=default_target)
+        dataset = VideoZipFile(
+            video_dir, step=step, target_file=target_file, default_target=default_target
+        )
     else:
-        dataset = VideoFolder(video_dir, step=step,
-                              target_file=target_file,
-                              default_target=default_target)
+        dataset = VideoFolder(
+            video_dir, step=step, target_file=target_file, default_target=default_target
+        )
 
-    dataloader = DataLoader(dataset, batch_size=1,
-                            shuffle=False, num_workers=num_workers,
-                            pin_memory=True, drop_last=False)
+    dataloader = DataLoader(
+        dataset,
+        batch_size=1,
+        shuffle=False,
+        num_workers=num_workers,
+        pin_memory=True,
+        drop_last=False,
+    )
 
     fakenet = pretorched.resnet18(num_classes=2, pretrained=None)
-    fakenet.load_state_dict({k.replace('module.model.', ''): v
-                             for k, v in torch.load(os.path.join(WEIGHT_DIR, checkpoint_file))['state_dict'].items()})
-    #  for k, v in torch.load(WEIGHT_DIR + '/'
-    # 'resnet18_dfdc_seg_count-24_init-imagenet-'
-    # 'ortho_optim-Ranger_lr-0.001_sched-CosineAnnealingLR_bs'
-    # '-64_best.pth.tar')['state_dict'].items()})
-    facenet = models.FaceModel(size=fakenet.input_size[-1],
-                               device=device,
-                               margin=margin,
-                               min_face_size=50,
-                               keep_all=True,
-                               post_process=False,
-                               select_largest=False,
-                               chunk_size=chunk_size)
+    fakenet.load_state_dict(
+        {
+            k.replace('module.model.', ''): v
+            for k, v in torch.load(os.path.join(WEIGHT_DIR, checkpoint_file))['state_dict'].items()
+        }
+    )
+
+    facenet = models.FaceModel(
+        size=fakenet.input_size[-1],
+        device=device,
+        margin=margin,
+        min_face_size=50,
+        keep_all=True,
+        post_process=False,
+        select_largest=False,
+        chunk_size=chunk_size,
+    )
     fakenet.eval()
     detector = models.FrameModel(fakenet, normalize=True)
     model = models.DeepfakeDetector(facenet, detector)
     model.to(device)
 
-    cudnn.benchmark = True
-
     criterion = nn.CrossEntropyLoss().cuda(device)
-    sub = pd.read_csv(SAMPLE_SUBMISSION_CSV)
-    sub.label = 0.5
-    sub = sub.set_index('filename', drop=False)
 
     preds, outputs, acc, loss, exceptions = validate(dataloader, model, criterion, device=device)
 
-    # with open(f'eval_step_{step}_bs_{batch_size}_cs_{chunk_size}_num_workers_{num_workers}.txt', 'w') as f:
+    results = {
+        'dataset': dataset_name,
+        'part': part,
+        'checkpoint_file': checkpoint_file,
+        'acc': acc,
+        'loss': loss,
+        'exceptions': exceptions,
+        'outputs': outputs,
+    }
+
     with open(results_file, 'w') as f:
-        f.write(f'acc: {acc}\n')
-        f.write(f'loss: {loss}\n')
-        f.write(f'Exceptions: {exceptions}')
-
-    for filename, prob in preds.items():
-        sub.loc[filename, 'label'] = prob
-        print(f'Setting {filename} to {prob}')
-    # sub.to_csv('submission.csv', index=False)
-
-    with open(json_file, 'w') as f:
-        json.dump(outputs, f)
+        json.dump(results, f)
 
 
 def validate(val_loader, model, criterion, device='cuda', display=True, print_freq=1):
     batch_time = AverageMeter('Time', ':6.3f')
     losses = AverageMeter('Loss', ':.4e')
     top1 = AverageMeter('Acc@1', ':6.2f')
-    progress = ProgressMeter(
-        len(val_loader),
-        [batch_time, losses, top1],
-        prefix='Test: ')
+    progress = ProgressMeter(len(val_loader), [batch_time, losses, top1], prefix='Test: ')
 
     preds = {}
     outputs = {}
@@ -209,10 +228,7 @@ def validate(val_loader, model, criterion, device='cuda', display=True, print_fr
                 probs = torch.softmax(output, 1)
                 for fn, prob, trg in zip(filenames, probs, target):
                     preds[fn] = prob[1].item()
-                    outputs[fn] = {
-                        'label': trg.item(),
-                        'prob': prob[1].item()
-                    }
+                    outputs[fn] = {'label': trg.item(), 'prob': prob[1].item()}
 
                 # measure elapsed time
                 batch_time.update(time.time() - end)
@@ -325,19 +341,28 @@ def resnet152(num_classes=1000, pretrained='imagenet'):
 
 
 class FaceModel(torch.nn.Module):
-
-    def __init__(self, size=224, device='cuda', margin=50, keep_all=False,
-                 post_process=False, select_largest=True, min_face_size=50,
-                 chunk_size=None):
+    def __init__(
+        self,
+        size=224,
+        device='cuda',
+        margin=50,
+        keep_all=False,
+        post_process=False,
+        select_largest=True,
+        min_face_size=50,
+        chunk_size=None,
+    ):
         super().__init__()
-        self.model = MTCNN(image_size=size,
-                           device=device,
-                           margin=margin,
-                           keep_all=keep_all,
-                           min_face_size=min_face_size,
-                           post_process=post_process,
-                           select_largest=select_largest,
-                           chunk_size=chunk_size)
+        self.model = MTCNN(
+            image_size=size,
+            device=device,
+            margin=margin,
+            keep_all=keep_all,
+            min_face_size=min_face_size,
+            post_process=post_process,
+            select_largest=select_largest,
+            chunk_size=chunk_size,
+        )
 
     def input_transform(self, x):
         x = x.permute(0, 2, 1, 3, 4).contiguous()  # [bs, d, nc, h, w]
@@ -355,12 +380,16 @@ class FaceModel(torch.nn.Module):
             min_face = min([f.shape[1] for f in faces_out])
             faces_out = torch.cat([f[:, :min_face] for f in faces_out])
             if to_pil:
-                face_images = {i: [Image.fromarray(ff.permute(1, 2, 0).numpy().astype(np.uint8)) for ff in f]
-                               for i, f in enumerate(faces_out.permute(1, 0, 2, 3, 4))}
+                face_images = {
+                    i: [Image.fromarray(ff.permute(1, 2, 0).numpy().astype(np.uint8)) for ff in f]
+                    for i, f in enumerate(faces_out.permute(1, 0, 2, 3, 4))
+                }
 
             else:
-                face_images = {i: [ff.permute(1, 2, 0).numpy().astype(np.uint8) for ff in f]
-                               for i, f in enumerate(faces_out.permute(1, 0, 2, 3, 4))}
+                face_images = {
+                    i: [ff.permute(1, 2, 0).numpy().astype(np.uint8) for ff in f]
+                    for i, f in enumerate(faces_out.permute(1, 0, 2, 3, 4))
+                }
             batched_face_images.append(face_images)
         return batched_face_images
 
@@ -411,9 +440,17 @@ class MTCNN(nn.Module):
     """
 
     def __init__(
-        self, image_size=160, margin=0, min_face_size=20,
-        thresholds=[0.6, 0.7, 0.7, 0.98], factor=0.709, post_process=True,
-        select_largest=True, keep_all=False, device=None, chunk_size=None,
+        self,
+        image_size=160,
+        margin=0,
+        min_face_size=20,
+        thresholds=[0.6, 0.7, 0.7, 0.98],
+        factor=0.709,
+        post_process=True,
+        select_largest=True,
+        keep_all=False,
+        device=None,
+        chunk_size=None,
         relax_landmarks=True,
     ):
         super().__init__()
@@ -438,7 +475,9 @@ class MTCNN(nn.Module):
             self.device = device
             self.to(device)
 
-    def forward(self, img, save_path=None, return_prob=False, smooth=False, amount=0.4, smooth_len=None):
+    def forward(
+        self, img, save_path=None, return_prob=False, smooth=False, amount=0.4, smooth_len=None
+    ):
         """Run MTCNN face detection on a PIL image. This method performs both detection and
         extraction of faces, returning tensors representing detected faces rather than the bounding
         boxes. To access bounding boxes, see the MTCNN.detect() method below.
@@ -583,10 +622,15 @@ class MTCNN(nn.Module):
 
         with torch.no_grad():
             batch_boxes, batch_points = detect_face(
-                img, self.min_face_size,
-                self.pnet, self.rnet, self.onet,
-                self.thresholds, self.factor,
-                self.device, self.relax_landmarks
+                img,
+                self.min_face_size,
+                self.pnet,
+                self.rnet,
+                self.onet,
+                self.thresholds,
+                self.factor,
+                self.device,
+                self.relax_landmarks,
             )
         boxes, probs, points = [], [], []
         for box, point in zip(batch_boxes, batch_points):
@@ -811,7 +855,7 @@ def fixed_image_standardization(image_tensor):
 def prewhiten(x):
     mean = x.mean()
     std = x.std()
-    std_adj = std.clamp(min=1.0 / (float(x.numel())**0.5))
+    std_adj = std.clamp(min=1.0 / (float(x.numel()) ** 0.5))
     y = (x - mean) / std_adj
     return y
 
@@ -872,7 +916,7 @@ def smooth(x, amount=0.2, window='hanning'):
     if window not in ['flat', 'hanning', 'hamming', 'bartlett', 'blackman']:
         raise ValueError("Window is on of 'flat', 'hanning', 'hamming', 'bartlett', 'blackman'")
 
-    s = np.r_[x[window_len - 1:0:-1], x, x[-2:-window_len - 1:-1]]
+    s = np.r_[x[window_len - 1 : 0 : -1], x, x[-2 : -window_len - 1 : -1]]
 
     if window == 'flat':  # moving average
         w = np.ones(window_len, 'd')
@@ -880,7 +924,7 @@ def smooth(x, amount=0.2, window='hanning'):
         w = eval('np.' + window + '(window_len)')
 
     y = np.convolve(w / w.sum(), s, mode='valid')
-    return y[(window_len // 2):-(window_len // 2)]
+    return y[(window_len // 2) : -(window_len // 2)]
 
 
 def _smooth(data, amount=1.0):
@@ -890,7 +934,9 @@ def _smooth(data, amount=1.0):
     ksize = max(1, int(amount * (data_len // 2)))
     kernel = torch.ones(1, 1, ksize, device='cuda') / ksize
     data = data.view(1, 1, -1).cuda()
-    return torch.nn.functional.conv1d(data, kernel, bias=None, stride=1, padding=0, dilation=1, groups=1).view(-1)
+    return torch.nn.functional.conv1d(
+        data, kernel, bias=None, stride=1, padding=0, dilation=1, groups=1
+    ).view(-1)
 
 
 def smooth_boxes(batch_boxes, amount=0.1):
@@ -912,7 +958,10 @@ def smooth_boxes(batch_boxes, amount=0.1):
                     boxes[face_idx].append(b)
                     added.append(face_idx)
     for face_num, coords in boxes.items():
-        out = [np.array(x) for x in zip(*[smooth(interp_nans(dim), amount=amount) for dim in zip(*coords)])]
+        out = [
+            np.array(x)
+            for x in zip(*[smooth(interp_nans(dim), amount=amount) for dim in zip(*coords)])
+        ]
         boxes[face_num] = out
     return list(map(np.stack, zip(*boxes.values())))
 
@@ -937,7 +986,10 @@ def _smooth_boxes(batch_boxes, amount=0.1):
                     boxes[face_idx].append(b)
                     added.append(face_idx)
     for face_num, coords in boxes.items():
-        out = [torch.tensor(x) for x in zip(*[smooth(interp_negs(dim), amount=amount) for dim in zip(*coords)])]
+        out = [
+            torch.tensor(x)
+            for x in zip(*[smooth(interp_negs(dim), amount=amount) for dim in zip(*coords)])
+        ]
         boxes[face_num] = out
     return list(map(torch.stack, zip(*boxes.values())))
 
@@ -1009,7 +1061,7 @@ def detect_face(imgs, minsize, pnet, rnet, onet, threshold, factor, device, rela
         im_data = []
         for k in range(len(y)):
             if ey[k] > (y[k] - 1) and ex[k] > (x[k] - 1):
-                img_k = imgs[image_inds[k], :, (y[k] - 1):ey[k], (x[k] - 1):ex[k]].unsqueeze(0)
+                img_k = imgs[image_inds[k], :, (y[k] - 1) : ey[k], (x[k] - 1) : ex[k]].unsqueeze(0)
                 im_data.append(imresample(img_k, (24, 24)))
         im_data = torch.cat(im_data, dim=0)
         im_data = (im_data - 127.5) * 0.0078125
@@ -1036,7 +1088,7 @@ def detect_face(imgs, minsize, pnet, rnet, onet, threshold, factor, device, rela
         im_data = []
         for k in range(len(y)):
             if ey[k] > (y[k] - 1) and ex[k] > (x[k] - 1):
-                img_k = imgs[image_inds[k], :, (y[k] - 1):ey[k], (x[k] - 1):ex[k]].unsqueeze(0)
+                img_k = imgs[image_inds[k], :, (y[k] - 1) : ey[k], (x[k] - 1) : ex[k]].unsqueeze(0)
                 im_data.append(imresample(img_k, (48, 48)))
         im_data = torch.cat(im_data, dim=0)
         im_data = (im_data - 127.5) * 0.0078125
@@ -1209,9 +1261,7 @@ def crop_tensor(tensor, box):
 
 
 def crop_resize(tensor, box, size):
-    return F.interpolate(
-        crop_tensor(tensor, box).unsqueeze(0),
-        size=size, mode='area')[0]
+    return F.interpolate(crop_tensor(tensor, box).unsqueeze(0), size=size, mode='area')[0]
 
 
 def extract_face(img, box, image_size=160, margin=0, save_path=None):
@@ -1264,7 +1314,7 @@ def extract_face(img, box, image_size=160, margin=0, save_path=None):
 def chunk(l, n):
     """Yield successive n-sized chunks from l."""
     for i in range(0, len(l), n):
-        yield l[i:i + n]
+        yield l[i : i + n]
 
 
 class AverageMeter(object):
@@ -1332,19 +1382,22 @@ def accuracy(output, target, topk=(1, 5)):
 
 
 class Normalize(nn.Module):
-    def __init__(self, mean=[0.485, 0.456, 0.406], std=[0.229, 0.224, 0.225],
-                 shape=(1, -1, 1, 1, 1), rescale=True):
+    def __init__(
+        self,
+        mean=[0.485, 0.456, 0.406],
+        std=[0.229, 0.224, 0.225],
+        shape=(1, -1, 1, 1, 1),
+        rescale=True,
+    ):
         super().__init__()
         self.shape = shape
-        self.mean = P(torch.tensor(mean).view(shape),
-                      requires_grad=False)
-        self.std = P(torch.tensor(std).view(shape),
-                     requires_grad=False)
+        self.mean = P(torch.tensor(mean).view(shape), requires_grad=False)
+        self.std = P(torch.tensor(std).view(shape), requires_grad=False)
         self.rescale = rescale
 
     def forward(self, x, rescale=None):
         rescale = self.rescale if rescale is None else rescale
-        x.div_(255.) if rescale else None
+        x.div_(255.0) if rescale else None
         return (x - self.mean) / self.std
 
 
@@ -1369,7 +1422,6 @@ class FrameModel(torch.nn.Module):
 
 
 class DeepfakeDetector(torch.nn.Module):
-
     def __init__(self, face_model, fake_model):
         super().__init__()
         self.face_model = face_model

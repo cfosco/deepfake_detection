@@ -4,15 +4,15 @@ VIDEO_ROOT=${DATA_ROOT}/DeepfakeDetection/videos
 FRAME_ROOT=${DATA_ROOT}/DeepfakeDetection/frames
 
 # Start from parent directory of script
-cd "$(dirname "${BASH_SOURCE[0]}")/../dist"
+cd "$(dirname "${BASH_SOURCE[0]}")/../"
 
-python eval.py --part adversarial_test_videos
-python eval.py --part aug_test_videos/original
-python eval.py --part aug_test_videos/original_fps15
-python eval.py --part aug_test_videos/original_crf33
-python eval.py --part aug_test_videos/original_scale0.25
-python eval.py --part aug_test_videos/original_scale0.25_crf33
-python eval.py --part aug_test_videos/original_scale0.25_crf44
+# python eval.py --part adversarial_test_videos
+# python eval.py --part aug_test_videos/original
+# python eval.py --part aug_test_videos/original_fps15
+# python eval.py --part aug_test_videos/original_crf33
+# python eval.py --part aug_test_videos/original_scale0.25
+# python eval.py --part aug_test_videos/original_scale0.25_crf33
+# python eval.py --part aug_test_videos/original_scale0.25_crf44
 # python eval.py --part aug_test_videos/dfdc_train_part_33
 # python eval.py --part aug_test_videos/dfdc_train_part_33_fps15
 # python eval.py --part aug_test_videos/dfdc_train_part_33_crf33
