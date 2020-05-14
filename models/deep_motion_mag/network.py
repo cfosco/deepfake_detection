@@ -123,22 +123,38 @@ class Manipulator(nn.Module):
         plt.show()
         self.gaussian_tensor = torch.from_numpy(g).float().repeat(1, 32, 1, 1).to('cuda')
 
-        print("self.gaussian_tensor.shape", self.gaussian_tensor.shape)
+        # print("self.gaussian_tensor.shape", self.gaussian_tensor.shape)
 
-    def forward(self, x_a, x_b, amp):
+    def forward(self, x_a, x_b, amp, attn_map=None):
         diff = x_b - x_a
         diff = self.convblks(diff)
 
-        print("diff", diff.shape)
+        # print("diff", diff.shape)
 
         # testing embedding manipulation
-        # diff = diff * self.gaussian_tensor
+        if attn_map is not None:
+            diff = diff * attn_map.to(diff.device)
 
         diff = (amp - 1.0) * diff
         diff = self.convblks_after(diff)
         diff = self.resblks(diff)
 
         return x_b + diff
+
+    def manip(self, x_a, amp, attn_map=None):
+        diff = self.convblks(x_a)
+
+        # print("diff", diff.shape)
+
+        # testing embedding manipulation
+        if attn_map is not None:
+            diff = diff * attn_map.to(diff.device)
+
+        diff = (amp - 1.0) * diff
+        diff = self.convblks_after(diff)
+        diff = self.resblks(diff)
+
+        return x_a + diff
 
 
 class Decoder(nn.Module):
@@ -170,7 +186,7 @@ class Decoder(nn.Module):
 
 
 class MagNet(nn.Module):
-    def __init__(self, num_resblk_enc=3, num_resblk_man=1, num_resblk_dec=9, amp=1.0):
+    def __init__(self, num_resblk_enc=3, num_resblk_man=1, num_resblk_dec=3, amp=1.0):
         super().__init__()
         self.amp = amp
         self.encoder = Encoder(num_resblk=num_resblk_enc)
@@ -199,6 +215,7 @@ class MagNet(nn.Module):
             amp = self.amp
         v, m = self.encoder(x)
         m_enc = self.manipulator(m, torch.zeros_like(m).to(m.device), amp)
+        m_enc = self.manipulator.manip(m, amp)
         y_hat = self.decoder(v, m_enc)
         return y_hat
 

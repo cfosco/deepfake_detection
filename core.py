@@ -104,7 +104,21 @@ def get_model(model_name, basemodel_name, pretrained='imagenet', init_name=None,
             basemodel_name, pretrained=pretrained, num_classes=num_classes, init_name=init_name
         )
         model = deepfake_models.FrameModel(basemodel)
-
+    elif model_name == 'ManipulatorDetector':
+        model = deepfake_models.ManipulatorDetector(
+            manipulator_model=deepfake_models.MagNet(),
+            detector_model=get_model(
+                'FrameModel', basemodel_name, pretrained=pretrained, init_name=init_name
+            ),
+        )
+    elif model_name == 'CaricatureModel':
+        model = deepfake_models.CaricatureModel(
+            face_model=deepfake_models.FaceModel(),
+            fake_model=get_model('FrameModel', basemodel_name, pretrained, init_name=init_name),
+            mag_model=deepfake_models.MagNet(),
+        )
+    else:
+        raise ValueError(f'Unreconized model type {model_name}')
     return model
 
 
