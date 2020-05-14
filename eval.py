@@ -79,8 +79,8 @@ def parse_args():
         '--checkpoint_file',
         type=str,
         # default='resnet18_all_seg_count-16_init-imagenet-ortho_optim-SGD_lr-0.001_sched-CosineAnnealingLR_bs-128_best.pth.tar',
-        default='resnet18_all_seg_count-16_init-imagenet-ortho_optim-SGD_lr-0.001_sched-CosineAnnealingLR_bs-128_checkpoint.pth.tar',
-        # default='resnet18_dfdc_seg_count-24_init-imagenet-ortho_optim-Ranger_lr-0.001_sched-CosineAnnealingLR_bs-64_best.pth.tar',
+        # default='resnet18_all_seg_count-16_init-imagenet-ortho_optim-SGD_lr-0.001_sched-CosineAnnealingLR_bs-128_checkpoint.pth.tar',
+        default='resnet18_dfdc_seg_count-24_init-imagenet-ortho_optim-Ranger_lr-0.001_sched-CosineAnnealingLR_bs-64_best.pth.tar',
     )
     args = parser.parse_args()
 

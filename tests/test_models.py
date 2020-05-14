@@ -1,3 +1,4 @@
+import sys
 import os
 import pytest
 import torch
@@ -12,6 +13,15 @@ import pretorched.models as pmodels
 
 from .. import config as cfg
 from .. import models
+
+try:
+    sys.path.extend(['.', '..'])
+    import core
+except ImportError:
+    SKIP_GET_TESTS = True
+else:
+    SKIP_GET_TESTS = False
+
 
 dir_path = os.path.dirname(os.path.realpath(__file__))
 BATCH_SIZE = 4
@@ -97,3 +107,19 @@ def test_manipulate_detector(frames3D_small):
     ).to(device)
     out = manipulator_detector(frames3D_small)
     print(out.shape)
+
+
+@pytest.mark.parametrize('model_name, basemodel_name', [
+    ('FrameModel', 'resnet18'),
+    ('ManipulatorDetector', 'resnet18')
+]
+)
+def test_get_model(model_name, basemodel_name, frames3D_small):
+    model = core.get_model(model_name, basemodel_name)
+    model = model.to(device)
+    out = model(frames3D_small)
+    assert tuple(out.size()) == (BATCH_SIZE, 2)
+
+
+def test_caricature_model():
+    model = core.get_model('CaricatureModel')

@@ -17,8 +17,8 @@ WEIGHT_DIR = os.path.join(dir_path, 'data')
 
 class FaceModel(torch.nn.Module):
 
-    def __init__(self, size=224, device='cuda', margin=50, keep_all=False,
-                 post_process=False, select_largest=True, min_face_size=50,
+    def __init__(self, size=224, device='cuda', margin=100, keep_all=True,
+                 post_process=False, select_largest=False, min_face_size=50,
                  chunk_size=None):
         super().__init__()
         self.model = MTCNN(image_size=size,
