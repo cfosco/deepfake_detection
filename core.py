@@ -1,5 +1,4 @@
 import functools
-import os
 import time
 from operator import add
 from typing import Union
@@ -168,7 +167,7 @@ def get_transform(
             ]
         ),
         'val': torchvision.transforms.Compose(
-            [transforms.ResizeVideo(resolution), transforms.CenterCropVideo(size),]
+            [transforms.ResizeVideo(resolution), transforms.CenterCropVideo(size)]
         ),
     }.get(split, 'val')
     transform = torchvision.transforms.Compose(
@@ -256,35 +255,6 @@ def get_dataset(
         **kwargs,
     }
     dataset_kwargs, _ = utils.split_kwargs_by_func(Dataset, full_kwargs)
-    return Dataset(**dataset_kwargs)
-
-
-def _get_dataset(
-    name,
-    root,
-    metafile,
-    split='train',
-    size=224,
-    resolution=256,
-    num_frames=16,
-    dataset_type='DeepfakeFrame',
-    sampler_type='TemporalSegmentSampler',
-    record_set_type='DeepfakeSet',
-    **kwargs,
-):
-
-    Dataset = getattr(data, dataset_type, 'ImageFolder')
-    record_set = getattr(data, record_set_type, 'DeepfakeSet')
-
-    sampler = getattr(samplers, sampler_type)(num_frames)
-
-    kwargs = {
-        'root': root,
-        'metafile': os.path.join(root, f'{split}.txt'),
-        'transform': get_transform(name, split, size, resolution),
-        **kwargs,
-    }
-    dataset_kwargs, _ = utils.split_kwargs_by_func(Dataset, kwargs)
     return Dataset(**dataset_kwargs)
 
 
