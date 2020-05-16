@@ -2,6 +2,7 @@ import functools
 import os
 import time
 from operator import add
+from typing import Union
 
 import torch
 import torch.nn as nn
@@ -98,28 +99,31 @@ def init_weights(model, init_name='ortho'):
     return model
 
 
-def get_model(model_name, basemodel_name, pretrained='imagenet', init_name=None, num_classes=2):
+def get_model(
+    model_name, basemodel_name='resnet18', pretrained='imagenet', init_name=None, num_classes=2
+) -> Union[
+    deepfake_models.FrameModel, deepfake_models.ManipulatorDetector, deepfake_models.CaricatureModel
+]:
     if model_name == 'FrameModel':
         basemodel = get_basemodel(
             basemodel_name, pretrained=pretrained, num_classes=num_classes, init_name=init_name
         )
-        model = deepfake_models.FrameModel(basemodel)
+        return deepfake_models.FrameModel(basemodel)
     elif model_name == 'ManipulatorDetector':
-        model = deepfake_models.ManipulatorDetector(
+        return deepfake_models.ManipulatorDetector(
             manipulator_model=deepfake_models.MagNet(),
             detector_model=get_model(
                 'FrameModel', basemodel_name, pretrained=pretrained, init_name=init_name
             ),
         )
     elif model_name == 'CaricatureModel':
-        model = deepfake_models.CaricatureModel(
+        return deepfake_models.CaricatureModel(
             face_model=deepfake_models.FaceModel(),
             fake_model=get_model('FrameModel', basemodel_name, pretrained, init_name=init_name),
             mag_model=deepfake_models.MagNet(),
         )
     else:
         raise ValueError(f'Unreconized model type {model_name}')
-    return model
 
 
 def get_basemodel(model_name, num_classes=2, pretrained='imagenet', init_name=None, **kwargs):
