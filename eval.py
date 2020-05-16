@@ -1,9 +1,7 @@
 import argparse
 import json
 import os
-import tempfile
 import time
-import zipfile
 from collections import defaultdict
 from collections.abc import Iterable
 
@@ -908,7 +906,9 @@ def smooth(x, amount=0.2, window='hanning'):
     scipy.signal.lfilter
 
     TODO: the window parameter could be the window itself if an array instead of a string
-    NOTE: length(output) != length(input), to correct this: return y[(window_len/2-1):-(window_len/2)] instead of just y.
+    NOTE: length(output) != length(input), to correct this:
+        return y[(window_len/2-1):-(window_len/2)]
+    instead of just y.
     """
 
     if x.ndim != 1:
