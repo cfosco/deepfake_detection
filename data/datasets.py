@@ -1,4 +1,4 @@
-import functools
+# import functools
 import io
 import json
 import os
@@ -73,7 +73,6 @@ class DeepfakeRecord:
 
 
 class DeepfakeFaceRecord(DeepfakeRecord):
-
     def __init__(self, part, name, data, face_data_key='facenet_videos'):
         self.part = part
         self.name = name
@@ -118,7 +117,6 @@ class DeepfakeFaceRecord(DeepfakeRecord):
 
 
 class DeepfakeSet:
-
     def __init__(self, metafile, blacklist_file=None, record_func=DeepfakeRecord):
         self.records = []
         self.metafile = metafile
@@ -147,14 +145,19 @@ class DeepfakeSet:
                 else:
                     self.blacklist_records.append(record)
 
-    def __getitem__(self, idx: int) -> DeepfakeRecord:
+    def __getitem__(self, idx: int) -> Union[DeepfakeRecord, DeepfakeFaceRecord]:
         return self.records[idx]
 
     def __len__(self):
         return len(self.records)
 
 
-DeepfakeFaceSet = functools.partial(DeepfakeSet, record_func=DeepfakeFaceRecord)
+class DeepfakeFaceSet(DeepfakeSet):
+    def __init__(self, metafile, blacklist_file=None):
+        super().__init__(metafile, blacklist_file=blacklist_file, record_func=DeepfakeFaceRecord)
+
+    def __getitem__(self, idx: int) -> DeepfakeFaceRecord:
+        return self.records[idx]
 
 
 class DeepfakeFrame(data.Dataset):
@@ -162,12 +165,14 @@ class DeepfakeFrame(data.Dataset):
     offset = 1
 
     def __init__(
-            self,
-            root: Union[str, Path],
-            record_set: DeepfakeSet,
-            sampler: FrameSampler = _default_sampler(),
-            image_tmpl: str = '{:06d}.jpg',
-            transform=None, target_transform=None):
+        self,
+        root: Union[str, Path],
+        record_set: Union[DeepfakeSet, DeepfakeFaceSet],
+        sampler: FrameSampler = _default_sampler(),
+        image_tmpl: str = '{:06d}.jpg',
+        transform=None,
+        target_transform=None,
+    ):
 
         self.root = root
         self.sampler = sampler
@@ -211,17 +216,28 @@ class DeepfakeFrame(data.Dataset):
     def __len__(self):
         return len(self.record_set)
 
+    def __repr__(self):
+        fmt_str = 'Dataset ' + self.__class__.__name__ + '\n'
+        fmt_str += '  Number of datapoints: {}\n'.format(len(self.record_set))
+        tmp = '  Transforms (if any): '
+        fmt_str += '{0}{1}\n'.format(
+            tmp, self.transform.__repr__().replace('\n', '\n' + ' ' * len(tmp))
+        )
+        return fmt_str
+
 
 class DeepfakeFaceFrame(DeepfakeFrame):
     def __init__(
-            self,
-            root: Union[str, Path],
-            record_set: DeepfakeSet,
-            sampler: FrameSampler = _default_sampler(),
-            image_tmpl: str = '{:06d}.jpg',
-            crop_faces: bool = False,
-            margin=100,
-            transform=None, target_transform=None):
+        self,
+        root: Union[str, Path],
+        record_set: DeepfakeFaceSet,
+        sampler: FrameSampler = _default_sampler(),
+        image_tmpl: str = '{:06d}.jpg',
+        crop_faces: bool = False,
+        margin=100,
+        transform=None,
+        target_transform=None,
+    ):
 
         self.root = root
         self.sampler = sampler
@@ -285,8 +301,16 @@ class DeepfakeFaceFrame(DeepfakeFrame):
 
 
 class DeepfakeFaceCropFrame(DeepfakeFaceFrame):
-    def __init__(self, root, record_set, sampler=_default_sampler(),
-                 image_tmpl='{:06d}.jpg', margin=100, transform=None, target_transform=None):
+    def __init__(
+        self,
+        root,
+        record_set,
+        sampler=_default_sampler(),
+        image_tmpl='{:06d}.jpg',
+        margin=100,
+        transform=None,
+        target_transform=None,
+    ):
         super().__init__(
             root,
             record_set,
@@ -295,11 +319,11 @@ class DeepfakeFaceCropFrame(DeepfakeFaceFrame):
             crop_faces=True,
             margin=margin,
             transform=transform,
-            target_transform=target_transform)
+            target_transform=target_transform,
+        )
 
 
 class DeepfakeVideo(VideoDataset):
-
     def __init__(
         self,
         root: Union[str, Path],
@@ -347,7 +371,6 @@ class DeepfakeVideo(VideoDataset):
 
 
 class DeepfakeFaceVideo(DeepfakeVideo):
-
     def __getitem__(self, index: int):
         record = self.record_set[index]
         video_dir = os.path.join(self.root, record.face_path)
@@ -453,7 +476,7 @@ class VideoFolder(torch.utils.data.Dataset):
 
         self.default_target = default_target
 
-    def __getitem__(self, index):
+    def __getitem__(self, index) -> Tuple[str, torch.Tensor, int]:
         name = self.videos_filenames[index]
         video_filename = os.path.join(self.root, name)
         frames = read_frames(video_filename, step=self.step)
@@ -465,9 +488,18 @@ class VideoFolder(torch.utils.data.Dataset):
     def __len__(self):
         return len(self.videos_filenames)
 
+    def __repr__(self):
+        fmt_str = 'Dataset ' + self.__class__.__name__ + '\n'
+        fmt_str += '  Root dir: {}\n'.format(self.root)
+        fmt_str += '  Number of datapoints: {}\n'.format(len(self.videos_filenames))
+        tmp = '  Transforms (if any): '
+        fmt_str += '{0}{1}\n'.format(
+            tmp, self.transform.__repr__().replace('\n', '\n' + ' ' * len(tmp))
+        )
+        return fmt_str
+
 
 class VideoZipFile(VideoFolder):
-
     def __init__(self, filename, step=2, transform=None, target_file=None, default_target=0):
         self.filename = filename
         self.step = step
@@ -503,10 +535,12 @@ def video_collate_fn(batch):
     nc, _, h, w = frames[0].shape
     num_frames = [f.size(1) for f in frames]
     max_len = max(num_frames)
-    frames = torch.stack([
-        torch.cat([f, f[:, -1:].expand(nc, max_len - nf, h, w)], 1)
-        for f, nf in zip(frames, num_frames)
-    ])
+    frames = torch.stack(
+        [
+            torch.cat([f, f[:, -1:].expand(nc, max_len - nf, h, w)], 1)
+            for f, nf in zip(frames, num_frames)
+        ]
+    )
     return names, frames, targets
 
 
@@ -573,8 +607,12 @@ class VideoRecord(object):
         return [int(label) for label in self._data[2:]]
 
     def todict(self):
-        return {'labels': self.labels, 'num_frames': self.num_frames,
-                'path': self.path, 'label': self.label}
+        return {
+            'labels': self.labels,
+            'num_frames': self.num_frames,
+            'path': self.path,
+            'label': self.label,
+        }
 
     def __hash__(self):
         return hash((self.path, self.num_frames))
@@ -587,8 +625,16 @@ class VideoRecord(object):
 
 
 class VideoDataset(data.Dataset):
-    def __init__(self, root, metadata_file, num_frames=1, image_tmpl='img_{:06d}.jpg',
-                 sampler=None, transform=None, target_transform=None):
+    def __init__(
+        self,
+        root,
+        metadata_file,
+        num_frames=1,
+        image_tmpl='img_{:06d}.jpg',
+        sampler=None,
+        transform=None,
+        target_transform=None,
+    ):
         self.root = root
         self.metadata_file = metadata_file
         self.num_frames = num_frames
@@ -626,11 +672,14 @@ class VideoDataset(data.Dataset):
         """
         average_duration = (record.num_frames - self.new_length + 1) * 1.0 / self.num_frames
         if average_duration > 0:
-            offsets = np.multiply(list(range(self.num_frames)), average_duration) + \
-                np.random.uniform(0, average_duration, size=self.num_frames)
+            offsets = np.multiply(
+                list(range(self.num_frames)), average_duration
+            ) + np.random.uniform(0, average_duration, size=self.num_frames)
             offsets = np.floor(offsets)
         elif record.num_frames > self.num_frames:
-            offsets = np.sort(randint(record.num_frames - self.new_length + 1, size=self.num_frames))
+            offsets = np.sort(
+                randint(record.num_frames - self.new_length + 1, size=self.num_frames)
+            )
         else:
             offsets = np.zeros((self.num_frames,))
         return offsets + 1
