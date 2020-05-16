@@ -353,9 +353,11 @@ class DeepfakeFaceVideo(DeepfakeVideo):
         video_dir = os.path.join(self.root, record.face_path)
         face_num = np.random.choice(record.face_nums)
         num_face_frames = record.num_face_frames[face_num]
-        frame_inds = self.sampler.sample(num_face_frames)
-
         video_path = os.path.join(video_dir, record.face_names[face_num] + '.mp4')
+        # video_length = self.frame_counter(video_path)
+        # frame_inds = self.sampler.sample(video_length)
+        frame_inds = self.sampler.sample(num_face_frames)
+        # print(num_face_frames, frame_inds)
         frames = list(self._load_frames(video_path, frame_inds))
         label = record.label
 

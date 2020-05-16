@@ -9,7 +9,7 @@ model_names = sorted(name for name in models.__dict__
                      if name.islower() and not name.startswith("__")
                      and callable(models.__dict__[name]))
 
-DATA_ROOT = os.getenv('DATA_ROOT')
+DATA_ROOT = os.getenv('DATA_ROOT', '.')
 
 ALL_DATASETS = [
     'DFDC',
@@ -167,7 +167,7 @@ def get_metadata(name, split='train', dataset_type='DeepfakeFrame',
         data_root, {'DFDC': 'DeepfakeDetection'}.get(name, name), 'test_videos.json') if (
         split == 'train') else None
     if name == 'DFDC' and split == 'train':
-        blacklist_file = os.path.join(data_root, 'DeepfakeDetection', 'aug_test_videos.json' )
+        blacklist_file = os.path.join(data_root, 'DeepfakeDetection', 'aug_test_videos.json')
     return {'root': root, 'metafile': metafile, 'blacklist_file': blacklist_file}
 
 
@@ -181,7 +181,11 @@ def parse_args():
                         help='model architecture: ' +
                         ' | '.join(model_names) +
                         ' (default: resnet3d50)')
+    parser.add_argument('--model_name', type=str, default='FrameModel')
+    parser.add_argument('--basemodel_name', type=str, default='resnet18')
     parser.add_argument('--segment_count', type=int, default=16)
+    parser.add_argument('--clip_length', type=int, default=16)
+    parser.add_argument('--frame_step', type=int, default=5)
     parser.add_argument('--dataset_type', type=str, default='DeepfakeFaceVideo')
     parser.add_argument('--record_set_type', type=str, default='DeepfakeFaceSet')
     parser.add_argument('--sampler_type', type=str, default='TSNFrameSampler')

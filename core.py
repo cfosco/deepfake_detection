@@ -20,9 +20,11 @@ from pretorched.metrics import accuracy
 from pretorched.runners.utils import AverageMeter, ProgressMeter
 
 
-torchvision_model_names = sorted(name for name in torchvision_models.__dict__
-                                 if name.islower() and not name.startswith("__")
-                                 and callable(torchvision_models.__dict__[name]))
+torchvision_model_names = sorted(
+    name
+    for name in torchvision_models.__dict__
+    if name.islower() and not name.startswith("__") and callable(torchvision_models.__dict__[name])
+)
 torchvision_model_names.extend(['xception'])
 
 torchvision_model_names.extend(['xception', 'mxresnet18', 'mxresnet50'])
@@ -59,9 +61,11 @@ def _get_scheduler(optimizer, sched_name='ReduceLROnPlateau', **kwargs):
 
 def init_weights_old(model, init_name='ortho'):
     for module in model.modules():
-        if (isinstance(module, nn.Conv2d)
+        if (
+            isinstance(module, nn.Conv2d)
             or isinstance(module, nn.Linear)
-                or isinstance(module, nn.Embedding)):
+            or isinstance(module, nn.Embedding)
+        ):
             if init_name == 'ortho':
                 init.orthogonal_(module.weight)
             elif init_name == 'N02':
@@ -74,7 +78,6 @@ def init_weights_old(model, init_name='ortho'):
 
 
 def init_weights(model, init_name='ortho'):
-
     def _init_weights(m, init_func):
         if getattr(m, 'bias', None) is not None:
             nn.init.constant_(m.bias, 0)
@@ -95,7 +98,31 @@ def init_weights(model, init_name='ortho'):
     return model
 
 
-def get_model(model_name, num_classes, pretrained='imagenet', init_name=None, **kwargs):
+def get_model(model_name, basemodel_name, pretrained='imagenet', init_name=None, num_classes=2):
+    if model_name == 'FrameModel':
+        basemodel = get_basemodel(
+            basemodel_name, pretrained=pretrained, num_classes=num_classes, init_name=init_name
+        )
+        model = deepfake_models.FrameModel(basemodel)
+    elif model_name == 'ManipulatorDetector':
+        model = deepfake_models.ManipulatorDetector(
+            manipulator_model=deepfake_models.MagNet(),
+            detector_model=get_model(
+                'FrameModel', basemodel_name, pretrained=pretrained, init_name=init_name
+            ),
+        )
+    elif model_name == 'CaricatureModel':
+        model = deepfake_models.CaricatureModel(
+            face_model=deepfake_models.FaceModel(),
+            fake_model=get_model('FrameModel', basemodel_name, pretrained, init_name=init_name),
+            mag_model=deepfake_models.MagNet(),
+        )
+    else:
+        raise ValueError(f'Unreconized model type {model_name}')
+    return model
+
+
+def get_basemodel(model_name, num_classes=2, pretrained='imagenet', init_name=None, **kwargs):
     model_func = getattr(models, model_name)
     pretrained = None if pretrained == 'None' else pretrained
     if pretrained is not None:
@@ -114,66 +141,106 @@ def get_model(model_name, num_classes, pretrained='imagenet', init_name=None, **
         if init_name is not None:
             print(f'Initializing {model_name} with {init_name}.')
             model = init_weights(model, init_name)
-    if model_name in torchvision_model_names:
-        print('2D model detected! Converting to FrameModel with mean consensus.')
-        model = deepfake_models.FrameModel(model)
     return model
 
 
-def get_transform(name='DFDC', split='train', size=224, resolution=256,
-                  mean=[0.485, 0.456, 0.406], std=[0.229, 0.224, 0.225],
-                  normalize=True, degrees=25):
+def get_transform(
+    name='DFDC',
+    split='train',
+    size=224,
+    resolution=256,
+    mean=[0.485, 0.456, 0.406],
+    std=[0.229, 0.224, 0.225],
+    normalize=True,
+    degrees=25,
+):
     norm = transforms.NormalizeVideo(mean=mean, std=std)
     cropping = {
-        'train': torchvision.transforms.Compose([
-            transforms.RandomResizedCropVideo(size),
-            transforms.RandomHorizontalFlipVideo(),
-            transforms.RandomRotationVideo(degrees)]),
-        'val': torchvision.transforms.Compose([
-            transforms.ResizeVideo(resolution),
-            transforms.CenterCropVideo(size),
-        ])
+        'train': torchvision.transforms.Compose(
+            [
+                transforms.RandomResizedCropVideo(size),
+                transforms.RandomHorizontalFlipVideo(),
+                transforms.RandomRotationVideo(degrees),
+            ]
+        ),
+        'val': torchvision.transforms.Compose(
+            [transforms.ResizeVideo(resolution), transforms.CenterCropVideo(size),]
+        ),
     }.get(split, 'val')
-    transform = torchvision.transforms.Compose([
-        cropping,
-        transforms.CollectFrames(),
-        transforms.PILVideoToTensor(),
-        norm if normalize else transforms.IdentityTransform(),
-    ])
+    transform = torchvision.transforms.Compose(
+        [
+            cropping,
+            transforms.CollectFrames(),
+            transforms.PILVideoToTensor(),
+            norm if normalize else transforms.IdentityTransform(),
+        ]
+    )
     return transform
 
 
-def get_dataset(name, data_root, split='train', size=224, resolution=256, num_frames=16,
-                dataset_type='DeepfakeFrame', sampler_type='TemporalSegmentSampler',
-                record_set_type='DeepfakeSet', segment_count=None,
-                **kwargs):
+def get_dataset(
+    name,
+    data_root,
+    split='train',
+    size=224,
+    resolution=256,
+    num_frames=16,
+    dataset_type='DeepfakeFrame',
+    sampler_type='TemporalSegmentSampler',
+    record_set_type='DeepfakeSet',
+    segment_count=None,
+    **kwargs,
+):
 
     if isinstance(name, (list, tuple)):
-        return torch.utils.data.ConcatDataset([
-            get_dataset(n, data_root, split=split, size=size, resolution=resolution,
-                        num_frames=num_frames, dataset_type=dataset_type, sampler_type=sampler_type,
-                        record_set_type=record_set_type, segment_count=segment_count, **kwargs)
-            for n in name
-        ])
+        return torch.utils.data.ConcatDataset(
+            [
+                get_dataset(
+                    n,
+                    data_root,
+                    split=split,
+                    size=size,
+                    resolution=resolution,
+                    num_frames=num_frames,
+                    dataset_type=dataset_type,
+                    sampler_type=sampler_type,
+                    record_set_type=record_set_type,
+                    segment_count=segment_count,
+                    **kwargs,
+                )
+                for n in name
+            ]
+        )
     elif name.lower() in ['all', 'full']:
         names = cfg.ALL_DATASETS
-        return get_dataset(names, data_root, split=split, size=size, resolution=resolution,
-                           num_frames=num_frames, dataset_type=dataset_type, sampler_type=sampler_type,
-                           record_set_type=record_set_type, segment_count=segment_count, **kwargs)
+        return get_dataset(
+            names,
+            data_root,
+            split=split,
+            size=size,
+            resolution=resolution,
+            num_frames=num_frames,
+            dataset_type=dataset_type,
+            sampler_type=sampler_type,
+            record_set_type=record_set_type,
+            segment_count=segment_count,
+            **kwargs,
+        )
 
     segment_count = num_frames if segment_count is None else segment_count
 
-    metadata = cfg.get_metadata(name,
-                                split=split,
-                                dataset_type=dataset_type,
-                                record_set_type=record_set_type,
-                                data_root=data_root)
+    metadata = cfg.get_metadata(
+        name,
+        split=split,
+        dataset_type=dataset_type,
+        record_set_type=record_set_type,
+        data_root=data_root,
+    )
     kwargs = {**metadata, **kwargs, 'segment_count': segment_count}
 
     Dataset = getattr(data, dataset_type, 'DeepfakeFrame')
     RecSet = getattr(data, record_set_type, 'DeepfakeSet')
     Sampler = getattr(samplers, sampler_type, 'TSNFrameSampler')
-
     r_kwargs, _ = utils.split_kwargs_by_func(RecSet, kwargs)
     s_kwargs, _ = utils.split_kwargs_by_func(Sampler, kwargs)
     record_set = RecSet(**r_kwargs)
@@ -188,87 +255,200 @@ def get_dataset(name, data_root, split='train', size=224, resolution=256, num_fr
     return Dataset(**dataset_kwargs)
 
 
-def _get_dataset(name, root, metafile, split='train', size=224, resolution=256, num_frames=16,
-                 dataset_type='DeepfakeFrame', sampler_type='TemporalSegmentSampler',
-                 record_set_type='DeepfakeSet',
-                 **kwargs):
+def _get_dataset(
+    name,
+    root,
+    metafile,
+    split='train',
+    size=224,
+    resolution=256,
+    num_frames=16,
+    dataset_type='DeepfakeFrame',
+    sampler_type='TemporalSegmentSampler',
+    record_set_type='DeepfakeSet',
+    **kwargs,
+):
 
     Dataset = getattr(data, dataset_type, 'ImageFolder')
     record_set = getattr(data, record_set_type, 'DeepfakeSet')
 
     sampler = getattr(samplers, sampler_type)(num_frames)
 
-    kwargs = {'root': root,
-              'metafile': os.path.join(root, f'{split}.txt'),
-              'transform': get_transform(name, split, size, resolution),
-              **kwargs}
+    kwargs = {
+        'root': root,
+        'metafile': os.path.join(root, f'{split}.txt'),
+        'transform': get_transform(name, split, size, resolution),
+        **kwargs,
+    }
     dataset_kwargs, _ = utils.split_kwargs_by_func(Dataset, kwargs)
     return Dataset(**dataset_kwargs)
 
 
-def get_hybrid_dataset(name, root, split='train', size=224, resolution=256,
-                       dataset_type='ImageFolder', load_in_mem=False):
+def get_hybrid_dataset(
+    name,
+    root,
+    split='train',
+    size=224,
+    resolution=256,
+    dataset_type='ImageFolder',
+    load_in_mem=False,
+):
     if name != 'Hybrid1365':
         raise ValueError(f'Hybrid Dataset: {name} not implemented')
-    imagenet_root = cfg.get_root_dirs('ImageNet', dataset_type=dataset_type,
-                                      resolution=resolution, data_root=root)
-    places365_root = cfg.get_root_dirs('Places365', dataset_type=dataset_type,
-                                       resolution=resolution, data_root=root)
-    imagenet_dataset = get_dataset('ImageNet', resolution=resolution, size=size,
-                                   dataset_type=dataset_type, load_in_mem=load_in_mem,
-                                   split=split, root=imagenet_root)
-    placess365_dataset = get_dataset('Places365', resolution=resolution, size=size,
-                                     dataset_type=dataset_type, load_in_mem=load_in_mem,
-                                     target_transform=functools.partial(add, 1000),
-                                     split=split, root=places365_root)
+    imagenet_root = cfg.get_root_dirs(
+        'ImageNet', dataset_type=dataset_type, resolution=resolution, data_root=root
+    )
+    places365_root = cfg.get_root_dirs(
+        'Places365', dataset_type=dataset_type, resolution=resolution, data_root=root
+    )
+    imagenet_dataset = get_dataset(
+        'ImageNet',
+        resolution=resolution,
+        size=size,
+        dataset_type=dataset_type,
+        load_in_mem=load_in_mem,
+        split=split,
+        root=imagenet_root,
+    )
+    placess365_dataset = get_dataset(
+        'Places365',
+        resolution=resolution,
+        size=size,
+        dataset_type=dataset_type,
+        load_in_mem=load_in_mem,
+        target_transform=functools.partial(add, 1000),
+        split=split,
+        root=places365_root,
+    )
     return torch.utils.data.ConcatDataset((imagenet_dataset, placess365_dataset))
 
 
-def get_dataloader(name, data_root=None, split='train', num_frames=16, size=224, resolution=256,
-                   dataset_type='DeepfakeFrame', sampler_type='TSNFrameSampler', record_set_type='DeepfakeSet',
-                   batch_size=64, num_workers=8, shuffle=True, load_in_mem=False, pin_memory=True, drop_last=False,
-                   distributed=False, segment_count=None,
-                   **kwargs):
+def get_dataloader(
+    name,
+    data_root=None,
+    split='train',
+    num_frames=16,
+    size=224,
+    resolution=256,
+    dataset_type='DeepfakeFrame',
+    sampler_type='TSNFrameSampler',
+    record_set_type='DeepfakeSet',
+    batch_size=64,
+    num_workers=8,
+    shuffle=True,
+    load_in_mem=False,
+    pin_memory=True,
+    drop_last=False,
+    distributed=False,
+    segment_count=None,
+    **kwargs,
+):
 
-    dataset = get_dataset(name, data_root, split=split, size=size, resolution=resolution,
-                          num_frames=num_frames, segment_count=segment_count, dataset_type=dataset_type,
-                          sampler_type=sampler_type, record_set_type=record_set_type)
+    dataset = get_dataset(
+        name,
+        data_root,
+        split=split,
+        size=size,
+        resolution=resolution,
+        num_frames=num_frames,
+        segment_count=segment_count,
+        dataset_type=dataset_type,
+        sampler_type=sampler_type,
+        record_set_type=record_set_type,
+        **kwargs,
+    )
     loader_sampler = DistributedSampler(dataset) if (distributed and split == 'train') else None
-    return DataLoader(dataset, batch_size=batch_size, sampler=loader_sampler,
-                      shuffle=(loader_sampler is None and shuffle), num_workers=num_workers,
-                      pin_memory=pin_memory, drop_last=drop_last)
+    return DataLoader(
+        dataset,
+        batch_size=batch_size,
+        sampler=loader_sampler,
+        shuffle=(loader_sampler is None and shuffle),
+        num_workers=num_workers,
+        pin_memory=pin_memory,
+        drop_last=drop_last,
+    )
 
 
-def _get_dataloader(name, data_root=None, split='train', size=224, resolution=256,
-                    dataset_type='ImageFolder', batch_size=64, num_workers=8, shuffle=True,
-                    load_in_mem=False, pin_memory=True, drop_last=True, distributed=False,
-                    **kwargs):
-    root = cfg.get_root_dirs(name, dataset_type=dataset_type,
-                             resolution=resolution, data_root=data_root)
+def _get_dataloader(
+    name,
+    data_root=None,
+    split='train',
+    size=224,
+    resolution=256,
+    dataset_type='ImageFolder',
+    batch_size=64,
+    num_workers=8,
+    shuffle=True,
+    load_in_mem=False,
+    pin_memory=True,
+    drop_last=True,
+    distributed=False,
+    **kwargs,
+):
+    root = cfg.get_root_dirs(
+        name, dataset_type=dataset_type, resolution=resolution, data_root=data_root
+    )
     get_dset_func = get_hybrid_dataset if name == 'Hybrid1365' else get_dataset
-    dataset = get_dset_func(name=name, root=root, size=size,
-                            split=split, resolution=resolution,
-                            dataset_type=dataset_type, load_in_mem=load_in_mem,
-                            **kwargs)
+    dataset = get_dset_func(
+        name=name,
+        root=root,
+        size=size,
+        split=split,
+        resolution=resolution,
+        dataset_type=dataset_type,
+        load_in_mem=load_in_mem,
+        **kwargs,
+    )
 
     sampler = DistributedSampler(dataset) if (distributed and split == 'train') else None
-    return DataLoader(dataset, batch_size=batch_size, sampler=sampler,
-                      shuffle=(sampler is None and shuffle), num_workers=num_workers,
-                      pin_memory=pin_memory, drop_last=drop_last)
+    return DataLoader(
+        dataset,
+        batch_size=batch_size,
+        sampler=sampler,
+        shuffle=(sampler is None and shuffle),
+        num_workers=num_workers,
+        pin_memory=pin_memory,
+        drop_last=drop_last,
+    )
 
 
-def get_dataloaders(name, root, dataset_type='ImageFolder', size=224, resolution=256,
-                    batch_size=32, num_workers=12, shuffle=[True, False], distributed=False,
-                    load_in_mem=False, pin_memory=True, drop_last=False,
-                    splits=['train', 'val'], **kwargs):
+def get_dataloaders(
+    name,
+    root,
+    dataset_type='ImageFolder',
+    size=224,
+    resolution=256,
+    batch_size=32,
+    num_workers=12,
+    shuffle=[True, False],
+    distributed=False,
+    load_in_mem=False,
+    pin_memory=True,
+    drop_last=False,
+    splits=['train', 'val'],
+    **kwargs,
+):
     if not isinstance(shuffle, list):
         shuffle = len(splits) * [shuffle]
     dataloaders = {
-        split: get_dataloader(name, data_root=root, split=split, size=size, resolution=resolution,
-                              dataset_type=dataset_type, batch_size=batch_size, num_workers=num_workers,
-                              shuffle=shuffle[i], load_in_mem=load_in_mem, pin_memory=pin_memory, drop_last=drop_last,
-                              distributed=distributed, **kwargs)
-        for i, split in enumerate(splits)}
+        split: get_dataloader(
+            name,
+            data_root=root,
+            split=split,
+            size=size,
+            resolution=resolution,
+            dataset_type=dataset_type,
+            batch_size=batch_size,
+            num_workers=num_workers,
+            shuffle=shuffle[i],
+            load_in_mem=load_in_mem,
+            pin_memory=pin_memory,
+            drop_last=drop_last,
+            distributed=distributed,
+            **kwargs,
+        )
+        for i, split in enumerate(splits)
+    }
     return dataloaders
 
 
@@ -285,15 +465,32 @@ def step_fn(input, target, model, criterion, optimizer=None, mode='train', **kwa
     return output, loss
 
 
+def name_from_args(args):
+    name = '_'.join(
+        [
+            args.model_name,
+            args.basemodel_name,
+            args.dataset.lower(),
+            args.sampler_type,
+            f'seg_count-{args.segment_count}',
+            f'init-{"-".join([args.pretrained, args.init]) if args.pretrained else args.init}',
+            f'optim-{args.optimizer}',
+            f'lr-{args.lr}',
+            f'sched-{args.scheduler}',
+            f'bs-{args.batch_size}',
+        ]
+    )
+    return name
+
+
 def train_gandataset(train_loader, model, gan, criterion, optimizer, epoch, args, display=True):
     batch_time = AverageMeter('Time', ':6.3f')
     data_time = AverageMeter('Data', ':6.3f')
     losses = AverageMeter('Loss', ':.4e')
     top1 = AverageMeter('Acc@1', ':6.2f')
     progress = ProgressMeter(
-        len(train_loader),
-        [batch_time, data_time, losses, top1],
-        prefix="Epoch: [{}]".format(epoch))
+        len(train_loader), [batch_time, data_time, losses, top1], prefix="Epoch: [{}]".format(epoch)
+    )
 
     # switch to train mode
     model.train()

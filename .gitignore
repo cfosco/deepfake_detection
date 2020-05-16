@@ -136,14 +136,22 @@ logs
 weights
 archive
 dist/data
+dist/predictions
 dist/data.zip
 submissions
 models/data
+models/deep_motion_mag/test_data
+models/deep_motion_mag/test_output
+models/deep_motion_mag/demo
 scripts/data
 scripts/models
 notebooks/data
 notebooks/models
+notebooks/results
 notebooks/DeepfakeDetection
+notebooks/cam_videos
 TODO
 
 *.lock
+data/gan_dataset.py
+dist/results

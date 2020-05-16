@@ -70,15 +70,7 @@ def main_worker(gpu, ngpus_per_node, args):
     os.makedirs(args.weights_dir, exist_ok=True)
     os.makedirs(args.logs_dir, exist_ok=True)
 
-    save_name = '_'.join([args.arch,
-                          args.dataset.lower(),
-                          f'seg_count-{args.segment_count}',
-                          f'init-{"-".join([args.pretrained, args.init]) if args.pretrained else args.init}',
-                          f'optim-{args.optimizer}',
-                          f'lr-{args.lr}',
-                          f'sched-{args.scheduler}',
-                          f'bs-{args.batch_size}',
-                          ])
+    save_name = core.name_from_args(args)
     print(f'Starting: {save_name}')
 
     args.log_file = os.path.join(args.logs_dir, save_name + '.json')
@@ -96,9 +88,12 @@ def main_worker(gpu, ngpus_per_node, args):
         dist.init_process_group(backend=args.dist_backend, init_method=args.dist_url,
                                 world_size=args.world_size, rank=args.rank)
 
-    model = core.get_model(args.arch, args.num_classes,
-                           pretrained=args.pretrained,
-                           init_name=args.init)
+    model = core.get_model(
+        args.model_name,
+        args.basemodel_name,
+        num_classes=args.num_classes,
+        pretrained=args.pretrained,
+        init_name=args.init)
     input_size = model.input_size[-1]
 
     if args.distributed:
@@ -168,11 +163,14 @@ def main_worker(gpu, ngpus_per_node, args):
     dataloaders = core.get_dataloaders(args.dataset, args.data_root,
                                        dataset_type=args.dataset_type,
                                        record_set_type=args.record_set_type,
+                                       sampler_type=args.sampler_type,
                                        segment_count=args.segment_count,
                                        batch_size=args.batch_size,
                                        num_workers=args.num_workers,
                                        distributed=args.distributed,
-                                       size=input_size)
+                                       size=input_size,
+                                       clip_length=args.clip_length,
+                                       frame_step=args.frame_step)
     train_loader, val_loader = dataloaders['train'], dataloaders['val']
     train_sampler = train_loader.sampler
 
