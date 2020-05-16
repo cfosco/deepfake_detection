@@ -117,10 +117,10 @@ class Manipulator(nn.Module):
 
         # testing embedding manipulation
         g = gaussian(shape_x=180, shape_y=180, mu_x=0.0, mu_y=0.4, sig_x=0.7, sig_y=0.3)
-        import matplotlib.pyplot as plt
+        # import matplotlib.pyplot as plt
 
-        plt.imshow(g)
-        plt.show()
+        # plt.imshow(g)
+        # plt.show()
         self.gaussian_tensor = torch.from_numpy(g).float().repeat(1, 32, 1, 1).to('cuda')
 
         # print("self.gaussian_tensor.shape", self.gaussian_tensor.shape)
