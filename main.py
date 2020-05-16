@@ -163,11 +163,14 @@ def main_worker(gpu, ngpus_per_node, args):
     dataloaders = core.get_dataloaders(args.dataset, args.data_root,
                                        dataset_type=args.dataset_type,
                                        record_set_type=args.record_set_type,
+                                       sampler_type=args.sampler_type,
                                        segment_count=args.segment_count,
                                        batch_size=args.batch_size,
                                        num_workers=args.num_workers,
                                        distributed=args.distributed,
-                                       size=input_size)
+                                       size=input_size,
+                                       clip_length=args.clip_length,
+                                       frame_step=args.frame_step)
     train_loader, val_loader = dataloaders['train'], dataloaders['val']
     train_sampler = train_loader.sampler
 

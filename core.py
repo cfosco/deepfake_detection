@@ -241,7 +241,6 @@ def get_dataset(
     Dataset = getattr(data, dataset_type, 'DeepfakeFrame')
     RecSet = getattr(data, record_set_type, 'DeepfakeSet')
     Sampler = getattr(samplers, sampler_type, 'TSNFrameSampler')
-
     r_kwargs, _ = utils.split_kwargs_by_func(RecSet, kwargs)
     s_kwargs, _ = utils.split_kwargs_by_func(Sampler, kwargs)
     record_set = RecSet(**r_kwargs)
@@ -356,6 +355,7 @@ def get_dataloader(
         dataset_type=dataset_type,
         sampler_type=sampler_type,
         record_set_type=record_set_type,
+        **kwargs,
     )
     loader_sampler = DistributedSampler(dataset) if (distributed and split == 'train') else None
     return DataLoader(
@@ -471,6 +471,7 @@ def name_from_args(args):
             args.model_name,
             args.basemodel_name,
             args.dataset.lower(),
+            args.sampler_type,
             f'seg_count-{args.segment_count}',
             f'init-{"-".join([args.pretrained, args.init]) if args.pretrained else args.init}',
             f'optim-{args.optimizer}',

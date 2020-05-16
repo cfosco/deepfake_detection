@@ -184,6 +184,8 @@ def parse_args():
     parser.add_argument('--model_name', type=str, default='FrameModel')
     parser.add_argument('--basemodel_name', type=str, default='resnet18')
     parser.add_argument('--segment_count', type=int, default=16)
+    parser.add_argument('--clip_length', type=int, default=16)
+    parser.add_argument('--frame_step', type=int, default=5)
     parser.add_argument('--dataset_type', type=str, default='DeepfakeFaceVideo')
     parser.add_argument('--record_set_type', type=str, default='DeepfakeFaceSet')
     parser.add_argument('--sampler_type', type=str, default='TSNFrameSampler')
