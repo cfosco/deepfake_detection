@@ -67,11 +67,14 @@ class ManipulatorDetector(torch.nn.Module):
         self.manipulator_model = manipulator_model
         self.detector_model = detector_model
 
-    def forward(self, x):
-        # x: [bs, 3, D, H, W]
-        o = torch.stack(
+    def manipulate(self, x):
+        return torch.stack(
             [self.manipulator_model.manipulate(f.transpose(0, 1)) for f in x]
         ).transpose(1, 2)
+
+    def forward(self, x):
+        # x: [bs, 3, D, H, W]
+        o = self.manipulate(x)
         o = self.detector_model(o)
         return o
 
