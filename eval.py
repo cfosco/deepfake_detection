@@ -74,6 +74,7 @@ def parse_args():
     parser.add_argument('--chunk_size', default=150, type=int)
     parser.add_argument('--results_dir', default='results', type=str)
     parser.add_argument('--default_target', default=0, type=str)
+    parser.add_argument('--whitelist_file', default='', type=str)
     parser.add_argument('--use_zip', action='store_true')
     parser.add_argument(
         '--checkpoint_file',
@@ -98,6 +99,7 @@ def parse_args():
         args.target_file = os.path.join(
             DEEPFAKE_DATA_ROOT, args.part, args.video_rootdir, 'test_targets.json'
         )
+        args.whitelist_file = os.path.join(DEEPFAKE_DATA_ROOT, args.whitelist_file)
     else:
         args.video_dir = os.path.join(DEEPFAKE_DATA_ROOT, args.video_rootdir, args.part)
         args.target_file = os.path.join(
@@ -105,12 +107,15 @@ def parse_args():
         )
     if not os.path.exists(args.target_file):
         args.target_file = None
+    if not os.path.isfile(args.whitelist_file):
+        args.whitelist_file = None
     return args
 
 
 def main(
     video_dir,
     target_file=None,
+    whitelist_file=None,
     default_target=0,
     margin=100,
     checkpoint_file=None,
@@ -146,6 +151,11 @@ def main(
         dataset = VideoFolder(
             video_dir, step=step, target_file=target_file, default_target=default_target
         )
+
+    if whitelist_file is not None:
+        with open(whitelist_file) as f:
+            whitelist_videos = json.load(f)
+        dataset.videos_filenames = filter_filenames(dataset.videos_filenames, whitelist_videos)
 
     dataloader = DataLoader(
         dataset,
@@ -1133,6 +1143,16 @@ def detect_face(imgs, minsize, pnet, rnet, onet, threshold, factor, device, rela
     batch_boxes, batch_points = np.array(batch_boxes), np.array(batch_points)
 
     return batch_boxes, batch_points
+
+
+def filter_filenames(videos_filenames, whitelist_videos, basename_only=True):
+    out = []
+    for video in videos_filenames:
+        v = os.path.basename(video) if basename_only else video
+        if any(v in allowed_video for allowed_video in whitelist_videos):
+            out.append(video)
+    print(f'Kept: {len(out)} out of {len(videos_filenames)}')
+    return out
 
 
 def bbreg(boundingbox, reg):
