@@ -109,16 +109,21 @@ def test_manipulate_detector(frames3D_small):
     print(out.shape)
 
 
-@pytest.mark.parametrize('model_name, basemodel_name', [
-    ('FrameModel', 'resnet18'),
-    ('ManipulatorDetector', 'resnet18')
-]
-)
+@pytest.mark.parametrize('model_name, basemodel_name',
+[('FrameModel', 'resnet18'), ('ManipulatorDetector', 'resnet18')
+])
 def test_get_model(model_name, basemodel_name, frames3D_small):
     model = core.get_model(model_name, basemodel_name)
     model = model.to(device)
     out = model(frames3D_small)
     assert tuple(out.size()) == (BATCH_SIZE, 2)
+
+
+def test_manipulator_with_attn(frames3D_small):
+    manipulator_model = models.MagNet().to(device)
+    frames = frames3D_small[0].transpose(0, 1)
+    attn_map = torch.randn(16, 8, 8).to(device)
+    out = manipulator_model.manipulate(frames, attn_map=attn_map)
 
 
 def test_caricature_model():

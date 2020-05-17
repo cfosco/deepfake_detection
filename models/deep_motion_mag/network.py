@@ -121,7 +121,7 @@ class Manipulator(nn.Module):
 
         # plt.imshow(g)
         # plt.show()
-        self.gaussian_tensor = torch.from_numpy(g).float().repeat(1, 32, 1, 1).to('cuda')
+        self.gaussian_tensor = torch.from_numpy(g).float().repeat(1, 32, 1, 1)
 
         # print("self.gaussian_tensor.shape", self.gaussian_tensor.shape)
 
@@ -148,7 +148,14 @@ class Manipulator(nn.Module):
 
         # testing embedding manipulation
         if attn_map is not None:
-            diff = diff * attn_map.to(diff.device)
+            # attn_map: [num_frames, h, w]
+            n, c, h, w = diff.size()
+            attn_map = attn_map.unsqueeze(1)  # [num_frames, 1, h, w]
+            interp_attn_map = nn.functional.interpolate(attn_map, size=h, mode='area')
+            interp_attn_map = interp_attn_map.expand_as(diff)
+
+
+            diff = diff * interp_attn_map.to(diff.device)
 
         diff = (amp - 1.0) * diff
         diff = self.convblks_after(diff)
@@ -210,12 +217,11 @@ class MagNet(nn.Module):
 
         return y_hat, (v_a, m_a), (v_b, m_b), (v_c, m_c)
 
-    def manipulate(self, x, amp=None):
+    def manipulate(self, x, amp=None, attn_map=None):
         if amp is None:
             amp = self.amp
         v, m = self.encoder(x)
-        m_enc = self.manipulator(m, torch.zeros_like(m).to(m.device), amp)
-        m_enc = self.manipulator.manip(m, amp)
+        m_enc = self.manipulator.manip(m, amp, attn_map)
         y_hat = self.decoder(v, m_enc)
         return y_hat
 
