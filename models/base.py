@@ -67,9 +67,9 @@ class ManipulatorDetector(torch.nn.Module):
         self.manipulator_model = manipulator_model
         self.detector_model = detector_model
 
-    def manipulate(self, x):
+    def manipulate(self, x, amp=None):
         return torch.stack(
-            [self.manipulator_model.manipulate(f.transpose(0, 1)) for f in x]
+            [self.manipulator_model.manipulate(f.transpose(0, 1), amp=amp) for f in x]
         ).transpose(1, 2)
 
     def forward(self, x):
