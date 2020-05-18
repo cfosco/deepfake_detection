@@ -91,7 +91,7 @@ class CaricatureModel(torch.nn.Module):
         self.face_model = face_model
         self.fake_model = fake_model
         self.mag_model = mag_model
-        self.gcam_model = grad_cam.GradCAM(fake_model)
+        self.gcam_model = grad_cam.GradCAM(fake_model.model)
         self.target_layer = target_layer
         if norm is None:
             self.norm = Normalize().to(device)
@@ -102,10 +102,25 @@ class CaricatureModel(torch.nn.Module):
             norm_faces = self.norm(faces)
         return faces, norm_faces
 
-    def forward(self, x):
-        faces, norm_faces = self.face_forward(x)
-        self.gcam_model.zero_grad()
-        probs, idx = self.gcam_model(norm_faces)
-        self.gcam_model.backward(idx=idx[0])
-        attn_maps = self.gcam_model.generate(target_layer=self.target_layer)
-        # TODO: Reshape attn_maps for manipulator
+    def forward(self, x, extract_face=False):
+        if extract_face:
+            faces, norm_faces = self.face_forward(x)
+        else:
+            faces, norm_faces = x, self.norm(x)
+
+        outputs = []
+        attn_maps = []
+        for face, norm_face in zip(faces, norm_faces):
+            norm_face = norm_face.transpose(0, 1)
+            self.gcam_model.model.zero_grad()
+            probs, idx = self.gcam_model.forward(norm_face)
+            self.gcam_model.backward(idx=idx[0])
+            attn_map = self.gcam_model.generate(target_layer=self.target_layer)
+            out = self.mag_model.manipulate(norm_face, attn_map=attn_map).transpose(0, 1)
+            outputs.append(out)
+            attn_maps.append(attn_map)
+        # TODO: smooth and threshold attn maps
+        attn_maps = torch.stack(attn_maps)
+        outputs = torch.stack(outputs)
+        return
+        # print(attn_maps.shape)
