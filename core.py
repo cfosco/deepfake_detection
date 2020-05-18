@@ -23,7 +23,9 @@ from pretorched.runners.utils import AverageMeter, ProgressMeter
 torchvision_model_names = sorted(
     name
     for name in torchvision_models.__dict__
-    if name.islower() and not name.startswith("__") and callable(torchvision_models.__dict__[name])
+    if name.islower()
+    and not name.startswith("__")
+    and callable(torchvision_models.__dict__[name])
 )
 torchvision_model_names.extend(['xception'])
 
@@ -51,7 +53,9 @@ def _get_scheduler(optimizer, sched_name='ReduceLROnPlateau', **kwargs):
     if sched_name == 'ReduceLROnPlateau':
         factor = kwargs.get('factor', 0.5)
         patience = kwargs.get('patience', 5)
-        scheduler = sched_func(optimizer, factor=factor, patience=patience, verbose=True)
+        scheduler = sched_func(
+            optimizer, factor=factor, patience=patience, verbose=True
+        )
     elif sched_name == 'CosineAnnealingLR':
         T_max = kwargs.get('T_max', 100)
         eta_min = kwargs.get('eta_min', 0)
@@ -99,13 +103,22 @@ def init_weights(model, init_name='ortho'):
 
 
 def get_model(
-    model_name, basemodel_name='resnet18', pretrained='imagenet', init_name=None, num_classes=2
+    model_name,
+    basemodel_name='resnet18',
+    pretrained='imagenet',
+    init_name=None,
+    num_classes=2,
 ) -> Union[
-    deepfake_models.FrameModel, deepfake_models.ManipulatorDetector, deepfake_models.CaricatureModel
+    deepfake_models.FrameModel,
+    deepfake_models.ManipulatorDetector,
+    deepfake_models.CaricatureModel,
 ]:
     if model_name == 'FrameModel':
         basemodel = get_basemodel(
-            basemodel_name, pretrained=pretrained, num_classes=num_classes, init_name=init_name
+            basemodel_name,
+            pretrained=pretrained,
+            num_classes=num_classes,
+            init_name=init_name,
         )
         return deepfake_models.FrameModel(basemodel)
     elif model_name == 'ManipulatorDetector':
@@ -118,14 +131,18 @@ def get_model(
     elif model_name == 'CaricatureModel':
         return deepfake_models.CaricatureModel(
             face_model=deepfake_models.FaceModel(),
-            fake_model=get_model('FrameModel', basemodel_name, pretrained, init_name=init_name),
+            fake_model=get_model(
+                'FrameModel', basemodel_name, pretrained, init_name=init_name
+            ),
             mag_model=deepfake_models.MagNet(),
         )
     else:
         raise ValueError(f'Unreconized model type {model_name}')
 
 
-def get_basemodel(model_name, num_classes=2, pretrained='imagenet', init_name=None, **kwargs):
+def get_basemodel(
+    model_name, num_classes=2, pretrained='imagenet', init_name=None, **kwargs
+):
     model_func = getattr(models, model_name)
     pretrained = None if pretrained == 'None' else pretrained
     if pretrained is not None:
@@ -331,7 +348,9 @@ def get_dataloader(
         record_set_type=record_set_type,
         **kwargs,
     )
-    loader_sampler = DistributedSampler(dataset) if (distributed and split == 'train') else None
+    loader_sampler = (
+        DistributedSampler(dataset) if (distributed and split == 'train') else None
+    )
     return DataLoader(
         dataset,
         batch_size=batch_size,
@@ -374,7 +393,9 @@ def _get_dataloader(
         **kwargs,
     )
 
-    sampler = DistributedSampler(dataset) if (distributed and split == 'train') else None
+    sampler = (
+        DistributedSampler(dataset) if (distributed and split == 'train') else None
+    )
     return DataLoader(
         dataset,
         batch_size=batch_size,
@@ -457,13 +478,17 @@ def name_from_args(args):
     return name
 
 
-def train_gandataset(train_loader, model, gan, criterion, optimizer, epoch, args, display=True):
+def train_gandataset(
+    train_loader, model, gan, criterion, optimizer, epoch, args, display=True
+):
     batch_time = AverageMeter('Time', ':6.3f')
     data_time = AverageMeter('Data', ':6.3f')
     losses = AverageMeter('Loss', ':.4e')
     top1 = AverageMeter('Acc@1', ':6.2f')
     progress = ProgressMeter(
-        len(train_loader), [batch_time, data_time, losses, top1], prefix="Epoch: [{}]".format(epoch)
+        len(train_loader),
+        [batch_time, data_time, losses, top1],
+        prefix="Epoch: [{}]".format(epoch),
     )
 
     # switch to train mode

@@ -11,7 +11,6 @@ import mmcv
 import pretorched
 import pretorched.models as pmodels
 
-from .. import config as cfg
 from .. import models
 
 try:
@@ -83,10 +82,10 @@ def test_facenet(frames):
 
 
 def test_facenet3D_get_faces(frames3D):
-    print(frames3D.shape)
     facenet = models.FaceModel(keep_all=True, select_largest=False, chunk_size=100)
     with torch.no_grad():
         out = facenet.get_faces(frames3D)
+        print(out)
 
 
 @pytest.mark.skip
@@ -109,9 +108,10 @@ def test_manipulate_detector(frames3D_small):
     print(out.shape)
 
 
-@pytest.mark.parametrize('model_name, basemodel_name',
-[('FrameModel', 'resnet18'), ('ManipulatorDetector', 'resnet18')
-])
+@pytest.mark.parametrize(
+    'model_name, basemodel_name',
+    [('FrameModel', 'resnet18'), ('ManipulatorDetector', 'resnet18')],
+)
 def test_get_model(model_name, basemodel_name, frames3D_small):
     model = core.get_model(model_name, basemodel_name)
     model = model.to(device)
@@ -124,7 +124,11 @@ def test_manipulator_with_attn(frames3D_small):
     frames = frames3D_small[0].transpose(0, 1)
     attn_map = torch.randn(16, 8, 8).to(device)
     out = manipulator_model.manipulate(frames, attn_map=attn_map)
+    assert tuple(out.shape) == (16, 3, 224, 224)
 
 
-def test_caricature_model():
-    model = core.get_model('CaricatureModel')
+def test_caricature_model(frames3D_small):
+    model = core.get_model('CaricatureModel').to(device)
+    # frames = frames3D_small[0]
+    out = model(frames3D_small[0:1])
+    print(out.shape)
