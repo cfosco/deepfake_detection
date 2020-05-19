@@ -85,7 +85,13 @@ class ManipulatorDetector(torch.nn.Module):
 
 class CaricatureModel(torch.nn.Module):
     def __init__(
-        self, face_model, fake_model, mag_model, norm=None, device='cuda', target_layer='layer4'
+        self,
+        face_model,
+        fake_model,
+        mag_model,
+        norm=None,
+        device='cuda',
+        target_layer='layer4',
     ):
         super().__init__()
         self.face_model = face_model
@@ -116,11 +122,21 @@ class CaricatureModel(torch.nn.Module):
             probs, idx = self.gcam_model.forward(norm_face)
             self.gcam_model.backward(idx=idx[0])
             attn_map = self.gcam_model.generate(target_layer=self.target_layer)
-            out = self.mag_model.manipulate(norm_face, attn_map=attn_map).transpose(0, 1)
+            out = self.mag_model.manipulate(norm_face, attn_map=attn_map)
+            out = out.transpose(0, 1)
             outputs.append(out)
             attn_maps.append(attn_map)
         # TODO: smooth and threshold attn maps
         attn_maps = torch.stack(attn_maps)
         outputs = torch.stack(outputs)
-        return
-        # print(attn_maps.shape)
+        return outputs, attn_maps
+
+
+def smooth_attn(attn_maps, kernel_size=3):
+    # TODO: Fix and finish this!
+    bs, c, d, h, w = attn_maps.size()
+    conv3d = torch.conv3d(1, 1, kernel_size, bias=False)
+    conv3d.weight = torch.ones_like(conv3d.weight)
+    smoothed = conv3d(attn_maps)
+    return smoothed
+
