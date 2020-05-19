@@ -1,12 +1,12 @@
-import sys
 import os
-import pytest
-import torch
+import sys
 
 import cv2
-from PIL import Image
-import numpy as np
 import mmcv
+import numpy as np
+import pytest
+import torch
+from PIL import Image
 
 import pretorched
 import pretorched.models as pmodels
@@ -130,5 +130,11 @@ def test_manipulator_with_attn(frames3D_small):
 def test_caricature_model(frames3D_small):
     model = core.get_model('CaricatureModel').to(device)
     # frames = frames3D_small[0]
-    out = model(frames3D_small[0:1])
-    print(out.shape)
+    out, attn_maps = model(frames3D_small[0:1])
+    assert tuple(out.size()) == (1, 3, 16, 224, 224)
+
+
+def test_smooth_attn():
+    from models.base import smooth_attn
+    attn_maps = torch.randn(16, 8, 8)
+    smoothed = smooth_attn(attn_maps)
