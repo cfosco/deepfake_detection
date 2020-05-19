@@ -2,7 +2,6 @@ import torch
 import torch.nn as nn
 from torch.nn import Parameter as P
 
-from pretorched.utils import chunk
 from pretorched.visualizers import grad_cam
 
 
@@ -139,4 +138,3 @@ def smooth_attn(attn_maps, kernel_size=3):
     conv3d.weight = torch.ones_like(conv3d.weight)
     smoothed = conv3d(attn_maps)
     return smoothed
-

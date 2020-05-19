@@ -5,9 +5,7 @@ import time
 from collections import defaultdict
 from collections.abc import Iterable
 
-import cv2
 import numpy as np
-import pandas as pd
 import torch
 import torch.backends.cudnn as cudnn
 import torch.nn as nn
@@ -37,7 +35,9 @@ SPLIT = 'dfdc_train_part_2'
 
 if KAGGLE:
     TEST_VIDEO_DIR = '/kaggle/input/deepfake-detection-challenge/test_videos/'
-    SAMPLE_SUBMISSION_CSV = '/kaggle/input/deepfake-detection-challenge/sample_submission.csv'
+    SAMPLE_SUBMISSION_CSV = (
+        '/kaggle/input/deepfake-detection-challenge/sample_submission.csv'
+    )
     TARGET_FILE = '/kaggle/input/dfdc-test-targets/test_targets.json'
     WEIGHT_DIR = '/kaggle/input/deepfake-data/data'
     if not os.path.exists(TARGET_FILE):
@@ -91,7 +91,9 @@ def parse_args():
         # args.video_dir = os.path.join(DEEPFAKE_DATA_ROOT, args.video_rootdir, args.part)
         # args.target_file = os.path.join(DEEPFAKE_DATA_ROOT, args.video_rootdir, args.part, 'test_targets.json')
         args.video_dir = os.path.join(DEEPFAKE_DATA_ROOT, args.part)
-        args.target_file = os.path.join(DEEPFAKE_DATA_ROOT, args.part, 'test_targets.json')
+        args.target_file = os.path.join(
+            DEEPFAKE_DATA_ROOT, args.part, 'test_targets.json'
+        )
     elif args.dataset == 'FaceForensics':
         args.video_dir = os.path.join(DEEPFAKE_DATA_ROOT, args.part, args.video_rootdir)
         args.target_file = os.path.join(
@@ -134,7 +136,10 @@ def main(
     os.makedirs(results_dir, exist_ok=True)
     results_file = os.path.join(
         results_dir,
-        '_'.join([dataset_name, part.replace('/', '_'), checkpoint_file, f'step_{step}']) + '.json',
+        '_'.join(
+            [dataset_name, part.replace('/', '_'), checkpoint_file, f'step_{step}']
+        )
+        + '.json',
     )
     if os.path.exists(results_file) and (not overwrite):
         print(f'Skipping {results_file}')
@@ -153,7 +158,9 @@ def main(
     if whitelist_file is not None:
         with open(whitelist_file) as f:
             whitelist_videos = json.load(f)
-        dataset.videos_filenames = filter_filenames(dataset.videos_filenames, whitelist_videos)
+        dataset.videos_filenames = filter_filenames(
+            dataset.videos_filenames, whitelist_videos
+        )
 
     dataloader = DataLoader(
         dataset,
@@ -168,7 +175,9 @@ def main(
     fakenet.load_state_dict(
         {
             k.replace('module.model.', ''): v
-            for k, v in torch.load(os.path.join(WEIGHT_DIR, checkpoint_file))['state_dict'].items()
+            for k, v in torch.load(os.path.join(WEIGHT_DIR, checkpoint_file))[
+                'state_dict'
+            ].items()
         }
     )
 
@@ -189,7 +198,9 @@ def main(
 
     criterion = nn.CrossEntropyLoss().cuda(device)
 
-    preds, outputs, acc, loss, exceptions = validate(dataloader, model, criterion, device=device)
+    preds, outputs, acc, loss, exceptions = validate(
+        dataloader, model, criterion, device=device
+    )
 
     results = {
         'dataset': dataset_name,
@@ -209,7 +220,9 @@ def validate(val_loader, model, criterion, device='cuda', display=True, print_fr
     batch_time = AverageMeter('Time', ':6.3f')
     losses = AverageMeter('Loss', ':.4e')
     top1 = AverageMeter('Acc@1', ':6.2f')
-    progress = ProgressMeter(len(val_loader), [batch_time, losses, top1], prefix='Test: ')
+    progress = ProgressMeter(
+        len(val_loader), [batch_time, losses, top1], prefix='Test: '
+    )
 
     preds = {}
     outputs = {}
@@ -389,7 +402,10 @@ class FaceModel(torch.nn.Module):
             faces_out = torch.cat([f[:, :min_face] for f in faces_out])
             if to_pil:
                 face_images = {
-                    i: [Image.fromarray(ff.permute(1, 2, 0).numpy().astype(np.uint8)) for ff in f]
+                    i: [
+                        Image.fromarray(ff.permute(1, 2, 0).numpy().astype(np.uint8))
+                        for ff in f
+                    ]
                     for i, f in enumerate(faces_out.permute(1, 0, 2, 3, 4))
                 }
 
@@ -484,7 +500,13 @@ class MTCNN(nn.Module):
             self.to(device)
 
     def forward(
-        self, img, save_path=None, return_prob=False, smooth=False, amount=0.4, smooth_len=None
+        self,
+        img,
+        save_path=None,
+        return_prob=False,
+        smooth=False,
+        amount=0.4,
+        smooth_len=None,
     ):
         """Run MTCNN face detection on a PIL image. This method performs both detection and
         extraction of faces, returning tensors representing detected faces rather than the bounding
@@ -549,7 +571,9 @@ class MTCNN(nn.Module):
 
         # Process all bounding boxes and probabilities
         faces, probs = [], []
-        for im, box_im, prob_im, path_im in zip(img, batch_boxes, batch_probs, save_path):
+        for im, box_im, prob_im, path_im in zip(
+            img, batch_boxes, batch_probs, save_path
+        ):
             if box_im is None:
                 faces.append(None)
                 probs.append([None] if self.keep_all else None)
@@ -650,7 +674,9 @@ class MTCNN(nn.Module):
                 points.append(None)
             elif self.select_largest:
                 # box_order = np.argsort((box[:, 2] - box[:, 0]) * (box[:, 3] - box[:, 1]))[::-1]
-                box_order = torch.argsort((box[:, 2] - box[:, 0]) * (box[:, 3] - box[:, 1])).flip(0)
+                box_order = torch.argsort(
+                    (box[:, 2] - box[:, 0]) * (box[:, 3] - box[:, 1])
+                ).flip(0)
                 box = box[box_order]
                 point = point[box_order]
                 boxes.append(box[:, :4])
@@ -924,7 +950,9 @@ def smooth(x, amount=0.2, window='hanning'):
         return x
 
     if window not in ['flat', 'hanning', 'hamming', 'bartlett', 'blackman']:
-        raise ValueError("Window is on of 'flat', 'hanning', 'hamming', 'bartlett', 'blackman'")
+        raise ValueError(
+            "Window is on of 'flat', 'hanning', 'hamming', 'bartlett', 'blackman'"
+        )
 
     s = np.r_[x[window_len - 1 : 0 : -1], x, x[-2 : -window_len - 1 : -1]]
 
@@ -970,7 +998,9 @@ def smooth_boxes(batch_boxes, amount=0.1):
     for face_num, coords in boxes.items():
         out = [
             np.array(x)
-            for x in zip(*[smooth(interp_nans(dim), amount=amount) for dim in zip(*coords)])
+            for x in zip(
+                *[smooth(interp_nans(dim), amount=amount) for dim in zip(*coords)]
+            )
         ]
         boxes[face_num] = out
     return list(map(np.stack, zip(*boxes.values())))
@@ -998,17 +1028,23 @@ def _smooth_boxes(batch_boxes, amount=0.1):
     for face_num, coords in boxes.items():
         out = [
             torch.tensor(x)
-            for x in zip(*[smooth(interp_negs(dim), amount=amount) for dim in zip(*coords)])
+            for x in zip(
+                *[smooth(interp_negs(dim), amount=amount) for dim in zip(*coords)]
+            )
         ]
         boxes[face_num] = out
     return list(map(torch.stack, zip(*boxes.values())))
 
 
-def detect_face(imgs, minsize, pnet, rnet, onet, threshold, factor, device, relax_landmarks=True):
+def detect_face(
+    imgs, minsize, pnet, rnet, onet, threshold, factor, device, relax_landmarks=True
+):
     if not isinstance(imgs, Iterable):
         imgs = [imgs]
     if any(img.shape != imgs[0].shape for img in imgs):
-        raise Exception("MTCNN batch processing only compatible with equal-dimension images.")
+        raise Exception(
+            "MTCNN batch processing only compatible with equal-dimension images."
+        )
     if not isinstance(imgs, torch.Tensor):
         imgs_np = np.stack([np.uint8(img) for img in imgs])
         imgs = torch.as_tensor(imgs_np, device=device).permute(0, 3, 1, 2)
@@ -1038,7 +1074,9 @@ def detect_face(imgs, minsize, pnet, rnet, onet, threshold, factor, device, rela
         im_data = (im_data - 127.5) * 0.0078125
         reg, probs = pnet(im_data)
 
-        boxes_scale, image_inds_scale = generateBoundingBox(reg, probs[:, 1], scale, threshold[0])
+        boxes_scale, image_inds_scale = generateBoundingBox(
+            reg, probs[:, 1], scale, threshold[0]
+        )
         boxes.append(boxes_scale)
         image_inds.append(image_inds_scale)
         all_inds.append(all_i + image_inds_scale)
@@ -1071,7 +1109,9 @@ def detect_face(imgs, minsize, pnet, rnet, onet, threshold, factor, device, rela
         im_data = []
         for k in range(len(y)):
             if ey[k] > (y[k] - 1) and ex[k] > (x[k] - 1):
-                img_k = imgs[image_inds[k], :, (y[k] - 1) : ey[k], (x[k] - 1) : ex[k]].unsqueeze(0)
+                img_k = imgs[
+                    image_inds[k], :, (y[k] - 1) : ey[k], (x[k] - 1) : ex[k]
+                ].unsqueeze(0)
                 im_data.append(imresample(img_k, (24, 24)))
         im_data = torch.cat(im_data, dim=0)
         im_data = (im_data - 127.5) * 0.0078125
@@ -1098,7 +1138,9 @@ def detect_face(imgs, minsize, pnet, rnet, onet, threshold, factor, device, rela
         im_data = []
         for k in range(len(y)):
             if ey[k] > (y[k] - 1) and ex[k] > (x[k] - 1):
-                img_k = imgs[image_inds[k], :, (y[k] - 1) : ey[k], (x[k] - 1) : ex[k]].unsqueeze(0)
+                img_k = imgs[
+                    image_inds[k], :, (y[k] - 1) : ey[k], (x[k] - 1) : ex[k]
+                ].unsqueeze(0)
                 im_data.append(imresample(img_k, (48, 48)))
         im_data = torch.cat(im_data, dim=0)
         im_data = (im_data - 127.5) * 0.0078125
@@ -1281,7 +1323,9 @@ def crop_tensor(tensor, box):
 
 
 def crop_resize(tensor, box, size):
-    return F.interpolate(crop_tensor(tensor, box).unsqueeze(0), size=size, mode='area')[0]
+    return F.interpolate(crop_tensor(tensor, box).unsqueeze(0), size=size, mode='area')[
+        0
+    ]
 
 
 def extract_face(img, box, image_size=160, margin=0, save_path=None):
@@ -1323,7 +1367,9 @@ def extract_face(img, box, image_size=160, margin=0, save_path=None):
 
     if save_path is not None:
         if isinstance(img, torch.Tensor):
-            face_im = Image.fromarray(face.permute(1, 2, 0).cpu().numpy().astype(np.uint8))
+            face_im = Image.fromarray(
+                face.permute(1, 2, 0).cpu().numpy().astype(np.uint8)
+            )
         os.makedirs(os.path.dirname(save_path) + "/", exist_ok=True)
         save_args = {"compress_level": 0} if ".png" in save_path else {}
         face_im.save(save_path, **save_args)

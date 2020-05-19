@@ -112,8 +112,12 @@ class Manipulator(nn.Module):
     def __init__(self, num_resblk):
         super().__init__()
         self.convblks = _make_layer(ConvBlock, 32, 32, 1, kernel_size=7, stride=1)
-        self.convblks_after = _make_layer(ConvBlockAfter, 32, 32, 1, kernel_size=3, stride=1)
-        self.resblks = _make_layer(ResBlock, 32, 32, num_resblk, kernel_size=3, stride=1)
+        self.convblks_after = _make_layer(
+            ConvBlockAfter, 32, 32, 1, kernel_size=3, stride=1
+        )
+        self.resblks = _make_layer(
+            ResBlock, 32, 32, num_resblk, kernel_size=3, stride=1
+        )
 
         # testing embedding manipulation
         g = gaussian(shape_x=180, shape_y=180, mu_x=0.0, mu_y=0.4, sig_x=0.7, sig_y=0.3)
