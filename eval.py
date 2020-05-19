@@ -213,7 +213,7 @@ def main(
     }
 
     with open(results_file, 'w') as f:
-        json.dump(results, f)
+        json.dump(results, f, indent=4)
 
 
 def validate(val_loader, model, criterion, device='cuda', display=True, print_freq=1):

@@ -138,7 +138,8 @@ def get_metadata(name, split='train', dataset_type='DeepfakeFrame',
         'val': 'test_metadata.json'
     }.get(split, 'train')
     if name == 'DFDC' and split == 'val':
-        fname = 'aug_test_metadata.json'
+        pass
+        # fname = 'aug_test_metadata.json'
 
     metafiles = {
         'DFDC': {
@@ -221,7 +222,7 @@ def parse_args():
                         help='path to latest checkpoint (default: none)')
     parser.add_argument('--weights_dir', default='weights', type=str, metavar='PATH')
     parser.add_argument('--logs_dir', default='logs', type=str, metavar='PATH')
-    parser.add_argument('--submissions_dir', default='submissions', type=str, metavar='PATH')
+    parser.add_argument('--results_dir', default='results', type=str, metavar='PATH')
     parser.add_argument('-e', '--evaluate', dest='evaluate', action='store_true',
                         help='evaluate model on validation set')
     parser.add_argument('--world-size', '-w', default=1, type=int,

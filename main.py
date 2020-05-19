@@ -4,23 +4,22 @@ import random
 import shutil
 import time
 import warnings
+from collections import defaultdict
 
 import torch
-import torch.nn as nn
-import torch.nn.parallel
 import torch.backends.cudnn as cudnn
 import torch.distributed as dist
 import torch.multiprocessing as mp
+import torch.nn as nn
+import torch.nn.parallel
 import torch.utils.data
 import torch.utils.data.distributed
 
+import config as cfg
+import core
 from pretorched import loggers
 from pretorched.metrics import accuracy
 from pretorched.runners.utils import AverageMeter, ProgressMeter
-
-import core
-import config as cfg
-
 
 best_acc1 = 0
 
@@ -71,8 +70,10 @@ def main_worker(gpu, ngpus_per_node, args):
     dir_path = os.path.dirname(os.path.realpath(__file__))
     args.weights_dir = os.path.join(dir_path, args.weights_dir)
     args.logs_dir = os.path.join(dir_path, args.logs_dir)
+    args.results_dir = os.path.join(dir_path, args.results_dir)
     os.makedirs(args.weights_dir, exist_ok=True)
     os.makedirs(args.logs_dir, exist_ok=True)
+    os.makedirs(args.results_dir, exist_ok=True)
 
     save_name = core.name_from_args(args)
     print(f'Starting: {save_name}')
@@ -197,21 +198,30 @@ def main_worker(gpu, ngpus_per_node, args):
     train_loader, val_loader = dataloaders['train'], dataloaders['val']
     train_sampler = train_loader.sampler
 
+    if args.evaluate:
+        results_file = os.path.join(args.results_dir, save_name + '.json')
+        print(f'Evaluating: {results_file}')
+        acc, loss = validate(val_loader, model, criterion, args)
+        with open(results_file, 'w') as f:
+            json.dump(
+                {
+                    'acc': acc,
+                    'loss': loss,
+                    'dataset': args.dataset,
+                    'checkpoint_file': args.resume,
+                    **vars(args),
+                    'train_args': checkpoint.get('args'),
+                },
+                f,
+                indent=4,
+            )
+        return
+
     logger = loggers.TensorBoardLogger(
         args.logs_dir, name=save_name, rank=args.rank, version=args.version
     )
 
-    if args.evaluate:
-        validate(val_loader, model, criterion, args)
-        return
-
-    history = {
-        'epoch': [],
-        'acc': [],
-        'loss': [],
-        'val_acc': [],
-        'val_loss': [],
-    }
+    history = defaultdict(list)
 
     for epoch in range(args.start_epoch, args.epochs):
         if args.distributed:
@@ -263,6 +273,7 @@ def main_worker(gpu, ngpus_per_node, args):
                     'best_acc1': best_acc1,
                     'optimizer': optimizer.state_dict(),
                     'history': history,
+                    'args': args,
                 },
                 is_best,
                 filename=os.path.join(args.weights_dir, save_name),
