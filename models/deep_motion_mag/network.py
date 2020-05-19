@@ -119,21 +119,18 @@ class Manipulator(nn.Module):
         g = gaussian(shape_x=180, shape_y=180, mu_x=0.0, mu_y=0.4, sig_x=0.7, sig_y=0.3)
         # import matplotlib.pyplot as plt
 
-        # plt.imshow(g)
-        # plt.show()
+        self.attn_map = None
         self.gaussian_tensor = torch.from_numpy(g).float().repeat(1, 32, 1, 1)
-
         # print("self.gaussian_tensor.shape", self.gaussian_tensor.shape)
 
     def forward(self, x_a, x_b, amp, attn_map=None):
         diff = x_b - x_a
         diff = self.convblks(diff)
 
-        # print("diff", diff.shape)
-
-        # testing embedding manipulation
+        attn_map = attn_map or self.attn_map
         if attn_map is not None:
-            diff = diff * attn_map.to(diff.device)
+            scaled_attn_map = self._format_attn_map(attn_map, diff.size())
+            diff = diff * scaled_attn_map.to(diff.device)
 
         diff = (amp - 1.0) * diff
         diff = self.convblks_after(diff)
@@ -141,21 +138,20 @@ class Manipulator(nn.Module):
 
         return x_b + diff
 
+    def _format_attn_map(self, attn_map, size):
+        n, c, h, w = size
+        attn_map = attn_map.unsqueeze(1)  # [num_frames, 1, h, w]
+        scaled_attn_map = nn.functional.interpolate(attn_map, size=h, mode='area')
+        scaled_attn_map = scaled_attn_map.expand(*size)
+        return scaled_attn_map
+
     def manip(self, x_a, amp, attn_map=None):
         diff = self.convblks(x_a)
 
-        # print("diff", diff.shape)
-
-        # testing embedding manipulation
+        attn_map = attn_map or self.attn_map
         if attn_map is not None:
-            # attn_map: [num_frames, h, w]
-            n, c, h, w = diff.size()
-            attn_map = attn_map.unsqueeze(1)  # [num_frames, 1, h, w]
-            interp_attn_map = nn.functional.interpolate(attn_map, size=h, mode='area')
-            interp_attn_map = interp_attn_map.expand_as(diff)
-
-
-            diff = diff * interp_attn_map.to(diff.device)
+            scaled_attn_map = self._format_attn_map(attn_map, diff.size())
+            diff = diff * scaled_attn_map.to(diff.device)
 
         diff = (amp - 1.0) * diff
         diff = self.convblks_after(diff)
@@ -193,7 +189,7 @@ class Decoder(nn.Module):
 
 
 class MagNet(nn.Module):
-    def __init__(self, num_resblk_enc=3, num_resblk_man=1, num_resblk_dec=3, amp=1.0):
+    def __init__(self, num_resblk_enc=3, num_resblk_man=1, num_resblk_dec=9, amp=1.0):
         super().__init__()
         self.amp = amp
         self.encoder = Encoder(num_resblk=num_resblk_enc)
