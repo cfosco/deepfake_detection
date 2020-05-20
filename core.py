@@ -48,39 +48,6 @@ def get_scheduler(optimizer, scheduler_name='CosineAnnealingLR', **kwargs):
     return scheduler
 
 
-def _get_scheduler(optimizer, sched_name='ReduceLROnPlateau', **kwargs):
-    sched_func = getattr(torch.optim.lr_scheduler, sched_name)
-    if sched_name == 'ReduceLROnPlateau':
-        factor = kwargs.get('factor', 0.5)
-        patience = kwargs.get('patience', 5)
-        scheduler = sched_func(
-            optimizer, factor=factor, patience=patience, verbose=True
-        )
-    elif sched_name == 'CosineAnnealingLR':
-        T_max = kwargs.get('T_max', 100)
-        eta_min = kwargs.get('eta_min', 0)
-        scheduler = sched_func(optimizer, T_max, eta_min=eta_min)
-    return scheduler
-
-
-def init_weights_old(model, init_name='ortho'):
-    for module in model.modules():
-        if (
-            isinstance(module, nn.Conv2d)
-            or isinstance(module, nn.Linear)
-            or isinstance(module, nn.Embedding)
-        ):
-            if init_name == 'ortho':
-                init.orthogonal_(module.weight)
-            elif init_name == 'N02':
-                init.normal_(module.weight, 0, 0.02)
-            elif init_name in ['glorot', 'xavier']:
-                init.xavier_normal_(module.weight)
-    else:
-        print('Init style not recognized...')
-    return model
-
-
 def init_weights(model, init_name='ortho'):
     def _init_weights(m, init_func):
         if getattr(m, 'bias', None) is not None:
@@ -356,51 +323,6 @@ def get_dataloader(
         batch_size=batch_size,
         sampler=loader_sampler,
         shuffle=(loader_sampler is None and shuffle),
-        num_workers=num_workers,
-        pin_memory=pin_memory,
-        drop_last=drop_last,
-    )
-
-
-def _get_dataloader(
-    name,
-    data_root=None,
-    split='train',
-    size=224,
-    resolution=256,
-    dataset_type='ImageFolder',
-    batch_size=64,
-    num_workers=8,
-    shuffle=True,
-    load_in_mem=False,
-    pin_memory=True,
-    drop_last=True,
-    distributed=False,
-    **kwargs,
-):
-    root = cfg.get_root_dirs(
-        name, dataset_type=dataset_type, resolution=resolution, data_root=data_root
-    )
-    get_dset_func = get_hybrid_dataset if name == 'Hybrid1365' else get_dataset
-    dataset = get_dset_func(
-        name=name,
-        root=root,
-        size=size,
-        split=split,
-        resolution=resolution,
-        dataset_type=dataset_type,
-        load_in_mem=load_in_mem,
-        **kwargs,
-    )
-
-    sampler = (
-        DistributedSampler(dataset) if (distributed and split == 'train') else None
-    )
-    return DataLoader(
-        dataset,
-        batch_size=batch_size,
-        sampler=sampler,
-        shuffle=(sampler is None and shuffle),
         num_workers=num_workers,
         pin_memory=pin_memory,
         drop_last=drop_last,
