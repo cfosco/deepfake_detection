@@ -4,23 +4,22 @@ import random
 import shutil
 import time
 import warnings
+from collections import defaultdict
 
 import torch
-import torch.nn as nn
-import torch.nn.parallel
 import torch.backends.cudnn as cudnn
 import torch.distributed as dist
 import torch.multiprocessing as mp
+import torch.nn as nn
+import torch.nn.parallel
 import torch.utils.data
 import torch.utils.data.distributed
 
+import config as cfg
+import core
 from pretorched import loggers
 from pretorched.metrics import accuracy
 from pretorched.runners.utils import AverageMeter, ProgressMeter
-
-import core
-import config as cfg
-
 
 best_acc1 = 0
 
@@ -32,15 +31,19 @@ def main():
         random.seed(args.seed)
         torch.manual_seed(args.seed)
         cudnn.deterministic = True
-        warnings.warn('You have chosen to seed training. '
-                      'This will turn on the CUDNN deterministic setting, '
-                      'which can slow down your training considerably! '
-                      'You may see unexpected behavior when restarting '
-                      'from checkpoints.')
+        warnings.warn(
+            'You have chosen to seed training. '
+            'This will turn on the CUDNN deterministic setting, '
+            'which can slow down your training considerably! '
+            'You may see unexpected behavior when restarting '
+            'from checkpoints.'
+        )
 
     if args.gpu is not None:
-        warnings.warn('You have chosen a specific GPU. This will completely '
-                      'disable data parallelism.')
+        warnings.warn(
+            'You have chosen a specific GPU. This will completely '
+            'disable data parallelism.'
+        )
 
     if args.dist_url == "env://" and args.world_size == -1:
         args.world_size = int(os.environ["WORLD_SIZE"])
@@ -67,18 +70,12 @@ def main_worker(gpu, ngpus_per_node, args):
     dir_path = os.path.dirname(os.path.realpath(__file__))
     args.weights_dir = os.path.join(dir_path, args.weights_dir)
     args.logs_dir = os.path.join(dir_path, args.logs_dir)
+    args.results_dir = os.path.join(dir_path, args.results_dir)
     os.makedirs(args.weights_dir, exist_ok=True)
     os.makedirs(args.logs_dir, exist_ok=True)
+    os.makedirs(args.results_dir, exist_ok=True)
 
-    save_name = '_'.join([args.arch,
-                          args.dataset.lower(),
-                          f'seg_count-{args.segment_count}',
-                          f'init-{"-".join([args.pretrained, args.init]) if args.pretrained else args.init}',
-                          f'optim-{args.optimizer}',
-                          f'lr-{args.lr}',
-                          f'sched-{args.scheduler}',
-                          f'bs-{args.batch_size}',
-                          ])
+    save_name = core.name_from_args(args)
     print(f'Starting: {save_name}')
 
     args.log_file = os.path.join(args.logs_dir, save_name + '.json')
@@ -93,12 +90,20 @@ def main_worker(gpu, ngpus_per_node, args):
             # For multiprocessing distributed training, rank needs to be the
             # global rank among all the processes
             args.rank = args.rank * ngpus_per_node + gpu
-        dist.init_process_group(backend=args.dist_backend, init_method=args.dist_url,
-                                world_size=args.world_size, rank=args.rank)
+        dist.init_process_group(
+            backend=args.dist_backend,
+            init_method=args.dist_url,
+            world_size=args.world_size,
+            rank=args.rank,
+        )
 
-    model = core.get_model(args.arch, args.num_classes,
-                           pretrained=args.pretrained,
-                           init_name=args.init)
+    model = core.get_model(
+        args.model_name,
+        args.basemodel_name,
+        num_classes=args.num_classes,
+        pretrained=args.pretrained,
+        init_name=args.init,
+    )
     input_size = model.input_size[-1]
 
     if args.distributed:
@@ -112,8 +117,12 @@ def main_worker(gpu, ngpus_per_node, args):
             # DistributedDataParallel, we need to divide the batch size
             # ourselves based on the total number of GPUs we have
             args.batch_size = int(args.batch_size / ngpus_per_node)
-            args.num_workers = int((args.num_workers + ngpus_per_node - 1) / ngpus_per_node)
-            model = torch.nn.parallel.DistributedDataParallel(model, device_ids=[args.gpu])
+            args.num_workers = int(
+                (args.num_workers + ngpus_per_node - 1) / ngpus_per_node
+            )
+            model = torch.nn.parallel.DistributedDataParallel(
+                model, device_ids=[args.gpu]
+            )
         else:
             model.cuda()
             # DistributedDataParallel will divide and allocate batch_size to all
@@ -133,9 +142,13 @@ def main_worker(gpu, ngpus_per_node, args):
     # Define loss function (criterion) and optimizer
     criterion = nn.CrossEntropyLoss().cuda(args.gpu)
 
-    optimizer = core.get_optimizer(model, args.optimizer,
-                                   lr=args.lr, momentum=args.momentum,
-                                   weight_decay=args.weight_decay)
+    optimizer = core.get_optimizer(
+        model,
+        args.optimizer,
+        lr=args.lr,
+        momentum=args.momentum,
+        weight_decay=args.weight_decay,
+    )
 
     scheduler = core.get_scheduler(optimizer, args.scheduler)
 
@@ -153,43 +166,62 @@ def main_worker(gpu, ngpus_per_node, args):
             args.start_epoch = checkpoint['epoch']
             best_acc1 = checkpoint['best_acc1']
             # if args.gpu is not None:
-                # best_acc1 may be from a checkpoint from a different GPU
-                # best_acc1 = best_acc1.to(args.gpu)
+            #     best_acc1 may be from a checkpoint from a different GPU
+            #     best_acc1 = best_acc1.to(args.gpu)
             model.load_state_dict(checkpoint['state_dict'])
             optimizer.load_state_dict(checkpoint['optimizer'])
-            print("=> loaded checkpoint '{}' (epoch {})"
-                  .format(args.resume, checkpoint['epoch']))
+            print(
+                "=> loaded checkpoint '{}' (epoch {})".format(
+                    args.resume, checkpoint['epoch']
+                )
+            )
         else:
             print("=> no checkpoint found at '{}'".format(args.resume))
         torch.cuda.empty_cache()
     cudnn.benchmark = True
 
     # Data loading code
-    dataloaders = core.get_dataloaders(args.dataset, args.data_root,
-                                       dataset_type=args.dataset_type,
-                                       record_set_type=args.record_set_type,
-                                       segment_count=args.segment_count,
-                                       batch_size=args.batch_size,
-                                       num_workers=args.num_workers,
-                                       distributed=args.distributed,
-                                       size=input_size)
+    dataloaders = core.get_dataloaders(
+        args.dataset,
+        args.data_root,
+        dataset_type=args.dataset_type,
+        record_set_type=args.record_set_type,
+        sampler_type=args.sampler_type,
+        segment_count=args.segment_count,
+        batch_size=args.batch_size,
+        num_workers=args.num_workers,
+        distributed=args.distributed,
+        size=input_size,
+        clip_length=args.clip_length,
+        frame_step=args.frame_step,
+    )
     train_loader, val_loader = dataloaders['train'], dataloaders['val']
     train_sampler = train_loader.sampler
 
-    logger = loggers.TensorBoardLogger(args.logs_dir, name=save_name, rank=args.rank,
-                                       version=args.version)
-
     if args.evaluate:
-        validate(val_loader, model, criterion, args)
+        results_file = os.path.join(args.results_dir, save_name + '.json')
+        print(f'Evaluating: {results_file}')
+        acc, loss = validate(val_loader, model, criterion, args)
+        with open(results_file, 'w') as f:
+            json.dump(
+                {
+                    'acc': acc,
+                    'loss': loss,
+                    'dataset': args.dataset,
+                    'checkpoint_file': args.resume,
+                    **vars(args),
+                    'train_args': checkpoint.get('args'),
+                },
+                f,
+                indent=4,
+            )
         return
 
-    history = {
-        'epoch': [],
-        'acc': [],
-        'loss': [],
-        'val_acc': [],
-        'val_loss': [],
-    }
+    logger = loggers.TensorBoardLogger(
+        args.logs_dir, name=save_name, rank=args.rank, version=args.version
+    )
+
+    history = defaultdict(list)
 
     for epoch in range(args.start_epoch, args.epochs):
         if args.distributed:
@@ -198,10 +230,9 @@ def main_worker(gpu, ngpus_per_node, args):
         display = is_rank0(args, ngpus_per_node)
 
         # Train for one epoch.
-        train_acc1, train_loss = train(train_loader, model,
-                                       criterion, optimizer,
-                                       logger, epoch, args,
-                                       display)
+        train_acc1, train_loss = train(
+            train_loader, model, criterion, optimizer, logger, epoch, args, display
+        )
 
         history['acc'].append(train_acc1.item())
         history['loss'].append(train_loss)
@@ -213,12 +244,15 @@ def main_worker(gpu, ngpus_per_node, args):
         history['val_loss'].append(val_loss)
         history['epoch'].append(epoch + 1)
 
-        logger.log_metrics({
-            'EpochAccuracy/train': train_acc1,
-            'EpochLoss/train': train_loss,
-            'EpochAccuracy/val': val_acc1,
-            'EpochLoss/val': val_loss,
-        }, step=epoch + 1)
+        logger.log_metrics(
+            {
+                'EpochAccuracy/train': train_acc1,
+                'EpochLoss/train': train_loss,
+                'EpochAccuracy/val': val_acc1,
+                'EpochLoss/val': val_loss,
+            },
+            step=epoch + 1,
+        )
 
         # Update the learning rate.
         if type(scheduler).__name__ == 'ReduceLROnPlateau':
@@ -231,22 +265,28 @@ def main_worker(gpu, ngpus_per_node, args):
         best_acc1 = max(val_acc1, best_acc1)
 
         if is_rank0(args, ngpus_per_node):
-            save_checkpoint({
-                'epoch': epoch + 1,
-                'arch': args.arch,
-                'state_dict': model.state_dict(),
-                'best_acc1': best_acc1,
-                'optimizer': optimizer.state_dict(),
-                'history': history,
-            }, is_best, filename=os.path.join(args.weights_dir, save_name))
+            save_checkpoint(
+                {
+                    'epoch': epoch + 1,
+                    'arch': args.arch,
+                    'state_dict': model.state_dict(),
+                    'best_acc1': best_acc1,
+                    'optimizer': optimizer.state_dict(),
+                    'history': history,
+                    'args': args,
+                },
+                is_best,
+                filename=os.path.join(args.weights_dir, save_name),
+            )
 
             with open(args.log_file, 'w') as f:
                 json.dump(history, f, indent=4)
 
 
 def is_rank0(args, ngpus_per_node):
-    return not args.multiprocessing_distributed or (args.multiprocessing_distributed
-                                                    and args.rank % ngpus_per_node == 0)
+    return not args.multiprocessing_distributed or (
+        args.multiprocessing_distributed and args.rank % ngpus_per_node == 0
+    )
 
 
 def train(train_loader, model, criterion, optimizer, logger, epoch, args, display=True):
@@ -257,7 +297,8 @@ def train(train_loader, model, criterion, optimizer, logger, epoch, args, displa
     progress = ProgressMeter(
         len(train_loader),
         [batch_time, data_time, losses, top1],
-        prefix="Epoch: [{}]".format(epoch))
+        prefix="Epoch: [{}]".format(epoch),
+    )
 
     itr = epoch * len(train_loader)
     # switch to train mode
@@ -293,10 +334,7 @@ def train(train_loader, model, criterion, optimizer, logger, epoch, args, displa
 
         if i % args.print_freq == 0 and display:
             progress.display(i)
-            logger.log_metrics({
-                'Accuracy/train': acc1,
-                'Loss/train': loss
-            }, step=itr)
+            logger.log_metrics({'Accuracy/train': acc1, 'Loss/train': loss}, step=itr)
 
             # logger.save()
 
@@ -308,9 +346,8 @@ def validate(val_loader, model, criterion, args, display=True):
     losses = AverageMeter('Loss', ':.4e')
     top1 = AverageMeter('Acc@1', ':6.2f')
     progress = ProgressMeter(
-        len(val_loader),
-        [batch_time, losses, top1],
-        prefix='Test: ')
+        len(val_loader), [batch_time, losses, top1], prefix='Test: '
+    )
 
     # switch to evaluate mode
     model.eval()

@@ -13,13 +13,13 @@ except ImportError:
 
 def get_transform(name='DFDC', split='train', size=224, resolution=256,
                   mean=[0.485, 0.456, 0.406], std=[0.229, 0.224, 0.225],
-                  normalize=True, degrees=10):
+                  normalize=True, degrees=0):
     norm = transforms.NormalizeVideo(mean=mean, std=std)
     cropping = {
         'train': torchvision.transforms.Compose([
             transforms.RandomResizedCropVideo(size),
             transforms.RandomHorizontalFlipVideo(),
-            transforms.RandomRotationVideo(degrees)]),
+            transforms.RandomRotationVideo(degrees) if degrees > 0 else transforms.IdentityTransform()]),
         'val': torchvision.transforms.Compose([
             transforms.ResizeVideo(resolution),
             transforms.CenterCropVideo(size),
