@@ -1,48 +1,52 @@
 import torch
 import torch.nn as nn
-from torch.nn import Parameter as P
 
 from pretorched.visualizers import grad_cam
 
+from .utils import Normalize
 
-class Normalize(nn.Module):
+
+class Detector(torch.nn.Module):
     def __init__(
-        self,
-        mean=[0.485, 0.456, 0.406],
-        std=[0.229, 0.224, 0.225],
-        shape=(1, -1, 1, 1, 1),
-        rescale=True,
+        self, model, consensus_func=nn.Identity(), normalize=False, rescale=True
     ):
-        super().__init__()
-        self.shape = shape
-        self.mean = P(torch.tensor(mean).view(shape), requires_grad=False)
-        self.std = P(torch.tensor(std).view(shape), requires_grad=False)
-        self.rescale = rescale
-
-    def forward(self, x, rescale=None):
-        rescale = self.rescale if rescale is None else rescale
-        x.div_(255.0) if rescale else None
-        return (x - self.mean) / self.std
-
-
-class FrameModel(torch.nn.Module):
-
-    frame_dim = 2
-
-    def __init__(self, model, consensus_func=torch.mean, normalize=False):
         super().__init__()
         self.model = model
         self.consensus_func = consensus_func
-        self.norm = Normalize() if normalize else nn.Identity()
+        self.norm = Normalize(rescale) if normalize else nn.Identity()
+
+    @property
+    def input_size(self):
+        return self.model.input_size
+
+
+class FrameDetector(Detector):
+
+    frame_dim = 2
+
+    def __init__(self, model, consensus_func=torch.mean, normalize=False, rescale=True):
+        super().__init__(model, consensus_func, normalize, rescale)
 
     def forward(self, x):
         x = self.norm(x)
         x = x.permute(2, 0, 1, 3, 4)
         return self.consensus_func(torch.stack([self.model(f) for f in x]), dim=0)
 
-    @property
-    def input_size(self):
-        return self.model.input_size
+
+class VideoDetector(Detector):
+    def __init__(
+        self, model, consensus_func=nn.Identity(), normalize=False, rescale=True
+    ):
+        super().__init__(model, consensus_func, normalize, rescale)
+
+    def forward(self, x):
+        x = self.norm(x)
+        x = self.model(x)
+        return self.consensus_func(x)
+
+
+class Distorter(nn.Module):
+    pass
 
 
 class DeepfakeDetector(torch.nn.Module):
@@ -54,13 +58,9 @@ class DeepfakeDetector(torch.nn.Module):
     def forward(self, x):
         faces = self.face_model(x)
         return self.fake_model(faces)
-        # min_faces = torch.min([f.shape[0] for f in faces])
-        # batched_faces = [torch.stack([f[i] for f in faces]) for i in range(min_faces)]
-        # return self.consensus_func(
-        # torch.stack([self.detector(f) for f in batched_faces]), dim=0)
 
 
-class ManipulatorDetector(torch.nn.Module):
+class SeriesManipulatorDetector(torch.nn.Module):
     def __init__(self, manipulator_model, detector_model):
         super().__init__()
         self.manipulator_model = manipulator_model
@@ -82,7 +82,20 @@ class ManipulatorDetector(torch.nn.Module):
         return self.detector_model.input_size
 
 
-class CaricatureModel(torch.nn.Module):
+class SharedEncoder(torch.nn.Module):
+    def __init__(
+        self, detector: Detector, distorter: Distorter,
+    ):
+        super().__init__()
+        self.detector = detector
+        self.distorter = distorter
+
+    def forward(self, x):
+        # TODO: FINISH
+        return x
+
+
+class GradCamCaricatureModel(torch.nn.Module):
     def __init__(
         self,
         face_model,

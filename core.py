@@ -76,30 +76,30 @@ def get_model(
     init_name=None,
     num_classes=2,
 ) -> Union[
-    deepfake_models.FrameModel,
-    deepfake_models.ManipulatorDetector,
-    deepfake_models.CaricatureModel,
+    deepfake_models.FrameDetector,
+    deepfake_models.SeriesManipulatorDetector,
+    deepfake_models.GradCamCaricatureModel,
 ]:
-    if model_name == 'FrameModel':
+    if model_name == 'FrameDetector':
         basemodel = get_basemodel(
             basemodel_name,
             pretrained=pretrained,
             num_classes=num_classes,
             init_name=init_name,
         )
-        return deepfake_models.FrameModel(basemodel)
-    elif model_name == 'ManipulatorDetector':
-        return deepfake_models.ManipulatorDetector(
+        return deepfake_models.FrameDetector(basemodel)
+    elif model_name == 'SeriesManipulatorDetector':
+        return deepfake_models.SeriesManipulatorDetector(
             manipulator_model=deepfake_models.MagNet(),
             detector_model=get_model(
-                'FrameModel', basemodel_name, pretrained=pretrained, init_name=init_name
+                'FrameDetector', basemodel_name, pretrained=pretrained, init_name=init_name
             ),
         )
     elif model_name == 'CaricatureModel':
-        return deepfake_models.CaricatureModel(
+        return deepfake_models.GradCamCaricatureModel(
             face_model=deepfake_models.FaceModel(),
             fake_model=get_model(
-                'FrameModel', basemodel_name, pretrained, init_name=init_name
+                'FrameDetector', basemodel_name, pretrained, init_name=init_name
             ),
             mag_model=deepfake_models.MagNet(),
         )
@@ -110,7 +110,10 @@ def get_model(
 def get_basemodel(
     model_name, num_classes=2, pretrained='imagenet', init_name=None, **kwargs
 ):
-    model_func = getattr(models, model_name)
+    if model_name in ['mxresnet18', 'mxresnet50']:
+        model_func = getattr(deepfake_models, model_name)
+    else:
+        model_func = getattr(models, model_name)
     pretrained = None if pretrained == 'None' else pretrained
     if pretrained is not None:
         # TODO Update THIS!
