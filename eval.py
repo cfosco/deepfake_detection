@@ -192,7 +192,7 @@ def main(
         chunk_size=chunk_size,
     )
     fakenet.eval()
-    detector = models.FrameModel(fakenet, normalize=True)
+    detector = models.FrameDetector(fakenet, normalize=True)
     model = models.DeepfakeDetector(facenet, detector)
     model.to(device)
 
