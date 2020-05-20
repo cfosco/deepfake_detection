@@ -145,7 +145,7 @@ class Manipulator(nn.Module):
     def _format_attn_map(self, attn_map, size):
         n, c, h, w = size
         attn_map = attn_map.unsqueeze(1)  # [num_frames, 1, h, w]
-        scaled_attn_map = nn.functional.interpolate(attn_map, size=h, mode='area')
+        scaled_attn_map = nn.functional.interpolate(attn_map, size=(h, w), mode='area')
         scaled_attn_map = scaled_attn_map.expand(*size)
         return scaled_attn_map
 

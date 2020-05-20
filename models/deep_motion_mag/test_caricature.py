@@ -93,9 +93,11 @@ def main():
     args = parser.parse_args()
     print(args)
 
+    device = 'cuda' if torch.cuda.is_available() else 'cpu'
+
     # create model
     model = MagNet().cuda()
-    fake_model = core.get_model('FrameModel')
+    fake_model = core.get_model('FrameModel').to(device)
     gcam_model = grad_cam.GradCAM(fake_model.model)
     # model  = torch.nn.DataParallel(model).cuda()
     print(model)
@@ -153,6 +155,7 @@ def main():
 
     # generate frames
     mag_frames = []
+    attn_maps = []
     model.eval()
 
     # static mode or dynamic mode
@@ -201,7 +204,7 @@ def main():
             gcam_model.model.zero_grad()
             probs, idx = gcam_model.forward(xb)
             gcam_model.backward(idx=idx[0])
-            attn_map = gcam_model.generate(target_layer='model.layer4')
+            attn_map = gcam_model.generate(target_layer='layer4')
             model.manipulator.attn_map = attn_map
 
             vb, mb = model.encoder(xb)

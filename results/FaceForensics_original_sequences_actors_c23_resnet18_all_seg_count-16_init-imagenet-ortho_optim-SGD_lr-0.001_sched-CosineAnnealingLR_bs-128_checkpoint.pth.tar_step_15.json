@@ -1,0 +1,1462 @@
+{
+    "dataset": "FaceForensics",
+    "part": "original_sequences/actors/c23",
+    "checkpoint_file": "resnet18_all_seg_count-16_init-imagenet-ortho_optim-SGD_lr-0.001_sched-CosineAnnealingLR_bs-128_checkpoint.pth.tar",
+    "acc": 70.52341597796143,
+    "loss": 0.662901012262858,
+    "exceptions": [],
+    "outputs": {
+        "01__exit_phone_room.mp4": {
+            "label": 0,
+            "prob": 0.701759397983551
+        },
+        "01__hugging_happy.mp4": {
+            "label": 0,
+            "prob": 0.07354816794395447
+        },
+        "01__kitchen_pan.mp4": {
+            "label": 0,
+            "prob": 0.036056820303201675
+        },
+        "01__kitchen_still.mp4": {
+            "label": 0,
+            "prob": 0.031417787075042725
+        },
+        "01__meeting_serious.mp4": {
+            "label": 0,
+            "prob": 0.45876526832580566
+        },
+        "01__outside_talking_pan_laughing.mp4": {
+            "label": 0,
+            "prob": 0.6042361259460449
+        },
+        "01__outside_talking_still_laughing.mp4": {
+            "label": 0,
+            "prob": 0.3146306276321411
+        },
+        "01__podium_speech_happy.mp4": {
+            "label": 0,
+            "prob": 0.02472159080207348
+        },
+        "01__secret_conversation.mp4": {
+            "label": 0,
+            "prob": 0.627530574798584
+        },
+        "01__talking_against_wall.mp4": {
+            "label": 0,
+            "prob": 0.00021446362370625138
+        },
+        "01__talking_angry_couch.mp4": {
+            "label": 0,
+            "prob": 0.4583267569541931
+        },
+        "01__walk_down_hall_angry.mp4": {
+            "label": 0,
+            "prob": 0.4528593420982361
+        },
+        "01__walking_and_outside_surprised.mp4": {
+            "label": 0,
+            "prob": 0.6900342106819153
+        },
+        "01__walking_down_indoor_hall_disgust.mp4": {
+            "label": 0,
+            "prob": 0.037414755672216415
+        },
+        "01__walking_down_street_outside_angry.mp4": {
+            "label": 0,
+            "prob": 0.9060283303260803
+        },
+        "01__walking_outside_cafe_disgusted.mp4": {
+            "label": 0,
+            "prob": 0.1537424474954605
+        },
+        "02__exit_phone_room.mp4": {
+            "label": 0,
+            "prob": 0.3462604880332947
+        },
+        "02__hugging_happy.mp4": {
+            "label": 0,
+            "prob": 0.7253846526145935
+        },
+        "02__kitchen_pan.mp4": {
+            "label": 0,
+            "prob": 0.0323522724211216
+        },
+        "02__kitchen_still.mp4": {
+            "label": 0,
+            "prob": 0.04612556844949722
+        },
+        "02__meeting_serious.mp4": {
+            "label": 0,
+            "prob": 0.7474905252456665
+        },
+        "02__outside_talking_pan_laughing.mp4": {
+            "label": 0,
+            "prob": 0.9522377252578735
+        },
+        "02__outside_talking_still_laughing.mp4": {
+            "label": 0,
+            "prob": 0.9952620267868042
+        },
+        "02__podium_speech_happy.mp4": {
+            "label": 0,
+            "prob": 0.02250945195555687
+        },
+        "02__secret_conversation.mp4": {
+            "label": 0,
+            "prob": 0.12243031710386276
+        },
+        "02__talking_against_wall.mp4": {
+            "label": 0,
+            "prob": 0.0005042407428845763
+        },
+        "02__talking_angry_couch.mp4": {
+            "label": 0,
+            "prob": 0.0237338338047266
+        },
+        "02__walk_down_hall_angry.mp4": {
+            "label": 0,
+            "prob": 0.4120023250579834
+        },
+        "02__walking_and_outside_surprised.mp4": {
+            "label": 0,
+            "prob": 0.6900342106819153
+        },
+        "02__walking_down_indoor_hall_disgust.mp4": {
+            "label": 0,
+            "prob": 0.0356900617480278
+        },
+        "02__walking_down_street_outside_angry.mp4": {
+            "label": 0,
+            "prob": 0.9978563189506531
+        },
+        "02__walking_outside_cafe_disgusted.mp4": {
+            "label": 0,
+            "prob": 0.9838600158691406
+        },
+        "03__exit_phone_room.mp4": {
+            "label": 0,
+            "prob": 0.0028529735282063484
+        },
+        "03__hugging_happy.mp4": {
+            "label": 0,
+            "prob": 0.9363914132118225
+        },
+        "03__kitchen_pan.mp4": {
+            "label": 0,
+            "prob": 0.035358209162950516
+        },
+        "03__kitchen_still.mp4": {
+            "label": 0,
+            "prob": 0.022733619436621666
+        },
+        "03__meeting_serious.mp4": {
+            "label": 0,
+            "prob": 0.48761144280433655
+        },
+        "03__outside_talking_pan_laughing.mp4": {
+            "label": 0,
+            "prob": 0.8795760869979858
+        },
+        "03__outside_talking_still_laughing.mp4": {
+            "label": 0,
+            "prob": 0.9762877225875854
+        },
+        "03__podium_speech_happy.mp4": {
+            "label": 0,
+            "prob": 0.9930692911148071
+        },
+        "03__secret_conversation.mp4": {
+            "label": 0,
+            "prob": 0.8617856502532959
+        },
+        "03__talking_against_wall.mp4": {
+            "label": 0,
+            "prob": 0.03346940502524376
+        },
+        "03__talking_angry_couch.mp4": {
+            "label": 0,
+            "prob": 0.042666465044021606
+        },
+        "03__walk_down_hall_angry.mp4": {
+            "label": 0,
+            "prob": 0.05560052767395973
+        },
+        "03__walking_and_outside_surprised.mp4": {
+            "label": 0,
+            "prob": 0.8564223647117615
+        },
+        "03__walking_down_indoor_hall_disgust.mp4": {
+            "label": 0,
+            "prob": 0.033893343061208725
+        },
+        "03__walking_down_street_outside_angry.mp4": {
+            "label": 0,
+            "prob": 0.7442089319229126
+        },
+        "03__walking_outside_cafe_disgusted.mp4": {
+            "label": 0,
+            "prob": 0.3629407286643982
+        },
+        "04__exit_phone_room.mp4": {
+            "label": 0,
+            "prob": 0.004721435718238354
+        },
+        "04__kitchen_pan.mp4": {
+            "label": 0,
+            "prob": 0.023906853049993515
+        },
+        "04__kitchen_still.mp4": {
+            "label": 0,
+            "prob": 0.0008809376740828156
+        },
+        "04__outside_talking_pan_laughing.mp4": {
+            "label": 0,
+            "prob": 0.4312628507614136
+        },
+        "04__outside_talking_still_laughing.mp4": {
+            "label": 0,
+            "prob": 0.37004002928733826
+        },
+        "04__podium_speech_happy.mp4": {
+            "label": 0,
+            "prob": 0.12548719346523285
+        },
+        "04__secret_conversation.mp4": {
+            "label": 0,
+            "prob": 0.15544627606868744
+        },
+        "04__talking_against_wall.mp4": {
+            "label": 0,
+            "prob": 0.0062176999635994434
+        },
+        "04__talking_angry_couch.mp4": {
+            "label": 0,
+            "prob": 0.0007392801926471293
+        },
+        "04__walk_down_hall_angry.mp4": {
+            "label": 0,
+            "prob": 0.29737523198127747
+        },
+        "04__walking_down_street_outside_angry.mp4": {
+            "label": 0,
+            "prob": 0.045932743698358536
+        },
+        "04__walking_outside_cafe_disgusted.mp4": {
+            "label": 0,
+            "prob": 0.38908153772354126
+        },
+        "05__exit_phone_room.mp4": {
+            "label": 0,
+            "prob": 0.018959244713187218
+        },
+        "05__hugging_happy.mp4": {
+            "label": 0,
+            "prob": 0.14016832411289215
+        },
+        "05__kitchen_pan.mp4": {
+            "label": 0,
+            "prob": 0.007493673823773861
+        },
+        "05__kitchen_still.mp4": {
+            "label": 0,
+            "prob": 0.000599405262619257
+        },
+        "05__outside_talking_pan_laughing.mp4": {
+            "label": 0,
+            "prob": 0.9614787697792053
+        },
+        "05__outside_talking_still_laughing.mp4": {
+            "label": 0,
+            "prob": 0.013487841933965683
+        },
+        "05__podium_speech_happy.mp4": {
+            "label": 0,
+            "prob": 0.678856611251831
+        },
+        "05__talking_against_wall.mp4": {
+            "label": 0,
+            "prob": 0.0015468716155737638
+        },
+        "05__walk_down_hall_angry.mp4": {
+            "label": 0,
+            "prob": 0.33967310190200806
+        },
+        "05__walking_down_street_outside_angry.mp4": {
+            "label": 0,
+            "prob": 0.04809362813830376
+        },
+        "05__walking_outside_cafe_disgusted.mp4": {
+            "label": 0,
+            "prob": 0.3680633008480072
+        },
+        "06__exit_phone_room.mp4": {
+            "label": 0,
+            "prob": 0.029583949595689774
+        },
+        "06__hugging_happy.mp4": {
+            "label": 0,
+            "prob": 0.6393997073173523
+        },
+        "06__kitchen_pan.mp4": {
+            "label": 0,
+            "prob": 0.7224805951118469
+        },
+        "06__kitchen_still.mp4": {
+            "label": 0,
+            "prob": 0.13605260848999023
+        },
+        "06__outside_talking_pan_laughing.mp4": {
+            "label": 0,
+            "prob": 0.8804636001586914
+        },
+        "06__outside_talking_still_laughing.mp4": {
+            "label": 0,
+            "prob": 0.6732972860336304
+        },
+        "06__podium_speech_happy.mp4": {
+            "label": 0,
+            "prob": 0.9242423176765442
+        },
+        "06__talking_against_wall.mp4": {
+            "label": 0,
+            "prob": 0.006600955501198769
+        },
+        "06__talking_angry_couch.mp4": {
+            "label": 0,
+            "prob": 0.23913271725177765
+        },
+        "06__walk_down_hall_angry.mp4": {
+            "label": 0,
+            "prob": 0.8291820883750916
+        },
+        "06__walking_and_outside_surprised.mp4": {
+            "label": 0,
+            "prob": 0.5342404246330261
+        },
+        "06__walking_down_indoor_hall_disgust.mp4": {
+            "label": 0,
+            "prob": 0.2788088321685791
+        },
+        "06__walking_down_street_outside_angry.mp4": {
+            "label": 0,
+            "prob": 0.3642371594905853
+        },
+        "06__walking_outside_cafe_disgusted.mp4": {
+            "label": 0,
+            "prob": 0.06599737703800201
+        },
+        "07__exit_phone_room.mp4": {
+            "label": 0,
+            "prob": 0.9089961051940918
+        },
+        "07__hugging_happy.mp4": {
+            "label": 0,
+            "prob": 0.21094276010990143
+        },
+        "07__kitchen_pan.mp4": {
+            "label": 0,
+            "prob": 0.39776313304901123
+        },
+        "07__kitchen_still.mp4": {
+            "label": 0,
+            "prob": 0.21426396071910858
+        },
+        "07__outside_talking_pan_laughing.mp4": {
+            "label": 0,
+            "prob": 0.9507097005844116
+        },
+        "07__outside_talking_still_laughing.mp4": {
+            "label": 0,
+            "prob": 0.8960871696472168
+        },
+        "07__podium_speech_happy.mp4": {
+            "label": 0,
+            "prob": 0.050937242805957794
+        },
+        "07__secret_conversation.mp4": {
+            "label": 0,
+            "prob": 0.446818083524704
+        },
+        "07__talking_against_wall.mp4": {
+            "label": 0,
+            "prob": 0.010531660169363022
+        },
+        "07__talking_angry_couch.mp4": {
+            "label": 0,
+            "prob": 0.06215212494134903
+        },
+        "07__walk_down_hall_angry.mp4": {
+            "label": 0,
+            "prob": 0.5505057573318481
+        },
+        "07__walking_down_street_outside_angry.mp4": {
+            "label": 0,
+            "prob": 0.9924384951591492
+        },
+        "07__walking_outside_cafe_disgusted.mp4": {
+            "label": 0,
+            "prob": 0.6763059496879578
+        },
+        "08__exit_phone_room.mp4": {
+            "label": 0,
+            "prob": 0.0007347160135395825
+        },
+        "08__kitchen_pan.mp4": {
+            "label": 0,
+            "prob": 0.020908517763018608
+        },
+        "08__kitchen_still.mp4": {
+            "label": 0,
+            "prob": 0.04497640207409859
+        },
+        "08__outside_talking_pan_laughing.mp4": {
+            "label": 0,
+            "prob": 0.008477617055177689
+        },
+        "08__outside_talking_still_laughing.mp4": {
+            "label": 0,
+            "prob": 0.0018599566537886858
+        },
+        "08__podium_speech_happy.mp4": {
+            "label": 0,
+            "prob": 0.005147367715835571
+        },
+        "08__talking_against_wall.mp4": {
+            "label": 0,
+            "prob": 0.0016336450353264809
+        },
+        "08__walk_down_hall_angry.mp4": {
+            "label": 0,
+            "prob": 0.12794101238250732
+        },
+        "08__walking_down_street_outside_angry.mp4": {
+            "label": 0,
+            "prob": 0.039946820586919785
+        },
+        "08__walking_outside_cafe_disgusted.mp4": {
+            "label": 0,
+            "prob": 0.2603697180747986
+        },
+        "09__exit_phone_room.mp4": {
+            "label": 0,
+            "prob": 0.26890259981155396
+        },
+        "09__kitchen_pan.mp4": {
+            "label": 0,
+            "prob": 0.04241887480020523
+        },
+        "09__outside_talking_pan_laughing.mp4": {
+            "label": 0,
+            "prob": 0.0814511626958847
+        },
+        "09__outside_talking_still_laughing.mp4": {
+            "label": 0,
+            "prob": 0.2830336391925812
+        },
+        "09__podium_speech_happy.mp4": {
+            "label": 0,
+            "prob": 0.010821929201483727
+        },
+        "09__talking_against_wall.mp4": {
+            "label": 0,
+            "prob": 0.00014928594464436173
+        },
+        "09__talking_angry_couch.mp4": {
+            "label": 0,
+            "prob": 0.04225664958357811
+        },
+        "09__walk_down_hall_angry.mp4": {
+            "label": 0,
+            "prob": 0.09476059675216675
+        },
+        "09__walking_down_street_outside_angry.mp4": {
+            "label": 0,
+            "prob": 0.01636269874870777
+        },
+        "10__exit_phone_room.mp4": {
+            "label": 0,
+            "prob": 0.0864265188574791
+        },
+        "10__kitchen_pan.mp4": {
+            "label": 0,
+            "prob": 0.1628963202238083
+        },
+        "10__kitchen_still.mp4": {
+            "label": 0,
+            "prob": 0.008238475769758224
+        },
+        "10__outside_talking_pan_laughing.mp4": {
+            "label": 0,
+            "prob": 0.989608108997345
+        },
+        "10__outside_talking_still_laughing.mp4": {
+            "label": 0,
+            "prob": 0.1373995542526245
+        },
+        "10__podium_speech_happy.mp4": {
+            "label": 0,
+            "prob": 0.11815401911735535
+        },
+        "10__talking_against_wall.mp4": {
+            "label": 0,
+            "prob": 0.002283363603055477
+        },
+        "10__talking_angry_couch.mp4": {
+            "label": 0,
+            "prob": 0.0020249905064702034
+        },
+        "10__walk_down_hall_angry.mp4": {
+            "label": 0,
+            "prob": 0.12642182409763336
+        },
+        "10__walking_down_street_outside_angry.mp4": {
+            "label": 0,
+            "prob": 0.7029579281806946
+        },
+        "10__walking_outside_cafe_disgusted.mp4": {
+            "label": 0,
+            "prob": 0.615257978439331
+        },
+        "11__exit_phone_room.mp4": {
+            "label": 0,
+            "prob": 0.631839394569397
+        },
+        "11__kitchen_pan.mp4": {
+            "label": 0,
+            "prob": 0.5396024584770203
+        },
+        "11__kitchen_still.mp4": {
+            "label": 0,
+            "prob": 0.7022345066070557
+        },
+        "11__outside_talking_pan_laughing.mp4": {
+            "label": 0,
+            "prob": 0.8942370414733887
+        },
+        "11__outside_talking_still_laughing.mp4": {
+            "label": 0,
+            "prob": 0.06841081380844116
+        },
+        "11__podium_speech_happy.mp4": {
+            "label": 0,
+            "prob": 0.0017924177227541804
+        },
+        "11__secret_conversation.mp4": {
+            "label": 0,
+            "prob": 0.11195182055234909
+        },
+        "11__talking_against_wall.mp4": {
+            "label": 0,
+            "prob": 0.03384501859545708
+        },
+        "11__talking_angry_couch.mp4": {
+            "label": 0,
+            "prob": 0.011653301306068897
+        },
+        "11__walk_down_hall_angry.mp4": {
+            "label": 0,
+            "prob": 0.9078013300895691
+        },
+        "11__walking_down_street_outside_angry.mp4": {
+            "label": 0,
+            "prob": 0.4392431676387787
+        },
+        "11__walking_outside_cafe_disgusted.mp4": {
+            "label": 0,
+            "prob": 0.021136505529284477
+        },
+        "12__exit_phone_room.mp4": {
+            "label": 0,
+            "prob": 0.6425763368606567
+        },
+        "12__hugging_happy.mp4": {
+            "label": 0,
+            "prob": 0.8498942255973816
+        },
+        "12__kitchen_pan.mp4": {
+            "label": 0,
+            "prob": 0.03947998583316803
+        },
+        "12__kitchen_still.mp4": {
+            "label": 0,
+            "prob": 0.019300736486911774
+        },
+        "12__outside_talking_pan_laughing.mp4": {
+            "label": 0,
+            "prob": 0.9119146466255188
+        },
+        "12__outside_talking_still_laughing.mp4": {
+            "label": 0,
+            "prob": 0.08745765686035156
+        },
+        "12__podium_speech_happy.mp4": {
+            "label": 0,
+            "prob": 0.046100568026304245
+        },
+        "12__secret_conversation.mp4": {
+            "label": 0,
+            "prob": 0.7244182229042053
+        },
+        "12__talking_against_wall.mp4": {
+            "label": 0,
+            "prob": 0.015656746923923492
+        },
+        "12__talking_angry_couch.mp4": {
+            "label": 0,
+            "prob": 0.34470894932746887
+        },
+        "12__walk_down_hall_angry.mp4": {
+            "label": 0,
+            "prob": 0.661181628704071
+        },
+        "12__walking_and_outside_surprised.mp4": {
+            "label": 0,
+            "prob": 0.4104524254798889
+        },
+        "12__walking_down_indoor_hall_disgust.mp4": {
+            "label": 0,
+            "prob": 0.3142419755458832
+        },
+        "12__walking_down_street_outside_angry.mp4": {
+            "label": 0,
+            "prob": 0.6360321044921875
+        },
+        "12__walking_outside_cafe_disgusted.mp4": {
+            "label": 0,
+            "prob": 0.020429030060768127
+        },
+        "13__exit_phone_room.mp4": {
+            "label": 0,
+            "prob": 0.713605523109436
+        },
+        "13__hugging_happy.mp4": {
+            "label": 0,
+            "prob": 0.5453668236732483
+        },
+        "13__kitchen_pan.mp4": {
+            "label": 0,
+            "prob": 0.0998530164361
+        },
+        "13__kitchen_still.mp4": {
+            "label": 0,
+            "prob": 0.24417522549629211
+        },
+        "13__outside_talking_pan_laughing.mp4": {
+            "label": 0,
+            "prob": 0.13506637513637543
+        },
+        "13__outside_talking_still_laughing.mp4": {
+            "label": 0,
+            "prob": 0.3778378367424011
+        },
+        "13__podium_speech_happy.mp4": {
+            "label": 0,
+            "prob": 0.003091782797127962
+        },
+        "13__secret_conversation.mp4": {
+            "label": 0,
+            "prob": 0.0921551063656807
+        },
+        "13__talking_against_wall.mp4": {
+            "label": 0,
+            "prob": 0.0012789041502401233
+        },
+        "13__talking_angry_couch.mp4": {
+            "label": 0,
+            "prob": 0.01009400188922882
+        },
+        "13__walk_down_hall_angry.mp4": {
+            "label": 0,
+            "prob": 0.8583796620368958
+        },
+        "13__walking_and_outside_surprised.mp4": {
+            "label": 0,
+            "prob": 0.3854175806045532
+        },
+        "13__walking_down_indoor_hall_disgust.mp4": {
+            "label": 0,
+            "prob": 0.3142419755458832
+        },
+        "13__walking_down_street_outside_angry.mp4": {
+            "label": 0,
+            "prob": 0.08736664056777954
+        },
+        "13__walking_outside_cafe_disgusted.mp4": {
+            "label": 0,
+            "prob": 0.9080674052238464
+        },
+        "14__exit_phone_room.mp4": {
+            "label": 0,
+            "prob": 0.9076298475265503
+        },
+        "14__hugging_happy.mp4": {
+            "label": 0,
+            "prob": 0.9140824675559998
+        },
+        "14__kitchen_pan.mp4": {
+            "label": 0,
+            "prob": 0.018025636672973633
+        },
+        "14__kitchen_still.mp4": {
+            "label": 0,
+            "prob": 0.005384508520364761
+        },
+        "14__outside_talking_pan_laughing.mp4": {
+            "label": 0,
+            "prob": 0.9268908500671387
+        },
+        "14__outside_talking_still_laughing.mp4": {
+            "label": 0,
+            "prob": 0.8674997687339783
+        },
+        "14__podium_speech_happy.mp4": {
+            "label": 0,
+            "prob": 0.07596011459827423
+        },
+        "14__secret_conversation.mp4": {
+            "label": 0,
+            "prob": 0.04006430134177208
+        },
+        "14__talking_against_wall.mp4": {
+            "label": 0,
+            "prob": 0.09293994307518005
+        },
+        "14__talking_angry_couch.mp4": {
+            "label": 0,
+            "prob": 0.0494045689702034
+        },
+        "14__walk_down_hall_angry.mp4": {
+            "label": 0,
+            "prob": 0.6599509119987488
+        },
+        "14__walking_and_outside_surprised.mp4": {
+            "label": 0,
+            "prob": 0.7325596809387207
+        },
+        "14__walking_down_indoor_hall_disgust.mp4": {
+            "label": 0,
+            "prob": 0.6266660094261169
+        },
+        "14__walking_down_street_outside_angry.mp4": {
+            "label": 0,
+            "prob": 0.3960566222667694
+        },
+        "14__walking_outside_cafe_disgusted.mp4": {
+            "label": 0,
+            "prob": 0.14141522347927094
+        },
+        "15__exit_phone_room.mp4": {
+            "label": 0,
+            "prob": 0.9633933901786804
+        },
+        "15__hugging_happy.mp4": {
+            "label": 0,
+            "prob": 0.6671058535575867
+        },
+        "15__kitchen_pan.mp4": {
+            "label": 0,
+            "prob": 0.3536283075809479
+        },
+        "15__kitchen_still.mp4": {
+            "label": 0,
+            "prob": 0.7136266231536865
+        },
+        "15__outside_talking_pan_laughing.mp4": {
+            "label": 0,
+            "prob": 0.2018587738275528
+        },
+        "15__outside_talking_still_laughing.mp4": {
+            "label": 0,
+            "prob": 0.5329360961914062
+        },
+        "15__podium_speech_happy.mp4": {
+            "label": 0,
+            "prob": 0.0017812940059229732
+        },
+        "15__talking_against_wall.mp4": {
+            "label": 0,
+            "prob": 0.12470407038927078
+        },
+        "15__talking_angry_couch.mp4": {
+            "label": 0,
+            "prob": 0.0019623534753918648
+        },
+        "15__walk_down_hall_angry.mp4": {
+            "label": 0,
+            "prob": 0.5662147402763367
+        },
+        "15__walking_and_outside_surprised.mp4": {
+            "label": 0,
+            "prob": 0.791519045829773
+        },
+        "15__walking_down_indoor_hall_disgust.mp4": {
+            "label": 0,
+            "prob": 0.6539695262908936
+        },
+        "15__walking_down_street_outside_angry.mp4": {
+            "label": 0,
+            "prob": 0.9464715719223022
+        },
+        "15__walking_outside_cafe_disgusted.mp4": {
+            "label": 0,
+            "prob": 0.3656892776489258
+        },
+        "16__exit_phone_room.mp4": {
+            "label": 0,
+            "prob": 0.01689707301557064
+        },
+        "16__hugging_happy.mp4": {
+            "label": 0,
+            "prob": 0.17088259756565094
+        },
+        "16__kitchen_pan.mp4": {
+            "label": 0,
+            "prob": 0.8345992565155029
+        },
+        "16__kitchen_still.mp4": {
+            "label": 0,
+            "prob": 0.5743464827537537
+        },
+        "16__outside_talking_pan_laughing.mp4": {
+            "label": 0,
+            "prob": 0.5059479475021362
+        },
+        "16__podium_speech_happy.mp4": {
+            "label": 0,
+            "prob": 0.8701514601707458
+        },
+        "16__talking_against_wall.mp4": {
+            "label": 0,
+            "prob": 0.011751282960176468
+        },
+        "16__walk_down_hall_angry.mp4": {
+            "label": 0,
+            "prob": 0.15085183084011078
+        },
+        "16__walking_and_outside_surprised.mp4": {
+            "label": 0,
+            "prob": 0.09462188184261322
+        },
+        "16__walking_down_indoor_hall_disgust.mp4": {
+            "label": 0,
+            "prob": 0.12121625244617462
+        },
+        "16__walking_down_street_outside_angry.mp4": {
+            "label": 0,
+            "prob": 0.3664429485797882
+        },
+        "16__walking_outside_cafe_disgusted.mp4": {
+            "label": 0,
+            "prob": 0.2114589512348175
+        },
+        "17__exit_phone_room.mp4": {
+            "label": 0,
+            "prob": 0.0032024180982261896
+        },
+        "17__hugging_happy.mp4": {
+            "label": 0,
+            "prob": 0.06996875256299973
+        },
+        "17__kitchen_pan.mp4": {
+            "label": 0,
+            "prob": 0.2557898759841919
+        },
+        "17__kitchen_still.mp4": {
+            "label": 0,
+            "prob": 0.08863623440265656
+        },
+        "17__outside_talking_pan_laughing.mp4": {
+            "label": 0,
+            "prob": 0.06815963238477707
+        },
+        "17__outside_talking_still_laughing.mp4": {
+            "label": 0,
+            "prob": 0.024227308109402657
+        },
+        "17__podium_speech_happy.mp4": {
+            "label": 0,
+            "prob": 0.010987073183059692
+        },
+        "17__talking_against_wall.mp4": {
+            "label": 0,
+            "prob": 0.0033145183697342873
+        },
+        "17__talking_angry_couch.mp4": {
+            "label": 0,
+            "prob": 0.18746283650398254
+        },
+        "17__walk_down_hall_angry.mp4": {
+            "label": 0,
+            "prob": 0.14640125632286072
+        },
+        "17__walking_and_outside_surprised.mp4": {
+            "label": 0,
+            "prob": 0.09935199469327927
+        },
+        "17__walking_down_indoor_hall_disgust.mp4": {
+            "label": 0,
+            "prob": 0.11679746210575104
+        },
+        "17__walking_down_street_outside_angry.mp4": {
+            "label": 0,
+            "prob": 0.008967782370746136
+        },
+        "18__exit_phone_room.mp4": {
+            "label": 0,
+            "prob": 0.013560809195041656
+        },
+        "18__kitchen_pan.mp4": {
+            "label": 0,
+            "prob": 0.6228696703910828
+        },
+        "18__kitchen_still.mp4": {
+            "label": 0,
+            "prob": 0.34480416774749756
+        },
+        "18__outside_talking_pan_laughing.mp4": {
+            "label": 0,
+            "prob": 0.7405655384063721
+        },
+        "18__outside_talking_still_laughing.mp4": {
+            "label": 0,
+            "prob": 0.7891330122947693
+        },
+        "18__podium_speech_happy.mp4": {
+            "label": 0,
+            "prob": 0.13521789014339447
+        },
+        "18__secret_conversation.mp4": {
+            "label": 0,
+            "prob": 0.33019405603408813
+        },
+        "18__talking_against_wall.mp4": {
+            "label": 0,
+            "prob": 0.018936848267912865
+        },
+        "18__walk_down_hall_angry.mp4": {
+            "label": 0,
+            "prob": 0.6264424920082092
+        },
+        "18__walking_down_street_outside_angry.mp4": {
+            "label": 0,
+            "prob": 0.9542210698127747
+        },
+        "18__walking_outside_cafe_disgusted.mp4": {
+            "label": 0,
+            "prob": 0.9073358178138733
+        },
+        "19__exit_phone_room.mp4": {
+            "label": 0,
+            "prob": 0.054051723331213
+        },
+        "19__kitchen_pan.mp4": {
+            "label": 0,
+            "prob": 0.1711646467447281
+        },
+        "19__kitchen_still.mp4": {
+            "label": 0,
+            "prob": 0.10340691357851028
+        },
+        "19__outside_talking_pan_laughing.mp4": {
+            "label": 0,
+            "prob": 0.41708511114120483
+        },
+        "19__outside_talking_still_laughing.mp4": {
+            "label": 0,
+            "prob": 0.7998803853988647
+        },
+        "19__podium_speech_happy.mp4": {
+            "label": 0,
+            "prob": 0.08202406764030457
+        },
+        "19__secret_conversation.mp4": {
+            "label": 0,
+            "prob": 0.12369856983423233
+        },
+        "19__talking_against_wall.mp4": {
+            "label": 0,
+            "prob": 0.004022653680294752
+        },
+        "19__talking_angry_couch.mp4": {
+            "label": 0,
+            "prob": 0.01694909855723381
+        },
+        "19__walk_down_hall_angry.mp4": {
+            "label": 0,
+            "prob": 0.09331556409597397
+        },
+        "19__walking_down_street_outside_angry.mp4": {
+            "label": 0,
+            "prob": 0.9642267823219299
+        },
+        "19__walking_outside_cafe_disgusted.mp4": {
+            "label": 0,
+            "prob": 0.8516971468925476
+        },
+        "20__exit_phone_room.mp4": {
+            "label": 0,
+            "prob": 0.16409562528133392
+        },
+        "20__hugging_happy.mp4": {
+            "label": 0,
+            "prob": 0.9274078607559204
+        },
+        "20__kitchen_pan.mp4": {
+            "label": 0,
+            "prob": 0.26650428771972656
+        },
+        "20__kitchen_still.mp4": {
+            "label": 0,
+            "prob": 0.2694849669933319
+        },
+        "20__outside_talking_pan_laughing.mp4": {
+            "label": 0,
+            "prob": 0.08832430094480515
+        },
+        "20__outside_talking_still_laughing.mp4": {
+            "label": 0,
+            "prob": 0.5794327855110168
+        },
+        "20__podium_speech_happy.mp4": {
+            "label": 0,
+            "prob": 0.18139679729938507
+        },
+        "20__secret_conversation.mp4": {
+            "label": 0,
+            "prob": 0.051451362669467926
+        },
+        "20__talking_against_wall.mp4": {
+            "label": 0,
+            "prob": 0.0072481767274439335
+        },
+        "20__talking_angry_couch.mp4": {
+            "label": 0,
+            "prob": 0.2347268909215927
+        },
+        "20__walk_down_hall_angry.mp4": {
+            "label": 0,
+            "prob": 0.2882183790206909
+        },
+        "20__walking_and_outside_surprised.mp4": {
+            "label": 0,
+            "prob": 0.0996437594294548
+        },
+        "20__walking_down_indoor_hall_disgust.mp4": {
+            "label": 0,
+            "prob": 0.2882673740386963
+        },
+        "20__walking_down_street_outside_angry.mp4": {
+            "label": 0,
+            "prob": 0.10623033344745636
+        },
+        "20__walking_outside_cafe_disgusted.mp4": {
+            "label": 0,
+            "prob": 0.22818797826766968
+        },
+        "21__exit_phone_room.mp4": {
+            "label": 0,
+            "prob": 0.023595208302140236
+        },
+        "21__hugging_happy.mp4": {
+            "label": 0,
+            "prob": 0.007468839641660452
+        },
+        "21__kitchen_pan.mp4": {
+            "label": 0,
+            "prob": 0.0009909311775118113
+        },
+        "21__kitchen_still.mp4": {
+            "label": 0,
+            "prob": 0.000464482611278072
+        },
+        "21__outside_talking_pan_laughing.mp4": {
+            "label": 0,
+            "prob": 0.26919904351234436
+        },
+        "21__outside_talking_still_laughing.mp4": {
+            "label": 0,
+            "prob": 0.3372921943664551
+        },
+        "21__podium_speech_happy.mp4": {
+            "label": 0,
+            "prob": 0.003369253361597657
+        },
+        "21__talking_against_wall.mp4": {
+            "label": 0,
+            "prob": 0.00018681229266803712
+        },
+        "21__talking_angry_couch.mp4": {
+            "label": 0,
+            "prob": 0.016867101192474365
+        },
+        "21__walk_down_hall_angry.mp4": {
+            "label": 0,
+            "prob": 0.4256453514099121
+        },
+        "21__walking_and_outside_surprised.mp4": {
+            "label": 0,
+            "prob": 0.0996437594294548
+        },
+        "21__walking_down_indoor_hall_disgust.mp4": {
+            "label": 0,
+            "prob": 0.2882673740386963
+        },
+        "21__walking_down_street_outside_angry.mp4": {
+            "label": 0,
+            "prob": 0.2453964501619339
+        },
+        "21__walking_outside_cafe_disgusted.mp4": {
+            "label": 0,
+            "prob": 0.07819820195436478
+        },
+        "22__exit_phone_room.mp4": {
+            "label": 0,
+            "prob": 0.06417323648929596
+        },
+        "22__kitchen_pan.mp4": {
+            "label": 0,
+            "prob": 0.23882168531417847
+        },
+        "22__kitchen_still.mp4": {
+            "label": 0,
+            "prob": 0.28541967272758484
+        },
+        "22__outside_talking_pan_laughing.mp4": {
+            "label": 0,
+            "prob": 0.9170166850090027
+        },
+        "22__outside_talking_still_laughing.mp4": {
+            "label": 0,
+            "prob": 0.15513283014297485
+        },
+        "22__podium_speech_happy.mp4": {
+            "label": 0,
+            "prob": 0.888134241104126
+        },
+        "22__secret_conversation.mp4": {
+            "label": 0,
+            "prob": 0.08434975147247314
+        },
+        "22__talking_against_wall.mp4": {
+            "label": 0,
+            "prob": 0.08088009804487228
+        },
+        "22__walk_down_hall_angry.mp4": {
+            "label": 0,
+            "prob": 0.9343910813331604
+        },
+        "22__walking_and_outside_surprised.mp4": {
+            "label": 0,
+            "prob": 0.8582521677017212
+        },
+        "22__walking_down_indoor_hall_disgust.mp4": {
+            "label": 0,
+            "prob": 0.33030134439468384
+        },
+        "22__walking_down_street_outside_angry.mp4": {
+            "label": 0,
+            "prob": 0.6328787803649902
+        },
+        "22__walking_outside_cafe_disgusted.mp4": {
+            "label": 0,
+            "prob": 0.9390673637390137
+        },
+        "23__exit_phone_room.mp4": {
+            "label": 0,
+            "prob": 0.3837592899799347
+        },
+        "23__hugging_happy.mp4": {
+            "label": 0,
+            "prob": 0.772779643535614
+        },
+        "23__kitchen_pan.mp4": {
+            "label": 0,
+            "prob": 0.029165029525756836
+        },
+        "23__kitchen_still.mp4": {
+            "label": 0,
+            "prob": 0.022812126204371452
+        },
+        "23__outside_talking_pan_laughing.mp4": {
+            "label": 0,
+            "prob": 0.5122216939926147
+        },
+        "23__outside_talking_still_laughing.mp4": {
+            "label": 0,
+            "prob": 0.8195034861564636
+        },
+        "23__podium_speech_happy.mp4": {
+            "label": 0,
+            "prob": 0.24676549434661865
+        },
+        "23__secret_conversation.mp4": {
+            "label": 0,
+            "prob": 0.700437605381012
+        },
+        "23__talking_against_wall.mp4": {
+            "label": 0,
+            "prob": 0.012346574105322361
+        },
+        "23__talking_angry_couch.mp4": {
+            "label": 0,
+            "prob": 0.029592370614409447
+        },
+        "23__walk_down_hall_angry.mp4": {
+            "label": 0,
+            "prob": 0.11125027388334274
+        },
+        "23__walking_and_outside_surprised.mp4": {
+            "label": 0,
+            "prob": 0.8582521677017212
+        },
+        "23__walking_down_indoor_hall_disgust.mp4": {
+            "label": 0,
+            "prob": 0.33030134439468384
+        },
+        "23__walking_down_street_outside_angry.mp4": {
+            "label": 0,
+            "prob": 0.6491085886955261
+        },
+        "23__walking_outside_cafe_disgusted.mp4": {
+            "label": 0,
+            "prob": 0.893047034740448
+        },
+        "24__exit_phone_room.mp4": {
+            "label": 0,
+            "prob": 0.5885252952575684
+        },
+        "24__kitchen_pan.mp4": {
+            "label": 0,
+            "prob": 0.3435966670513153
+        },
+        "24__kitchen_still.mp4": {
+            "label": 0,
+            "prob": 0.7068511247634888
+        },
+        "24__outside_talking_pan_laughing.mp4": {
+            "label": 0,
+            "prob": 0.1759146898984909
+        },
+        "24__outside_talking_still_laughing.mp4": {
+            "label": 0,
+            "prob": 0.3453758955001831
+        },
+        "24__podium_speech_happy.mp4": {
+            "label": 0,
+            "prob": 0.01281037274748087
+        },
+        "24__secret_conversation.mp4": {
+            "label": 0,
+            "prob": 0.6536649465560913
+        },
+        "24__talking_against_wall.mp4": {
+            "label": 0,
+            "prob": 0.0003662651579361409
+        },
+        "24__talking_angry_couch.mp4": {
+            "label": 0,
+            "prob": 0.3965032696723938
+        },
+        "24__walk_down_hall_angry.mp4": {
+            "label": 0,
+            "prob": 0.03662370890378952
+        },
+        "24__walking_down_street_outside_angry.mp4": {
+            "label": 0,
+            "prob": 0.5428893566131592
+        },
+        "24__walking_outside_cafe_disgusted.mp4": {
+            "label": 0,
+            "prob": 0.6753286123275757
+        },
+        "25__exit_phone_room.mp4": {
+            "label": 0,
+            "prob": 0.05574028566479683
+        },
+        "25__outside_talking_pan_laughing.mp4": {
+            "label": 0,
+            "prob": 0.36066094040870667
+        },
+        "25__outside_talking_still_laughing.mp4": {
+            "label": 0,
+            "prob": 0.20708687603473663
+        },
+        "25__podium_speech_happy.mp4": {
+            "label": 0,
+            "prob": 0.07139226049184799
+        },
+        "25__secret_conversation.mp4": {
+            "label": 0,
+            "prob": 0.15492688119411469
+        },
+        "25__talking_against_wall.mp4": {
+            "label": 0,
+            "prob": 0.00816432200372219
+        },
+        "25__walk_down_hall_angry.mp4": {
+            "label": 0,
+            "prob": 0.6974762678146362
+        },
+        "25__walking_down_street_outside_angry.mp4": {
+            "label": 0,
+            "prob": 0.008184178732335567
+        },
+        "25__walking_outside_cafe_disgusted.mp4": {
+            "label": 0,
+            "prob": 0.19011077284812927
+        },
+        "26__exit_phone_room.mp4": {
+            "label": 0,
+            "prob": 0.20794525742530823
+        },
+        "26__kitchen_pan.mp4": {
+            "label": 0,
+            "prob": 0.049113817512989044
+        },
+        "26__kitchen_still.mp4": {
+            "label": 0,
+            "prob": 0.09950721263885498
+        },
+        "26__outside_talking_pan_laughing.mp4": {
+            "label": 0,
+            "prob": 0.8168514966964722
+        },
+        "26__outside_talking_still_laughing.mp4": {
+            "label": 0,
+            "prob": 0.44056421518325806
+        },
+        "26__podium_speech_happy.mp4": {
+            "label": 0,
+            "prob": 0.022037191316485405
+        },
+        "26__secret_conversation.mp4": {
+            "label": 0,
+            "prob": 0.4025327265262604
+        },
+        "26__talking_against_wall.mp4": {
+            "label": 0,
+            "prob": 0.013334855437278748
+        },
+        "26__talking_angry_couch.mp4": {
+            "label": 0,
+            "prob": 0.009914475493133068
+        },
+        "26__walk_down_hall_angry.mp4": {
+            "label": 0,
+            "prob": 0.05958627909421921
+        },
+        "26__walking_down_street_outside_angry.mp4": {
+            "label": 0,
+            "prob": 0.31737080216407776
+        },
+        "26__walking_outside_cafe_disgusted.mp4": {
+            "label": 0,
+            "prob": 0.221876323223114
+        },
+        "27__exit_phone_room.mp4": {
+            "label": 0,
+            "prob": 0.07631383836269379
+        },
+        "27__hugging_happy.mp4": {
+            "label": 0,
+            "prob": 0.7134402990341187
+        },
+        "27__kitchen_pan.mp4": {
+            "label": 0,
+            "prob": 0.011616185307502747
+        },
+        "27__kitchen_still.mp4": {
+            "label": 0,
+            "prob": 0.006262924522161484
+        },
+        "27__meeting_serious.mp4": {
+            "label": 0,
+            "prob": 0.4017258882522583
+        },
+        "27__outside_talking_pan_laughing.mp4": {
+            "label": 0,
+            "prob": 0.277964323759079
+        },
+        "27__outside_talking_still_laughing.mp4": {
+            "label": 0,
+            "prob": 0.0539628230035305
+        },
+        "27__podium_speech_happy.mp4": {
+            "label": 0,
+            "prob": 0.027517909184098244
+        },
+        "27__talking_against_wall.mp4": {
+            "label": 0,
+            "prob": 0.0006186523823998868
+        },
+        "27__talking_angry_couch.mp4": {
+            "label": 0,
+            "prob": 0.0008113138028420508
+        },
+        "27__walk_down_hall_angry.mp4": {
+            "label": 0,
+            "prob": 0.0909099206328392
+        },
+        "27__walking_and_outside_surprised.mp4": {
+            "label": 0,
+            "prob": 0.8152353763580322
+        },
+        "27__walking_down_indoor_hall_disgust.mp4": {
+            "label": 0,
+            "prob": 0.033893343061208725
+        },
+        "27__walking_down_street_outside_angry.mp4": {
+            "label": 0,
+            "prob": 0.613163948059082
+        },
+        "27__walking_outside_cafe_disgusted.mp4": {
+            "label": 0,
+            "prob": 0.27182328701019287
+        },
+        "28__exit_phone_room.mp4": {
+            "label": 0,
+            "prob": 0.40625324845314026
+        },
+        "28__kitchen_pan.mp4": {
+            "label": 0,
+            "prob": 0.7089052200317383
+        },
+        "28__kitchen_still.mp4": {
+            "label": 0,
+            "prob": 0.009395817294716835
+        },
+        "28__outside_talking_pan_laughing.mp4": {
+            "label": 0,
+            "prob": 0.41428157687187195
+        },
+        "28__outside_talking_still_laughing.mp4": {
+            "label": 0,
+            "prob": 0.4937458634376526
+        },
+        "28__podium_speech_happy.mp4": {
+            "label": 0,
+            "prob": 0.0582081638276577
+        },
+        "28__secret_conversation.mp4": {
+            "label": 0,
+            "prob": 0.09108299016952515
+        },
+        "28__talking_angry_couch.mp4": {
+            "label": 0,
+            "prob": 0.005366252735257149
+        },
+        "28__walk_down_hall_angry.mp4": {
+            "label": 0,
+            "prob": 0.05688965693116188
+        },
+        "28__walking_down_street_outside_angry.mp4": {
+            "label": 0,
+            "prob": 0.9677606225013733
+        },
+        "28__walking_outside_cafe_disgusted.mp4": {
+            "label": 0,
+            "prob": 0.4993847608566284
+        }
+    }
+}
