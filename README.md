@@ -99,7 +99,7 @@ The entrypoint into training is `main.py`. You'll need to specifiy several comma
 
 ```
 python main.py \
-    --model_name FrameModel --basemodel_name resnet18 --dataset DFDC \
+    --model_name FrameDetector--basemodel_name resnet18 --dataset DFDC \
     --batch-size 128 --segment_count 16 --optimizer Ranger --pretrained imagenet
     --num_workers 12 --dataset_type DeepfakeFaceVideo
 ```
@@ -137,7 +137,13 @@ Results of the evaluation are stored in `results_dir` (default: results).
 
 ## Description of available models
 
-1. `FrameModel` - Baseline detector (e.g. resnet18 with average pooling over the per-frame logits)
-2. `DeepfakeDetector`: Facenet + FrameModel
-3. `ManipulatorDetector`: "In Series"
-TODO: Finish
+1. `Detector` - a base class representing a deepfake detector with the following subclasses:
+    - `FrameDetector`:  Baseline 2D CNN detector (e.g. resnet18 with average pooling over the per-frame logits)
+    - `VideoDetector`:  Baseline 3D CNN detector (e.g. resnet3d18)
+2. Detectors with self-attention: An improvment over the base detectors via the addition of self-attention blocks:
+    - Specify `--model_name FrameDetector` and `--basemodel_name mxresnet18` for a FrameDetector with self attention.
+3. `SeriesManipulatorDetector`:
+    - Unsupervised manipulation is applied to the video before passing through the detector.
+    - Pretrained MagNetDetector Hybrid can be achieved by first loading MagNet and Detector weights before training.
+4. `SharedAttnCaricatureDetector`: Learned self-attention maps are applied to caricature module
+5. `GradCamCaricatureModel` - simply for post-training caricature generation for human perception.
