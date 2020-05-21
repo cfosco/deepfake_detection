@@ -76,7 +76,7 @@ def get_model(
     init_name=None,
     num_classes=2,
 ) -> Union[
-    deepfake_models.FrameDetector,
+    deepfake_models.Detetector,
     deepfake_models.SeriesManipulatorDetector,
     deepfake_models.GradCamCaricatureModel,
 ]:
@@ -88,14 +88,25 @@ def get_model(
             init_name=init_name,
         )
         return deepfake_models.FrameDetector(basemodel)
+    elif model_name == 'VideoDetector':
+        basemodel = get_basemodel(
+            basemodel_name,
+            pretrained=pretrained,
+            num_classes=num_classes,
+            init_name=init_name,
+        )
+        return deepfake_models.VideoDetector(basemodel)
     elif model_name == 'SeriesManipulatorDetector':
         return deepfake_models.SeriesManipulatorDetector(
             manipulator_model=deepfake_models.MagNet(),
             detector_model=get_model(
-                'FrameDetector', basemodel_name, pretrained=pretrained, init_name=init_name
+                'FrameDetector',  # TODO: add option for VideoDetector
+                basemodel_name,
+                pretrained=pretrained,
+                init_name=init_name,
             ),
         )
-    elif model_name == 'CaricatureModel':
+    elif model_name == 'GradCamCaricatureModel':
         return deepfake_models.GradCamCaricatureModel(
             face_model=deepfake_models.FaceModel(),
             fake_model=get_model(
