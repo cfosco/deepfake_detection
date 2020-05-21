@@ -2,6 +2,7 @@ import math
 import sys
 from collections import defaultdict
 from functools import partial
+from typing import Dict, Union
 
 import torch
 import torch.nn as nn
@@ -17,9 +18,15 @@ __all__ = [
     'mxresnet50',
     'mxresnet101',
     'mxresnet152',
+    'samxresnet18',
+    'samxresnet34',
+    'samxresnet50',
+    'samxresnet101',
+    'samxresnet152',
+
 ]
 
-model_urls = {
+model_urls: Dict[str, Dict[str, Union[str, None]]] = {
     'imagenet': defaultdict(
         lambda: None,
         {
@@ -29,7 +36,7 @@ model_urls = {
 }
 
 num_classes = {'imagenet': 1000}
-pretrained_settings = defaultdict(dict)
+pretrained_settings: Dict[str, Dict[str, Dict]] = defaultdict(dict)
 input_sizes = {}
 means = {}
 stds = {}
@@ -120,7 +127,8 @@ def conv1d(
 
 
 class SimpleSelfAttention(nn.Module):
-    # Adapted from SelfAttention layer at https://github.com/fastai/fastai/blob/5c51f9eabf76853a89a9bc5741804d2ed4407e49/fastai/layers.py
+    # Adapted from SelfAttention layer at
+    # https://github.com/fastai/fastai/blob/5c51f9eabf76853a89a9bc5741804d2ed4407e49/fastai/layers.py
     # Inspired by https://arxiv.org/pdf/1805.08318.pdf
 
     def __init__(self, n_in: int, ks=1, sym=False):  # , n_out:int):
@@ -268,9 +276,7 @@ class MXResNetSeq(nn.Sequential):
 
 
 class MXResNet(nn.Module):
-    def __init__(
-        self, expansion, layers, c_in=3, num_classes=1000, sa=True, sym=False
-    ):
+    def __init__(self, expansion, layers, c_in=3, num_classes=1000, sa=False, sym=False):
         super().__init__()
         stem = []
         sizes = [c_in, 32, 64, 64]  # modified per Grankin
@@ -345,3 +351,6 @@ for n, e, l in [
 ]:
     name = f'mxresnet{n}'
     setattr(me, name, partial(mxresnet, expansion=e, n_layers=l, name=name))
+
+    sa_name = f'samxresnet{n}'
+    setattr(me, sa_name, partial(mxresnet, expansion=e, n_layers=l, name=sa_name, sa=True))
