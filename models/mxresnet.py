@@ -5,8 +5,10 @@ from functools import partial
 
 import torch
 import torch.nn as nn
+import torch.nn.functional as F
 from torch.nn import Module
 from torch.nn.utils.spectral_norm import spectral_norm
+from torch.utils import model_zoo
 
 __all__ = [
     'MXResNet',

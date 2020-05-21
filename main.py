@@ -210,7 +210,7 @@ def main_worker(gpu, ngpus_per_node, args):
                     'dataset': args.dataset,
                     'checkpoint_file': args.resume,
                     **vars(args),
-                    'train_args': checkpoint.get('args'),
+                    'train_args': vars(checkpoint.get('args')),
                 },
                 f,
                 indent=4,

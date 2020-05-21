@@ -91,7 +91,7 @@ def test_facenet3D_get_faces(frames3D):
 @pytest.mark.skip
 def test_deepfake_detector(frames3D):
     facenet = models.FaceModel(device=device)
-    detector = models.FrameModel(
+    detector = models.FrameDetector(
         pretorched.resnet18(num_classes=2, pretrained=None), normalize=True
     )
     dfmodel = models.DeepfakeDetector(facenet, detector).to(device)
@@ -102,7 +102,7 @@ def test_deepfake_detector(frames3D):
 def test_manipulate_detector(frames3D_small):
     model = pmodels.resnet18()
     manipulator_detector = models.ManipulatorDetector(
-        manipulator_model=models.MagNet(), detector_model=models.FrameModel(model)
+        manipulator_model=models.MagNet(), detector_model=models.FrameDetector(model)
     ).to(device)
     out = manipulator_detector(frames3D_small)
     print(out.shape)
