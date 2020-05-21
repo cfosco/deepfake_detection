@@ -17,8 +17,8 @@ import models as deepfake_models
 from pretorched import models, optim, utils
 from pretorched.data import samplers, transforms
 from pretorched.metrics import accuracy
+from pretorched.models import utils as mutils
 from pretorched.runners.utils import AverageMeter, ProgressMeter
-
 
 torchvision_model_names = sorted(
     name
@@ -99,6 +99,20 @@ def get_model(
     elif model_name == 'SeriesManipulatorDetector':
         return deepfake_models.SeriesManipulatorDetector(
             manipulator_model=deepfake_models.MagNet(),
+            detector_model=get_model(
+                'FrameDetector',  # TODO: add option for VideoDetector
+                basemodel_name,
+                pretrained=pretrained,
+                init_name=init_name,
+            ),
+        )
+    elif model_name == 'SeriesPretrainedManipulatorDetector':
+        magnet = deepfake_models.MagNet()
+        magnet_ckpt_file = 'models/deep_motion_mag/ckpt/ckpt_e11.pth.tar'
+        magnet_ckpt = torch.load(magnet_ckpt_file, map_location='cpu')
+        magnet.load_state_dict(mutils.remove_prefix(magnet_ckpt['state_dict']))
+        return deepfake_models.SeriesManipulatorDetector(
+            manipulator_model=magnet,
             detector_model=get_model(
                 'FrameDetector',  # TODO: add option for VideoDetector
                 basemodel_name,
