@@ -167,8 +167,8 @@ def get_metadata(name, split='train', dataset_type='DeepfakeFrame',
     blacklist_file = os.path.join(
         data_root, {'DFDC': 'DeepfakeDetection'}.get(name, name), 'test_videos.json') if (
         split == 'train') else None
-    if name == 'DFDC' and split == 'train':
-        blacklist_file = os.path.join(data_root, 'DeepfakeDetection', 'aug_test_videos.json')
+    # if name == 'DFDC' and split == 'train':
+        # blacklist_file = os.path.join(data_root, 'DeepfakeDetection', 'aug_test_videos.json')
     return {'root': root, 'metafile': metafile, 'blacklist_file': blacklist_file}
 
 
