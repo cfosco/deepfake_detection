@@ -105,6 +105,8 @@ def main_worker(gpu, ngpus_per_node, args):
         init_name=args.init,
     )
     input_size = model.input_size[-1]
+    args.normalize = core.do_normalize(model)
+    args.rescale = core.do_rescale(model)
 
     if args.distributed:
         # For multiprocessing distributed, DistributedDataParallel constructor
@@ -194,6 +196,8 @@ def main_worker(gpu, ngpus_per_node, args):
         size=input_size,
         clip_length=args.clip_length,
         frame_step=args.frame_step,
+        normalize=args.normalize,
+        rescale=args.rescale,
     )
     train_loader, val_loader = dataloaders['train'], dataloaders['val']
     train_sampler = train_loader.sampler

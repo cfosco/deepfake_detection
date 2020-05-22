@@ -13,7 +13,7 @@ except ImportError:
 
 def get_transform(name='DFDC', split='train', size=224, resolution=256,
                   mean=[0.485, 0.456, 0.406], std=[0.229, 0.224, 0.225],
-                  normalize=True, degrees=0):
+                  normalize=True, rescale=True, degrees=0):
     norm = transforms.NormalizeVideo(mean=mean, std=std)
     cropping = {
         'train': torchvision.transforms.Compose([
@@ -28,7 +28,7 @@ def get_transform(name='DFDC', split='train', size=224, resolution=256,
     transform = torchvision.transforms.Compose([
         cropping,
         transforms.CollectFrames(),
-        transforms.PILVideoToTensor(),
+        transforms.PILVideoToTensor(rescale=rescale),
         norm if normalize else transforms.IdentityTransform(),
     ])
     return transform

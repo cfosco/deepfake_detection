@@ -1,4 +1,5 @@
 from .base import (
+    AttnFrameDetector,
     DeepfakeDetector,
     Detector,
     FrameDetector,
@@ -17,6 +18,7 @@ __all__ = [
     'Xception',
     'Detector',
     'FrameDetector',
+    'AttnFrameDetector',
     'VideoDetector',
     'FaceModel',
     'DeepfakeDetector',

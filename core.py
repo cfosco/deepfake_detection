@@ -75,6 +75,8 @@ def get_model(
     pretrained: str = 'imagenet',
     init_name: Optional[str] = None,
     num_classes: int = 2,
+    normalize=False,
+    rescale=True,
 ) -> Union[
     deepfake_models.Detector,
     deepfake_models.SeriesManipulatorDetector,
@@ -87,7 +89,9 @@ def get_model(
             num_classes=num_classes,
             init_name=init_name,
         )
-        return deepfake_models.FrameDetector(basemodel)
+        return deepfake_models.FrameDetector(
+            basemodel, normalize=normalize, rescale=rescale
+        )
     elif model_name == 'VideoDetector':
         basemodel = get_basemodel(
             basemodel_name,
@@ -118,6 +122,8 @@ def get_model(
                 basemodel_name,
                 pretrained=pretrained,
                 init_name=init_name,
+                normalize=True,
+                rescale=True,
             ),
         )
     elif model_name == 'PretrainedManipulatorAttnDetector':
@@ -125,7 +131,6 @@ def get_model(
         magnet_ckpt_file = 'models/deep_motion_mag/ckpt/ckpt_e11.pth.tar'
         magnet_ckpt = torch.load(magnet_ckpt_file, map_location='cpu')
         magnet.load_state_dict(mutils.remove_prefix(magnet_ckpt['state_dict']))
-
         return magnet
     elif model_name == 'GradCamCaricatureModel':
         return deepfake_models.GradCamCaricatureModel(
@@ -140,6 +145,10 @@ def get_model(
 
 
 def do_normalize(model):
+    return not isinstance(model, (deepfake_models.SeriesManipulatorDetector))
+
+
+def do_rescale(model):
     return not isinstance(model, (deepfake_models.SeriesManipulatorDetector))
 
 
@@ -220,6 +229,7 @@ def get_dataset(
     record_set_type='DeepfakeSet',
     segment_count=None,
     normalize=True,
+    rescale=True,
     **kwargs,
 ):
 
@@ -238,6 +248,7 @@ def get_dataset(
                     record_set_type=record_set_type,
                     segment_count=segment_count,
                     normalize=normalize,
+                    rescale=rescale,
                     **kwargs,
                 )
                 for n in name
@@ -257,6 +268,7 @@ def get_dataset(
             record_set_type=record_set_type,
             segment_count=segment_count,
             normalize=normalize,
+            rescale=rescale,
             **kwargs,
         )
 
@@ -281,7 +293,9 @@ def get_dataset(
     full_kwargs = {
         'record_set': record_set,
         'sampler': sampler,
-        'transform': data.get_transform(split=split, size=size, normalize=normalize),
+        'transform': data.get_transform(
+            split=split, size=size, normalize=normalize, rescale=rescale
+        ),
         **kwargs,
     }
     dataset_kwargs, _ = utils.split_kwargs_by_func(Dataset, full_kwargs)
@@ -346,6 +360,7 @@ def get_dataloader(
     distributed=False,
     segment_count=None,
     normalize=True,
+    rescale=True,
     **kwargs,
 ):
 
@@ -361,6 +376,7 @@ def get_dataloader(
         sampler_type=sampler_type,
         record_set_type=record_set_type,
         normalize=normalize,
+        rescale=rescale,
         **kwargs,
     )
     loader_sampler = (
@@ -392,6 +408,7 @@ def get_dataloaders(
     drop_last=False,
     splits=['train', 'val'],
     normalize=True,
+    rescale=True,
     **kwargs,
 ):
     if not isinstance(shuffle, list):
@@ -412,6 +429,7 @@ def get_dataloaders(
             drop_last=drop_last,
             distributed=distributed,
             normalize=normalize,
+            rescale=rescale,
             **kwargs,
         )
         for i, split in enumerate(splits)
