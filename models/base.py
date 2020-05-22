@@ -1,5 +1,6 @@
 import torch
 import torch.nn as nn
+from torch.nn import Parameter as P
 
 from pretorched.visualizers import grad_cam
 
@@ -92,6 +93,7 @@ class SeriesManipulatorDetector(torch.nn.Module):
         super().__init__()
         self.manipulator_model = manipulator_model
         self.detector_model = detector_model
+        self.amp_param = P(4 * torch.ones(1, 1, 1, 1))
 
     def manipulate(self, x, amp=None):
         return torch.stack(
@@ -101,12 +103,10 @@ class SeriesManipulatorDetector(torch.nn.Module):
     def forward(self, x):
         # x: [bs, 3, D, H, W]
         x = x / 127.5 - 1.0
-        o = self.manipulate(x)
+        o = self.manipulate(x, amp=self.amp_param)
         o = o - o.min()
         o = o / o.max()
         o = o * 255
-        # o = torch.clamp(o, -1.0, 1.0)
-        # o = (o + 1.0) * 127.5
         o = self.detector_model(o)
         return o
 
