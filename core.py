@@ -128,7 +128,7 @@ def get_model(
         )
     elif model_name == 'SeriesPretrainedSmallManipulatorDetector':
         magnet = deepfake_models.MagNet(num_resblk_enc=3, num_resblk_man=1, num_resblk_dec=3)
-        magnet_ckpt_file = 'models/deep_motion_mag/ckpt/ckpt_3_1_3_e12.pth.tar'
+        magnet_ckpt_file = 'models/deep_motion_mag/ckpt/ckpt_3_1_3_12.pth.tar'
         magnet_ckpt = torch.load(magnet_ckpt_file, map_location='cpu')
         magnet.load_state_dict(mutils.remove_prefix(magnet_ckpt['state_dict']))
         return deepfake_models.SeriesManipulatorDetector(

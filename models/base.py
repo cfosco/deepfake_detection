@@ -102,8 +102,11 @@ class SeriesManipulatorDetector(torch.nn.Module):
         # x: [bs, 3, D, H, W]
         x = x / 127.5 - 1.0
         o = self.manipulate(x)
-        o = torch.clamp(o, -1.0, 1.0)
-        o = (o + 1.0) * 127.5
+        o -= o.min()
+        o /= o.max()
+        o *= 255
+        # o = torch.clamp(o, -1.0, 1.0)
+        # o = (o + 1.0) * 127.5
         o = self.detector_model(o)
         return o
 
