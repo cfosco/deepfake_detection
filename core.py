@@ -1,7 +1,7 @@
 import functools
 import time
 from operator import add
-from typing import Union
+from typing import Union, Optional
 
 import torch
 import torch.nn as nn
@@ -70,11 +70,11 @@ def init_weights(model, init_name='ortho'):
 
 
 def get_model(
-    model_name,
-    basemodel_name='resnet18',
-    pretrained='imagenet',
-    init_name=None,
-    num_classes=2,
+    model_name: str,
+    basemodel_name: str = 'resnet18',
+    pretrained: str = 'imagenet',
+    init_name: Optional[str] = None,
+    num_classes: int = 2,
 ) -> Union[
     deepfake_models.Detector,
     deepfake_models.SeriesManipulatorDetector,
@@ -120,6 +120,13 @@ def get_model(
                 init_name=init_name,
             ),
         )
+    elif model_name == 'PretrainedManipulatorAttnDetector':
+        magnet = deepfake_models.MagNet()
+        magnet_ckpt_file = 'models/deep_motion_mag/ckpt/ckpt_e11.pth.tar'
+        magnet_ckpt = torch.load(magnet_ckpt_file, map_location='cpu')
+        magnet.load_state_dict(mutils.remove_prefix(magnet_ckpt['state_dict']))
+
+        return magnet
     elif model_name == 'GradCamCaricatureModel':
         return deepfake_models.GradCamCaricatureModel(
             face_model=deepfake_models.FaceModel(),
@@ -132,10 +139,18 @@ def get_model(
         raise ValueError(f'Unreconized model type {model_name}')
 
 
+def do_normalize(model):
+    return not isinstance(model, (deepfake_models.SeriesManipulatorDetector))
+
+
 def get_basemodel(
-    model_name, num_classes=2, pretrained='imagenet', init_name=None, **kwargs
+    model_name: str,
+    num_classes: int = 2,
+    pretrained: str = 'imagenet',
+    init_name: Optional[str] = None,
+    **kwargs,
 ):
-    if model_name in ['mxresnet18', 'mxresnet50']:
+    if model_name in ['mxresnet18', 'mxresnet50', 'samxresnet18', 'samxresnet50']:
         model_func = getattr(deepfake_models, model_name)
     else:
         model_func = getattr(models, model_name)
@@ -204,6 +219,7 @@ def get_dataset(
     sampler_type='TemporalSegmentSampler',
     record_set_type='DeepfakeSet',
     segment_count=None,
+    normalize=True,
     **kwargs,
 ):
 
@@ -221,6 +237,7 @@ def get_dataset(
                     sampler_type=sampler_type,
                     record_set_type=record_set_type,
                     segment_count=segment_count,
+                    normalize=normalize,
                     **kwargs,
                 )
                 for n in name
@@ -239,6 +256,7 @@ def get_dataset(
             sampler_type=sampler_type,
             record_set_type=record_set_type,
             segment_count=segment_count,
+            normalize=normalize,
             **kwargs,
         )
 
@@ -263,7 +281,7 @@ def get_dataset(
     full_kwargs = {
         'record_set': record_set,
         'sampler': sampler,
-        'transform': data.get_transform(split=split, size=size),
+        'transform': data.get_transform(split=split, size=size, normalize=normalize),
         **kwargs,
     }
     dataset_kwargs, _ = utils.split_kwargs_by_func(Dataset, full_kwargs)
@@ -327,6 +345,7 @@ def get_dataloader(
     drop_last=False,
     distributed=False,
     segment_count=None,
+    normalize=True,
     **kwargs,
 ):
 
@@ -341,6 +360,7 @@ def get_dataloader(
         dataset_type=dataset_type,
         sampler_type=sampler_type,
         record_set_type=record_set_type,
+        normalize=normalize,
         **kwargs,
     )
     loader_sampler = (
@@ -371,6 +391,7 @@ def get_dataloaders(
     pin_memory=True,
     drop_last=False,
     splits=['train', 'val'],
+    normalize=True,
     **kwargs,
 ):
     if not isinstance(shuffle, list):
@@ -390,6 +411,7 @@ def get_dataloaders(
             pin_memory=pin_memory,
             drop_last=drop_last,
             distributed=distributed,
+            normalize=normalize,
             **kwargs,
         )
         for i, split in enumerate(splits)

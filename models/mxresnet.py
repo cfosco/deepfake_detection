@@ -11,7 +11,7 @@ from torch.nn import Module
 from torch.nn.utils.spectral_norm import spectral_norm
 from torch.utils import model_zoo
 
-__all__ = [
+__all__ = [  # noqa
     'MXResNet',
     'mxresnet18',
     'mxresnet34',
