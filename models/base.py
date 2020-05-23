@@ -52,8 +52,10 @@ class AttnFrameDetector(FrameDetector):
         # sa_input = self.fhooks._feature_outputs[torch.device('cuda', index=0)][key
         # 'features.4.1.sa'
         # ]
+
         if key is not None:
-            sa_input = self.fhooks.get_output(next(self.model.parameters()).device)[key]
+            base_key = list(self.fhooks._feature_outputs.keys())[0]
+            sa_input = self.fhooks.get_output(base_key)[0]
             # Compute attention map here
             size = sa_input.size()
             sa_input = sa_input.view(*size[:2], -1)
@@ -142,16 +144,23 @@ class ResManipulatorDetector(torch.nn.Module):
         return self.detector_model.input_size
 
 
-class ResManipulatorDetectorAttn(torch.nn.Module):
+class ResManipulatorAttnDetector(torch.nn.Module):
     def __init__(self, manipulator_model, detector_model):
         super().__init__()
         self.manipulator_model = manipulator_model
         self.detector_model = detector_model
         self.amp_param = P(4 * torch.ones(1, 1, 1, 1))
 
-    def manipulate(self, x, amp=None):
+    def manipulate(self, x, amp=None, attn_map=None):
+        if attn_map is None:
+            attn_map = [None] * x.size(0)
         return torch.stack(
-            [self.manipulator_model.manipulate(f.transpose(0, 1), amp=amp) for f in x]
+            [
+                self.manipulator_model.manipulate(
+                    f.transpose(0, 1), amp=amp, attn_map=a
+                )
+                for f, a in zip(x, attn_map)
+            ]
         ).transpose(1, 2)
 
     def forward(self, x):
@@ -211,6 +220,7 @@ class GradCamCaricatureModel(torch.nn.Module):
         return faces, norm_faces
 
     def forward(self, x, extract_face=False):
+        # NOTE: Use models/deep_motion_mag/test_caricature.py for now...
         if extract_face:
             faces, norm_faces = self.face_forward(x)
         else:

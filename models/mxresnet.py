@@ -23,7 +23,6 @@ __all__ = [  # noqa
     'samxresnet50',
     'samxresnet101',
     'samxresnet152',
-
 ]
 
 model_urls: Dict[str, Dict[str, Union[str, None]]] = {
@@ -276,7 +275,9 @@ class MXResNetSeq(nn.Sequential):
 
 
 class MXResNet(nn.Module):
-    def __init__(self, expansion, layers, c_in=3, num_classes=1000, sa=False, sym=False):
+    def __init__(
+        self, expansion, layers, c_in=3, num_classes=1000, sa=False, sym=False
+    ):
         super().__init__()
         stem = []
         sizes = [c_in, 32, 64, 64]  # modified per Grankin
@@ -326,6 +327,19 @@ class MXResNet(nn.Module):
         x = self.logits(x)
         return x
 
+    @property
+    def last_linear(self):
+        return self._last_linear
+
+    @last_linear.setter
+    def last_linear(self, value):
+        self._last_linear = value
+        self.logits = nn.Sequential(
+            nn.AdaptiveAvgPool2d(1), nn.Flatten(), self._last_linear
+        )
+
+
+
 
 def mxresnet(
     expansion, n_layers, name, num_classes=1000, pretrained='imagenet', **kwargs
@@ -353,4 +367,7 @@ for n, e, l in [
     setattr(me, name, partial(mxresnet, expansion=e, n_layers=l, name=name))
 
     sa_name = f'samxresnet{n}'
-    setattr(me, sa_name, partial(mxresnet, expansion=e, n_layers=l, name=sa_name, sa=True))
+    setattr(
+        me, sa_name, partial(mxresnet, expansion=e, n_layers=l, name=sa_name, sa=True)
+    )
+

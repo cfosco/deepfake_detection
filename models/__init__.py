@@ -6,6 +6,7 @@ from .base import (
     GradCamCaricatureModel,
     SeriesManipulatorDetector,
     ResManipulatorDetector,
+    ResManipulatorAttnDetector,
     VideoDetector,
 )
 from .deep_motion_mag.network import MagNet, Manipulator
@@ -31,6 +32,7 @@ __all__ = [
     'GradCamCaricatureModel',
     'mxresnet18',
     'ResManipulatorDetector',
+    'ResManipulatorAttnDetector',
     'mxresnet50',
     'mxresnet18',
     'MXResNet',
