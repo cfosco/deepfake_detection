@@ -50,7 +50,7 @@ class AttnFrameDetector(FrameDetector):
 
     def get_attn(self, key='features.4.1.sa'):
         # sa_input = self.fhooks._feature_outputs[torch.device('cuda', index=0)][key
-            # 'features.4.1.sa'
+        # 'features.4.1.sa'
         # ]
         if key is not None:
             sa_input = self.fhooks.get_output(next(self.model.parameters()).device)[key]
@@ -108,6 +108,33 @@ class SeriesManipulatorDetector(torch.nn.Module):
         o = o / o.max()
         o = o * 255
         o = self.detector_model(o)
+        return o
+
+    @property
+    def input_size(self):
+        return self.detector_model.input_size
+
+
+class ResManipulatorDetector(torch.nn.Module):
+    def __init__(self, manipulator_model, detector_model):
+        super().__init__()
+        self.manipulator_model = manipulator_model
+        self.detector_model = detector_model
+        self.amp_param = P(4 * torch.ones(1, 1, 1, 1))
+
+    def manipulate(self, x, amp=None):
+        return torch.stack(
+            [self.manipulator_model.manipulate(f.transpose(0, 1), amp=amp) for f in x]
+        ).transpose(1, 2)
+
+    def forward(self, x):
+        # x: [bs, 3, D, H, W]
+        o = x / 127.5 - 1.0
+        o = self.manipulate(o, amp=self.amp_param)
+        o = o - o.min()
+        o = o / o.max()
+        o = o * 255
+        o = self.detector_model(o) + self.detector_model(x)
         return o
 
     @property
