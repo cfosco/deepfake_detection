@@ -1,3 +1,4 @@
+import os
 import functools
 import time
 from operator import add
@@ -30,6 +31,8 @@ torchvision_model_names = sorted(
 torchvision_model_names.extend(['xception'])
 
 torchvision_model_names.extend(['xception', 'mxresnet18', 'mxresnet50'])
+
+dir_path = os.path.dirpath(os.path.realpath(__file__))
 
 
 def get_optimizer(model, optimizer_name='SGD', lr=0.001, **kwargs):
@@ -113,7 +116,7 @@ def get_model(
         )
     elif model_name == 'SeriesPretrainedManipulatorDetector':
         magnet = deepfake_models.MagNet()
-        magnet_ckpt_file = 'models/deep_motion_mag/ckpt/ckpt_e11.pth.tar'
+        magnet_ckpt_file = os.path.join(dir_path, 'models/deep_motion_mag/ckpt/ckpt_e11.pth.tar')
         magnet_ckpt = torch.load(magnet_ckpt_file, map_location='cpu')
         magnet.load_state_dict(mutils.remove_prefix(magnet_ckpt['state_dict']))
         return deepfake_models.SeriesManipulatorDetector(
@@ -129,7 +132,7 @@ def get_model(
         )
     elif model_name == 'SeriesPretrainedFrozenManipulatorDetector':
         magnet = deepfake_models.MagNet()
-        magnet_ckpt_file = 'models/deep_motion_mag/ckpt/ckpt_e11.pth.tar'
+        magnet_ckpt_file = os.path.join(dir_path, 'models/deep_motion_mag/ckpt/ckpt_e11.pth.tar')
         magnet_ckpt = torch.load(magnet_ckpt_file, map_location='cpu')
         magnet.load_state_dict(mutils.remove_prefix(magnet_ckpt['state_dict']))
         for p in magnet.parameters():
@@ -148,7 +151,7 @@ def get_model(
         )
     elif model_name == 'ResPretrainedManipulatorDetector':
         magnet = deepfake_models.MagNet()
-        magnet_ckpt_file = 'models/deep_motion_mag/ckpt/ckpt_e11.pth.tar'
+        magnet_ckpt_file = os.path.join(dir_path, 'models/deep_motion_mag/ckpt/ckpt_e11.pth.tar')
         magnet_ckpt = torch.load(magnet_ckpt_file, map_location='cpu')
         magnet.load_state_dict(mutils.remove_prefix(magnet_ckpt['state_dict']))
         return deepfake_models.ResManipulatorDetector(
@@ -166,7 +169,7 @@ def get_model(
         magnet = deepfake_models.MagNet(
             num_resblk_enc=3, num_resblk_man=1, num_resblk_dec=3
         )
-        magnet_ckpt_file = 'models/deep_motion_mag/ckpt/ckpt_3_1_3_22.pth.tar'
+        magnet_ckpt_file = os.path.join(dir_path, 'models/deep_motion_mag/ckpt/ckpt_3_1_3_22.pth.tar')
         magnet_ckpt = torch.load(magnet_ckpt_file, map_location='cpu')
         magnet.load_state_dict(mutils.remove_prefix(magnet_ckpt['state_dict']))
         return deepfake_models.SeriesManipulatorDetector(
@@ -182,7 +185,7 @@ def get_model(
         )
     elif model_name == 'PretrainedManipulatorAttnDetector':
         magnet = deepfake_models.MagNet()
-        magnet_ckpt_file = 'models/deep_motion_mag/ckpt/ckpt_e11.pth.tar'
+        magnet_ckpt_file = os.path.join(dir_path, 'models/deep_motion_mag/ckpt/ckpt_e11.pth.tar')
         magnet_ckpt = torch.load(magnet_ckpt_file, map_location='cpu')
         magnet.load_state_dict(mutils.remove_prefix(magnet_ckpt['state_dict']))
         # TODO: FINISH
