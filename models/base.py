@@ -142,6 +142,36 @@ class ResManipulatorDetector(torch.nn.Module):
         return self.detector_model.input_size
 
 
+class ResManipulatorDetectorAttn(torch.nn.Module):
+    def __init__(self, manipulator_model, detector_model):
+        super().__init__()
+        self.manipulator_model = manipulator_model
+        self.detector_model = detector_model
+        self.amp_param = P(4 * torch.ones(1, 1, 1, 1))
+
+    def manipulate(self, x, amp=None):
+        return torch.stack(
+            [self.manipulator_model.manipulate(f.transpose(0, 1), amp=amp) for f in x]
+        ).transpose(1, 2)
+
+    def forward(self, x):
+        # x: [bs, 3, D, H, W]
+        out = self.detector_model(x)
+        attn_map = self.detector_model.get_attn()
+
+        o = x / 127.5 - 1.0
+        o = self.manipulate(o, amp=self.amp_param, attn_map=attn_map)
+        o = o - o.min()
+        o = o / o.max()
+        o = o * 255
+        o = self.detector_model(o) + out
+        return o
+
+    @property
+    def input_size(self):
+        return self.detector_model.input_size
+
+
 class SharedEncoder(torch.nn.Module):
     def __init__(
         self, detector: Detector, distorter: Distorter,

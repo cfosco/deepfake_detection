@@ -20,6 +20,13 @@ TODO: (README) Finish installation instractions
   - lintel
   - pretorched (`dev` branch)
 
+  ```
+git clone https://github.com/alexandonian/torchvideo.git && cd torchvideo && pip install -e . && cd ..
+git clone https://github.com/alexandonian/lintel.git && cd lintel && pip install -e . && cd ..
+git clone https://github.com/alexandonian/FileLock.git && cd FileLock && pip install -e . && cd ..
+git clone https://github.com/alexandonian/pretorched-x.git && cd pretorched-x && pip install -e . && git checkout dev && cd ..
+  ```
+
 TODO: (README) Finish writing instructions.
 </details>
 
