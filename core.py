@@ -32,7 +32,7 @@ torchvision_model_names.extend(['xception'])
 
 torchvision_model_names.extend(['xception', 'mxresnet18', 'mxresnet50'])
 
-dir_path = os.path.dirpath(os.path.realpath(__file__))
+dir_path = os.path.dirname(os.path.realpath(__file__))
 
 
 def get_optimizer(model, optimizer_name='SGD', lr=0.001, **kwargs):
