@@ -76,7 +76,7 @@ def get_model(
     init_name=None,
     num_classes=2,
 ) -> Union[
-    deepfake_models.Detetector,
+    deepfake_models.Detector,
     deepfake_models.SeriesManipulatorDetector,
     deepfake_models.GradCamCaricatureModel,
 ]:
