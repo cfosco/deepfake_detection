@@ -100,10 +100,18 @@ The entrypoint into training is `main.py`. You'll need to specifiy several comma
 ```
 python main.py \
     --model_name FrameDetector--basemodel_name resnet18 --dataset DFDC \
-    --batch-size 128 --segment_count 16 --optimizer Ranger --pretrained imagenet
+    --batch-size 128 --segment_count 16 --optimizer Ranger --pretrained imagenet \
     --num_workers 12 --dataset_type DeepfakeFaceVideo
 ```
 Checkpoints are stored in `weights_dir` (default: weights) and logs in `logs_dir` (default: logs)
+
+SeriesManipulator:
+```
+python main.py \
+    --model_name PretrainedSeriesManipulator --basemodel_name resnet18 --dataset DFDC \
+    --batch-size 16 --segment_count 16 --optimizer Ranger --pretrained imagenet \
+    --num_workers 12 --dataset_type DeepfakeFaceVideo
+```
 
 ## Evaluation
 
