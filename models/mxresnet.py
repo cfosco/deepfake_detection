@@ -29,8 +29,8 @@ model_urls: Dict[str, Dict[str, Union[str, None]]] = {
     'imagenet': defaultdict(
         lambda: None,
         {
-            'mxresnet18': 'http://pretorched-x.csail.mit.edu/models/mxresnet18_imagenet-47250e15.pth',
-            'samxresnet18': 'http://pretorched-x.csail.mit.edu/models/samxresnet18_imagenet-d847cdd7.pth',
+            'mxresnet18': 'http://pretorched-x.csail.mit.edu/models/mxresnet18_imagenet-c7af5e38.pth',
+            'samxresnet18': 'http://pretorched-x.csail.mit.edu/models/samxresnet18_imagenet-0e56b40a.pth',
         },
     )
 }
@@ -298,13 +298,11 @@ class MXResNet(nn.Module):
             )
             for i, l in enumerate(layers)
         ]
-        self.last_linear = nn.Linear(block_szs[-1] * expansion, num_classes)
         self.features = nn.Sequential(
             *stem, nn.MaxPool2d(kernel_size=3, stride=2, padding=1), *blocks
         )
-        self.logits = nn.Sequential(
-            nn.AdaptiveAvgPool2d(1), nn.Flatten(), self.last_linear
-        )
+        self.logits = nn.Sequential(nn.AdaptiveAvgPool2d(1), nn.Flatten())
+        self.last_linear = nn.Linear(block_szs[-1] * expansion, num_classes)
 
         init_cnn(self)
 
@@ -326,20 +324,8 @@ class MXResNet(nn.Module):
     def forward(self, x):
         x = self.features(x)
         x = self.logits(x)
+        x = self.last_linear(x)
         return x
-
-    @property
-    def last_linear(self):
-        return self._last_linear
-
-    @last_linear.setter
-    def last_linear(self, value):
-        self._last_linear = value
-        self.logits = nn.Sequential(
-            nn.AdaptiveAvgPool2d(1), nn.Flatten(), self._last_linear
-        )
-
-
 
 
 def mxresnet(

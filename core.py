@@ -289,8 +289,6 @@ def get_basemodel(
                 print(f'Re-initializing last_linear of {model_name} with {init_name}.')
                 last_linear = init_weights(last_linear, init_name)
             model.last_linear = last_linear
-            if model_name in ['mxresnet18', 'mxresnet50', 'samxresnet18', 'samxresnet50']:
-                model.logits[2] = last_linear
     else:
         model = model_func(num_classes=num_classes, pretrained=pretrained, **kwargs)
         if init_name is not None:
