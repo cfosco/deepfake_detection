@@ -29,7 +29,8 @@ model_urls: Dict[str, Dict[str, Union[str, None]]] = {
     'imagenet': defaultdict(
         lambda: None,
         {
-            'mxresnet18': 'http://pretorched-x.csail.mit.edu/models/mxresnet18_imagenet-47250e15.pth'
+            'mxresnet18': 'http://pretorched-x.csail.mit.edu/models/mxresnet18_imagenet-47250e15.pth',
+            'samxresnet18': 'http://pretorched-x.csail.mit.edu/models/samxresnet18_imagenet-d847cdd7.pth',
         },
     )
 }
