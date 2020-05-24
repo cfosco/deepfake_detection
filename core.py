@@ -97,6 +97,7 @@ def get_model(
         return deepfake_models.FrameDetector(
             basemodel, normalize=normalize, rescale=rescale
         )
+
     elif model_name == 'AttnFrameDetector':
         basemodel = get_basemodel(
             basemodel_name,
@@ -107,6 +108,7 @@ def get_model(
         return deepfake_models.AttnFrameDetector(
             basemodel, normalize=normalize, rescale=rescale
         )
+
     elif model_name == 'VideoDetector':
         basemodel = get_basemodel(
             basemodel_name,
@@ -115,6 +117,7 @@ def get_model(
             init_name=init_name,
         )
         return deepfake_models.VideoDetector(basemodel)
+
     elif model_name == 'SeriesManipulatorDetector':
         return deepfake_models.SeriesManipulatorDetector(
             manipulator_model=deepfake_models.MagNet(),
@@ -125,6 +128,7 @@ def get_model(
                 init_name=init_name,
             ),
         )
+
     elif model_name == 'SeriesPretrainedManipulatorDetector':
         magnet = deepfake_models.MagNet()
         magnet_ckpt_file = os.path.join(
@@ -143,6 +147,7 @@ def get_model(
                 rescale=True,
             ),
         )
+
     elif model_name == 'SeriesPretrainedFrozenManipulatorDetector':
         magnet = deepfake_models.MagNet()
         magnet_ckpt_file = os.path.join(
@@ -164,24 +169,7 @@ def get_model(
                 rescale=True,
             ),
         )
-    elif model_name == 'ResPretrainedManipulatorDetector':
-        magnet = deepfake_models.MagNet()
-        magnet_ckpt_file = os.path.join(
-            dir_path, 'models/deep_motion_mag/ckpt/ckpt_e11.pth.tar'
-        )
-        magnet_ckpt = torch.load(magnet_ckpt_file, map_location='cpu')
-        magnet.load_state_dict(mutils.remove_prefix(magnet_ckpt['state_dict']))
-        return deepfake_models.ResManipulatorDetector(
-            manipulator_model=magnet,
-            detector_model=get_model(
-                'FrameDetector',  # TODO: add option for VideoDetector
-                basemodel_name,
-                pretrained=pretrained,
-                init_name=init_name,
-                normalize=True,
-                rescale=True,
-            ),
-        )
+
     elif model_name == 'SeriesPretrainedSmallManipulatorDetector':
         magnet = deepfake_models.MagNet(
             num_resblk_enc=3, num_resblk_man=1, num_resblk_dec=3
@@ -202,9 +190,96 @@ def get_model(
                 rescale=True,
             ),
         )
-    elif model_name == 'ResPretrainedSmallManipulatorDetector':
+
+    elif model_name == 'SeriesPretrainedFrozenSmallManipulatorDetector':
         magnet = deepfake_models.MagNet(
             num_resblk_enc=3, num_resblk_man=1, num_resblk_dec=3
+        )
+        magnet_ckpt_file = os.path.join(
+            dir_path, 'models/deep_motion_mag/ckpt/ckpt_3_1_3_22.pth.tar'
+        )
+        magnet_ckpt = torch.load(magnet_ckpt_file, map_location='cpu')
+        magnet.load_state_dict(mutils.remove_prefix(magnet_ckpt['state_dict']))
+        for p in magnet.parameters():
+            p.requires_grad = False
+        return deepfake_models.SeriesManipulatorDetector(
+            manipulator_model=magnet,
+            detector_model=get_model(
+                'FrameDetector',  # TODO: add option for VideoDetector
+                basemodel_name,
+                pretrained=pretrained,
+                init_name=init_name,
+                normalize=True,
+                rescale=True,
+            ),
+        )
+
+    elif model_name == 'SeriesPretrainedMediumManipulatorDetector':
+        magnet = deepfake_models.MagNet(
+            num_resblk_enc=3, num_resblk_man=1, num_resblk_dec=6
+        )
+        magnet_ckpt_file = os.path.join(
+            dir_path, 'models/deep_motion_mag/ckpt/ckpt_3_1_6_22.pth.tar'
+        )
+        magnet_ckpt = torch.load(magnet_ckpt_file, map_location='cpu')
+        magnet.load_state_dict(mutils.remove_prefix(magnet_ckpt['state_dict']))
+        return deepfake_models.SeriesManipulatorDetector(
+            manipulator_model=magnet,
+            detector_model=get_model(
+                'FrameDetector',  # TODO: add option for VideoDetector
+                basemodel_name,
+                pretrained=pretrained,
+                init_name=init_name,
+                normalize=True,
+                rescale=True,
+            ),
+        )
+
+    elif model_name == 'SeriesPretrainedFrozenMediumManipulatorDetector':
+        magnet = deepfake_models.MagNet(
+            num_resblk_enc=3, num_resblk_man=1, num_resblk_dec=6
+        )
+        magnet_ckpt_file = os.path.join(
+            dir_path, 'models/deep_motion_mag/ckpt/ckpt_3_1_6_22.pth.tar'
+        )
+        magnet_ckpt = torch.load(magnet_ckpt_file, map_location='cpu')
+        magnet.load_state_dict(mutils.remove_prefix(magnet_ckpt['state_dict']))
+        for p in magnet.parameters():
+            p.requires_grad = False
+        return deepfake_models.SeriesManipulatorDetector(
+            manipulator_model=magnet,
+            detector_model=get_model(
+                'FrameDetector',  # TODO: add option for VideoDetector
+                basemodel_name,
+                pretrained=pretrained,
+                init_name=init_name,
+                normalize=True,
+                rescale=True,
+            ),
+        )
+
+    elif model_name == 'ResPretrainedManipulatorDetector':
+        magnet = deepfake_models.MagNet()
+        magnet_ckpt_file = os.path.join(
+            dir_path, 'models/deep_motion_mag/ckpt/ckpt_e11.pth.tar'
+        )
+        magnet_ckpt = torch.load(magnet_ckpt_file, map_location='cpu')
+        magnet.load_state_dict(mutils.remove_prefix(magnet_ckpt['state_dict']))
+        return deepfake_models.ResManipulatorDetector(
+            manipulator_model=magnet,
+            detector_model=get_model(
+                'FrameDetector',  # TODO: add option for VideoDetector
+                basemodel_name,
+                pretrained=pretrained,
+                init_name=init_name,
+                normalize=True,
+                rescale=True,
+            ),
+        )
+
+    elif model_name == 'ResPretrainedSmallManipulatorDetector':
+        magnet = deepfake_models.MagNet(
+            num_resblk_enc=3, num_resblk_man=1, num_resblk_dec=1
         )
         magnet_ckpt_file = os.path.join(
             dir_path, 'models/deep_motion_mag/ckpt/ckpt_3_1_3_22.pth.tar'
@@ -222,6 +297,7 @@ def get_model(
                 rescale=True,
             ),
         )
+
     elif model_name == 'ResPretrainedManipulatorAttnDetector':
         magnet = deepfake_models.MagNet()
         magnet_ckpt_file = os.path.join(
@@ -233,8 +309,6 @@ def get_model(
             print(f'Warning: {basemodel_name} does not support attention')
             print(f'Switching basemodel to samxresnet18...')
             basemodel_name = 'samxresnet18'
-            # TODO: make sure last linear gets updated correctly (dim 1000 -> 2)
-
         return deepfake_models.ResManipulatorAttnDetector(
             manipulator_model=magnet,
             detector_model=get_model(
@@ -246,6 +320,7 @@ def get_model(
                 rescale=True,
             ),
         )
+
     elif model_name == 'GradCamCaricatureModel':
         return deepfake_models.GradCamCaricatureModel(
             face_model=deepfake_models.FaceModel(),
