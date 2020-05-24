@@ -204,7 +204,7 @@ def get_model(
         )
     elif model_name == 'ResPretrainedSmallManipulatorDetector':
         magnet = deepfake_models.MagNet(
-            num_resblk_enc=3, num_resblk_man=1, num_resblk_dec=1
+            num_resblk_enc=3, num_resblk_man=1, num_resblk_dec=3
         )
         magnet_ckpt_file = os.path.join(
             dir_path, 'models/deep_motion_mag/ckpt/ckpt_3_1_3_22.pth.tar'
