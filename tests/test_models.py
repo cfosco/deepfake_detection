@@ -144,8 +144,15 @@ def test_attn_detector(frames3D_small):
     from pretorched.models.utils import profile
     model = models.AttnFrameDetector(model=core.get_basemodel('samxresnet18'))
     model = model.to(device)
-    out = profile(model, (frames3D_small,))
+    out = model(frames3D_small)
     attn = model.get_attn()
     print(attn.shape)
     print(model.fhooks)
     print(out)
+
+
+def test_ResManipulatorAttnDetector(frames3D_small):
+    model = core.get_model('ResPretrainedManipulatorAttnDetector')
+    model = model.to(device)
+    out = model(frames3D_small)
+    print(out.shape)
