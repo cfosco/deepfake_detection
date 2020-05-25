@@ -357,4 +357,3 @@ for n, e, l in [
     setattr(
         me, sa_name, partial(mxresnet, expansion=e, n_layers=l, name=sa_name, sa=True)
     )
-
