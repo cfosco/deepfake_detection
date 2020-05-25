@@ -138,15 +138,14 @@ def test_smooth_attn():
     from models.base import smooth_attn
     attn_maps = torch.randn(16, 8, 8)
     smoothed = smooth_attn(attn_maps)
+    print(smoothed.shape)
 
 
 def test_attn_detector(frames3D_small):
-    from pretorched.models.utils import profile
     model = models.AttnFrameDetector(model=core.get_basemodel('samxresnet18'))
     model = model.to(device)
-    out = model(frames3D_small)
-    attn = model.get_attn()
-    print(attn.shape)
+    out, attn_map = model(frames3D_small)
+    print(attn_map.shape)
     print(model.fhooks)
     print(out)
 

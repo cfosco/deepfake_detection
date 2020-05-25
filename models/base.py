@@ -46,7 +46,14 @@ class AttnFrameDetector(FrameDetector):
     def forward(self, x):
         x = self.norm(x)
         x = x.permute(2, 0, 1, 3, 4)
-        return self.consensus_func(torch.stack([self.model(f) for f in x]), dim=0)
+        outputs = []
+        attn_maps = []
+        for f in x:
+            outputs.append(self.model(f))
+            attn_maps.append(self.get_attn())
+        output = self.consensus_func(torch.stack(outputs), dim=0)
+        attn_maps = torch.stack(attn_maps, dim=1)
+        return output, attn_maps
 
     def get_attn(self, key='features.4.1.sa'):
         # sa_input = self.fhooks._feature_outputs[torch.device('cuda', index=0)][key
@@ -165,8 +172,7 @@ class ResManipulatorAttnDetector(torch.nn.Module):
 
     def forward(self, x):
         # x: [bs, 3, D, H, W]
-        out = self.detector_model(x)
-        attn_map = self.detector_model.get_attn()
+        out, attn_map = self.detector_model(x)
 
         o = x / 127.5 - 1.0
         o = self.manipulate(o, amp=self.amp_param, attn_map=attn_map)
