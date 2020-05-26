@@ -157,3 +157,7 @@ TODO
 *.lock
 data/gan_dataset.py
 dist/results
+
+classification/faceforensics++_models_subset
+classification/faceforensics++_models.zip
+classification/test_videos
