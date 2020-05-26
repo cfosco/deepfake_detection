@@ -3,7 +3,7 @@
     "part": "videos/dfdc_train_part_25",
     "checkpoint_file": "faceforensics_pretrained_xception_all_c23",
     "acc": 86.17439120188531,
-    "loss": 0.4891249620928506,
+    "loss": 0.48912414176812435,
     "exceptions": [],
     "outputs": {
         "dfdc_train_part_25/aadqbokerz.mp4": {
@@ -2364,7 +2364,7 @@
         },
         "dfdc_train_part_25/fvhhdftwcf.mp4": {
             "label": 0,
-            "prob": 1.6114384493448597e-07
+            "prob": 1.3334395987385506e-07
         },
         "dfdc_train_part_25/fvjgauvoqz.mp4": {
             "label": 0,

@@ -3,7 +3,7 @@
     "part": "videos/dfdc_train_part_31",
     "checkpoint_file": "faceforensics_pretrained_xception_all_c23",
     "acc": 89.79757085020243,
-    "loss": 0.3103398662829689,
+    "loss": 0.3103399646426985,
     "exceptions": [],
     "outputs": {
         "dfdc_train_part_31/aaedrqeumd.mp4": {
@@ -4420,7 +4420,7 @@
         },
         "dfdc_train_part_31/liynjxljcy.mp4": {
             "label": 0,
-            "prob": 1.2957461592577602e-07
+            "prob": 1.274847534205037e-07
         },
         "dfdc_train_part_31/ljbmnepoiz.mp4": {
             "label": 0,
@@ -5952,7 +5952,7 @@
         },
         "dfdc_train_part_31/pmsbrhfkcn.mp4": {
             "label": 0,
-            "prob": 0.004162716679275036
+            "prob": 0.0044025550596416
         },
         "dfdc_train_part_31/pmyunkwxsy.mp4": {
             "label": 0,
@@ -8556,7 +8556,7 @@
         },
         "dfdc_train_part_31/wsuouxuuen.mp4": {
             "label": 0,
-            "prob": 0.00013018614845350385
+            "prob": 0.00013203341222833842
         },
         "dfdc_train_part_31/wszvhoeuyz.mp4": {
             "label": 0,

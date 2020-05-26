@@ -3,7 +3,7 @@
     "part": "videos/dfdc_train_part_39",
     "checkpoint_file": "faceforensics_pretrained_xception_all_c23",
     "acc": 82.3943661971831,
-    "loss": 0.518670020820296,
+    "loss": 0.51866379152861,
     "exceptions": [],
     "outputs": {
         "dfdc_train_part_39/aacweweyzz.mp4": {
@@ -696,7 +696,7 @@
         },
         "dfdc_train_part_39/bwahtlquns.mp4": {
             "label": 0,
-            "prob": 0.013259517028927803
+            "prob": 0.011606515385210514
         },
         "dfdc_train_part_39/bwfulxdqjx.mp4": {
             "label": 0,
@@ -808,7 +808,7 @@
         },
         "dfdc_train_part_39/chajgyysle.mp4": {
             "label": 0,
-            "prob": 4.6036890966050237e-10
+            "prob": 4.594618574493836e-10
         },
         "dfdc_train_part_39/chupyqxggc.mp4": {
             "label": 0,
@@ -6148,7 +6148,7 @@
         },
         "dfdc_train_part_39/pzyhjedqpq.mp4": {
             "label": 0,
-            "prob": 0.0031043135095387697
+            "prob": 0.0029627089388668537
         },
         "dfdc_train_part_39/qakprhrdpo.mp4": {
             "label": 0,
@@ -7060,7 +7060,7 @@
         },
         "dfdc_train_part_39/sapzqwfbxx.mp4": {
             "label": 0,
-            "prob": 1.0199075859418372e-06
+            "prob": 8.827190640658955e-07
         },
         "dfdc_train_part_39/satnmpebqw.mp4": {
             "label": 0,
@@ -7852,7 +7852,7 @@
         },
         "dfdc_train_part_39/tzwjmlybpn.mp4": {
             "label": 0,
-            "prob": 0.025632549077272415
+            "prob": 0.025493064895272255
         },
         "dfdc_train_part_39/uahckunyap.mp4": {
             "label": 0,
@@ -7872,7 +7872,7 @@
         },
         "dfdc_train_part_39/ubhxbrmrhk.mp4": {
             "label": 0,
-            "prob": 0.926968514919281
+            "prob": 0.9259416460990906
         },
         "dfdc_train_part_39/ubrvtqznom.mp4": {
             "label": 0,

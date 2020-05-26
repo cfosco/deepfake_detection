@@ -3,7 +3,7 @@
     "part": "videos/dfdc_train_part_24",
     "checkpoint_file": "faceforensics_pretrained_xception_all_c23",
     "acc": 75.77171572146446,
-    "loss": 0.6780936771793837,
+    "loss": 0.678088758255797,
     "exceptions": [],
     "outputs": {
         "dfdc_train_part_24/aadubxfxhr.mp4": {
@@ -1328,7 +1328,7 @@
         },
         "dfdc_train_part_24/dgfrhycttb.mp4": {
             "label": 0,
-            "prob": 0.0031855313573032618
+            "prob": 0.003336725989356637
         },
         "dfdc_train_part_24/dgkngkneyf.mp4": {
             "label": 0,
@@ -2068,7 +2068,7 @@
         },
         "dfdc_train_part_24/evtwpssjhk.mp4": {
             "label": 0,
-            "prob": 0.22429350018501282
+            "prob": 0.2134707123041153
         },
         "dfdc_train_part_24/evwyllcgxp.mp4": {
             "label": 0,
