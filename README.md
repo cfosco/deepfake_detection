@@ -20,6 +20,13 @@ TODO: (README) Finish installation instractions
   - lintel
   - pretorched (`dev` branch)
 
+  ```
+git clone https://github.com/alexandonian/torchvideo.git && cd torchvideo && pip install -e . && cd ..
+git clone https://github.com/alexandonian/lintel.git && cd lintel && pip install -e . && cd ..
+git clone https://github.com/alexandonian/FileLock.git && cd FileLock && pip install -e . && cd ..
+git clone https://github.com/alexandonian/pretorched-x.git && cd pretorched-x && pip install -e . && git checkout dev && cd ..
+  ```
+
 TODO: (README) Finish writing instructions.
 </details>
 
@@ -100,10 +107,18 @@ The entrypoint into training is `main.py`. You'll need to specifiy several comma
 ```
 python main.py \
     --model_name FrameDetector--basemodel_name resnet18 --dataset DFDC \
-    --batch-size 128 --segment_count 16 --optimizer Ranger --pretrained imagenet
+    --batch-size 128 --segment_count 16 --optimizer Ranger --pretrained imagenet \
     --num_workers 12 --dataset_type DeepfakeFaceVideo
 ```
 Checkpoints are stored in `weights_dir` (default: weights) and logs in `logs_dir` (default: logs)
+
+SeriesManipulator:
+```
+python main.py \
+    --model_name PretrainedSeriesManipulator --basemodel_name resnet18 --dataset DFDC \
+    --batch-size 16 --segment_count 16 --optimizer Ranger --pretrained imagenet \
+    --num_workers 12 --dataset_type DeepfakeFaceVideo
+```
 
 ## Evaluation
 

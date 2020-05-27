@@ -2,6 +2,7 @@ import math
 import sys
 from collections import defaultdict
 from functools import partial
+from typing import Dict, Union
 
 import torch
 import torch.nn as nn
@@ -10,26 +11,32 @@ from torch.nn import Module
 from torch.nn.utils.spectral_norm import spectral_norm
 from torch.utils import model_zoo
 
-__all__ = [
+__all__ = [  # noqa
     'MXResNet',
     'mxresnet18',
     'mxresnet34',
     'mxresnet50',
     'mxresnet101',
     'mxresnet152',
+    'samxresnet18',
+    'samxresnet34',
+    'samxresnet50',
+    'samxresnet101',
+    'samxresnet152',
 ]
 
-model_urls = {
+model_urls: Dict[str, Dict[str, Union[str, None]]] = {
     'imagenet': defaultdict(
         lambda: None,
         {
-            'mxresnet18': 'http://pretorched-x.csail.mit.edu/models/mxresnet18_imagenet-47250e15.pth'
+            'mxresnet18': 'http://pretorched-x.csail.mit.edu/models/mxresnet18_imagenet-c7af5e38.pth',
+            'samxresnet18': 'http://pretorched-x.csail.mit.edu/models/samxresnet18_imagenet-0e56b40a.pth',
         },
     )
 }
 
 num_classes = {'imagenet': 1000}
-pretrained_settings = defaultdict(dict)
+pretrained_settings: Dict[str, Dict[str, Dict]] = defaultdict(dict)
 input_sizes = {}
 means = {}
 stds = {}
@@ -120,7 +127,8 @@ def conv1d(
 
 
 class SimpleSelfAttention(nn.Module):
-    # Adapted from SelfAttention layer at https://github.com/fastai/fastai/blob/5c51f9eabf76853a89a9bc5741804d2ed4407e49/fastai/layers.py
+    # Adapted from SelfAttention layer at
+    # https://github.com/fastai/fastai/blob/5c51f9eabf76853a89a9bc5741804d2ed4407e49/fastai/layers.py
     # Inspired by https://arxiv.org/pdf/1805.08318.pdf
 
     def __init__(self, n_in: int, ks=1, sym=False):  # , n_out:int):
@@ -290,13 +298,11 @@ class MXResNet(nn.Module):
             )
             for i, l in enumerate(layers)
         ]
-        self.last_linear = nn.Linear(block_szs[-1] * expansion, num_classes)
         self.features = nn.Sequential(
             *stem, nn.MaxPool2d(kernel_size=3, stride=2, padding=1), *blocks
         )
-        self.logits = nn.Sequential(
-            nn.AdaptiveAvgPool2d(1), nn.Flatten(), self.last_linear
-        )
+        self.logits = nn.Sequential(nn.AdaptiveAvgPool2d(1), nn.Flatten())
+        self.last_linear = nn.Linear(block_szs[-1] * expansion, num_classes)
 
         init_cnn(self)
 
@@ -318,6 +324,7 @@ class MXResNet(nn.Module):
     def forward(self, x):
         x = self.features(x)
         x = self.logits(x)
+        x = self.last_linear(x)
         return x
 
 
@@ -345,3 +352,8 @@ for n, e, l in [
 ]:
     name = f'mxresnet{n}'
     setattr(me, name, partial(mxresnet, expansion=e, n_layers=l, name=name))
+
+    sa_name = f'samxresnet{n}'
+    setattr(
+        me, sa_name, partial(mxresnet, expansion=e, n_layers=l, name=sa_name, sa=True)
+    )

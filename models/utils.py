@@ -4,7 +4,6 @@ from functools import partial
 import torch
 import torch.nn as nn
 from torch.nn import Parameter as P
-from pretorched.models.torchvision_models import resnet18
 
 
 class IntermediateLayerGetter(nn.ModuleDict):
@@ -118,11 +117,17 @@ class FeatureHooks:
         return output
 
 
-# model = resnet18()
+# import mxresnet
+# model = mxresnet.samxresnet18()
+# # model = resnet18()
 # nm = model.named_modules()
-# hooks = [{'name': 'layer1.1.conv1', 'type': 'forward'}]
+# hooks = [
+#     {'name': 'features.4.1.sa', 'type': 'forward'},
+#     {'name': 'features.4.1.sa', 'type': 'forward_pre'},
+#     ]
 # f = FeatureHooks(hooks, nm)
 # x = torch.randn(4, 3, 224, 224)
 # out = model(x)
 # o = f.get_output(torch.device('cpu'))
-# print(o[0].shape)
+# for oo in o:
+#     print(o[0].shape)

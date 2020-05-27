@@ -1,9 +1,10 @@
 import torch
 import torch.nn as nn
+from torch.nn import Parameter as P
 
 from pretorched.visualizers import grad_cam
 
-from .utils import Normalize
+from .utils import Normalize, FeatureHooks
 
 
 class Detector(torch.nn.Module):
@@ -13,7 +14,7 @@ class Detector(torch.nn.Module):
         super().__init__()
         self.model = model
         self.consensus_func = consensus_func
-        self.norm = Normalize(rescale) if normalize else nn.Identity()
+        self.norm = Normalize(rescale=rescale) if normalize else nn.Identity()
 
     @property
     def input_size(self):
@@ -31,6 +32,42 @@ class FrameDetector(Detector):
         x = self.norm(x)
         x = x.permute(2, 0, 1, 3, 4)
         return self.consensus_func(torch.stack([self.model(f) for f in x]), dim=0)
+
+
+class AttnFrameDetector(FrameDetector):
+    def __init__(self, model, consensus_func=torch.mean, normalize=False, rescale=True):
+        super().__init__(model, consensus_func, normalize, rescale)
+        nm = model.named_modules()
+        hooks = [
+            {'name': 'features.4.1.sa', 'type': 'forward_pre'},
+        ]
+        self.fhooks = FeatureHooks(hooks, nm)
+
+    def forward(self, x):
+        x = self.norm(x)
+        x = x.permute(2, 0, 1, 3, 4)
+        outputs = []
+        attn_maps = []
+        for f in x:
+            outputs.append(self.model(f))
+            attn_maps.append(self.get_attn())
+        output = self.consensus_func(torch.stack(outputs), dim=0)
+        attn_maps = torch.stack(attn_maps, dim=1)
+        return output, attn_maps
+
+    def get_attn(self, key='features.4.1.sa'):
+        # sa_input = self.fhooks._feature_outputs[torch.device('cuda', index=0)][key
+        # 'features.4.1.sa'
+        # ]
+
+        if key is not None:
+            base_key = list(self.fhooks._feature_outputs.keys())[0]
+            sa_input = self.fhooks.get_output(base_key)[0]
+            # Compute attention map here
+            size = sa_input.size()
+            sa_input = sa_input.view(*size[:2], -1)
+            attn = torch.bmm(sa_input, sa_input.permute(0, 2, 1).contiguous())
+        return attn
 
 
 class VideoDetector(Detector):
@@ -65,6 +102,7 @@ class SeriesManipulatorDetector(torch.nn.Module):
         super().__init__()
         self.manipulator_model = manipulator_model
         self.detector_model = detector_model
+        self.amp_param = P(4 * torch.ones(1, 1, 1, 1))
 
     def manipulate(self, x, amp=None):
         return torch.stack(
@@ -73,8 +111,75 @@ class SeriesManipulatorDetector(torch.nn.Module):
 
     def forward(self, x):
         # x: [bs, 3, D, H, W]
-        o = self.manipulate(x)
+        x = x / 127.5 - 1.0
+        o = self.manipulate(x, amp=self.amp_param)
+        o = o - o.min()
+        o = o / o.max()
+        o = o * 255
         o = self.detector_model(o)
+        return o
+
+    @property
+    def input_size(self):
+        return self.detector_model.input_size
+
+
+class ResManipulatorDetector(torch.nn.Module):
+    def __init__(self, manipulator_model, detector_model):
+        super().__init__()
+        self.manipulator_model = manipulator_model
+        self.detector_model = detector_model
+        self.amp_param = P(4 * torch.ones(1, 1, 1, 1))
+
+    def manipulate(self, x, amp=None):
+        return torch.stack(
+            [self.manipulator_model.manipulate(f.transpose(0, 1), amp=amp) for f in x]
+        ).transpose(1, 2)
+
+    def forward(self, x):
+        # x: [bs, 3, D, H, W]
+        o = x / 127.5 - 1.0
+        o = self.manipulate(o, amp=self.amp_param)
+        o = o - o.min()
+        o = o / o.max()
+        o = o * 255
+        o = self.detector_model(o) + self.detector_model(x)
+        return o
+
+    @property
+    def input_size(self):
+        return self.detector_model.input_size
+
+
+class ResManipulatorAttnDetector(torch.nn.Module):
+    def __init__(self, manipulator_model, detector_model):
+        super().__init__()
+        self.manipulator_model = manipulator_model
+        self.detector_model = detector_model
+        self.amp_param = P(4 * torch.ones(1, 1, 1, 1))
+
+    def manipulate(self, x, amp=None, attn_map=None):
+        if attn_map is None:
+            attn_map = [None] * x.size(0)
+        return torch.stack(
+            [
+                self.manipulator_model.manipulate(
+                    f.transpose(0, 1), amp=amp, attn_map=a
+                )
+                for f, a in zip(x, attn_map)
+            ]
+        ).transpose(1, 2)
+
+    def forward(self, x):
+        # x: [bs, 3, D, H, W]
+        out, attn_map = self.detector_model(x)
+
+        o = x / 127.5 - 1.0
+        o = self.manipulate(o, amp=self.amp_param, attn_map=attn_map)
+        o = o - o.min()
+        o = o / o.max()
+        o = o * 255
+        o = self.detector_model(o) + out
         return o
 
     @property
@@ -121,6 +226,7 @@ class GradCamCaricatureModel(torch.nn.Module):
         return faces, norm_faces
 
     def forward(self, x, extract_face=False):
+        # NOTE: Use models/deep_motion_mag/test_caricature.py for now...
         if extract_face:
             faces, norm_faces = self.face_forward(x)
         else:

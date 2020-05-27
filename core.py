@@ -1,7 +1,8 @@
+import os
 import functools
 import time
 from operator import add
-from typing import Union
+from typing import Union, Optional
 
 import torch
 import torch.nn as nn
@@ -17,8 +18,8 @@ import models as deepfake_models
 from pretorched import models, optim, utils
 from pretorched.data import samplers, transforms
 from pretorched.metrics import accuracy
+from pretorched.models import utils as mutils
 from pretorched.runners.utils import AverageMeter, ProgressMeter
-
 
 torchvision_model_names = sorted(
     name
@@ -30,6 +31,8 @@ torchvision_model_names = sorted(
 torchvision_model_names.extend(['xception'])
 
 torchvision_model_names.extend(['xception', 'mxresnet18', 'mxresnet50'])
+
+dir_path = os.path.dirname(os.path.realpath(__file__))
 
 
 def get_optimizer(model, optimizer_name='SGD', lr=0.001, **kwargs):
@@ -70,13 +73,17 @@ def init_weights(model, init_name='ortho'):
 
 
 def get_model(
-    model_name,
-    basemodel_name='resnet18',
-    pretrained='imagenet',
-    init_name=None,
-    num_classes=2,
+    model_name: str,
+    basemodel_name: str = 'resnet18',
+    pretrained: str = 'imagenet',
+    init_name: Optional[str] = None,
+    num_classes: int = 2,
+    normalize=False,
+    rescale=True,
 ) -> Union[
-    deepfake_models.FrameDetector,
+    deepfake_models.Detector,
+    deepfake_models.ResManipulatorDetector,
+    deepfake_models.ResManipulatorAttnDetector,
     deepfake_models.SeriesManipulatorDetector,
     deepfake_models.GradCamCaricatureModel,
 ]:
@@ -87,15 +94,234 @@ def get_model(
             num_classes=num_classes,
             init_name=init_name,
         )
-        return deepfake_models.FrameDetector(basemodel)
+        return deepfake_models.FrameDetector(
+            basemodel, normalize=normalize, rescale=rescale
+        )
+
+    elif model_name == 'AttnFrameDetector':
+        basemodel = get_basemodel(
+            basemodel_name,
+            pretrained=pretrained,
+            num_classes=num_classes,
+            init_name=init_name,
+        )
+        return deepfake_models.AttnFrameDetector(
+            basemodel, normalize=normalize, rescale=rescale
+        )
+
+    elif model_name == 'VideoDetector':
+        basemodel = get_basemodel(
+            basemodel_name,
+            pretrained=pretrained,
+            num_classes=num_classes,
+            init_name=init_name,
+        )
+        return deepfake_models.VideoDetector(basemodel)
+
     elif model_name == 'SeriesManipulatorDetector':
         return deepfake_models.SeriesManipulatorDetector(
             manipulator_model=deepfake_models.MagNet(),
             detector_model=get_model(
-                'FrameDetector', basemodel_name, pretrained=pretrained, init_name=init_name
+                'FrameDetector',  # TODO: add option for VideoDetector
+                basemodel_name,
+                pretrained=pretrained,
+                init_name=init_name,
             ),
         )
-    elif model_name == 'CaricatureModel':
+
+    elif model_name == 'SeriesPretrainedManipulatorDetector':
+        magnet = deepfake_models.MagNet()
+        magnet_ckpt_file = os.path.join(
+            dir_path, 'models/deep_motion_mag/ckpt/ckpt_e11.pth.tar'
+        )
+        magnet_ckpt = torch.load(magnet_ckpt_file, map_location='cpu')
+        magnet.load_state_dict(mutils.remove_prefix(magnet_ckpt['state_dict']))
+        return deepfake_models.SeriesManipulatorDetector(
+            manipulator_model=magnet,
+            detector_model=get_model(
+                'FrameDetector',  # TODO: add option for VideoDetector
+                basemodel_name,
+                pretrained=pretrained,
+                init_name=init_name,
+                normalize=True,
+                rescale=True,
+            ),
+        )
+
+    elif model_name == 'SeriesPretrainedFrozenManipulatorDetector':
+        magnet = deepfake_models.MagNet()
+        magnet_ckpt_file = os.path.join(
+            dir_path, 'models/deep_motion_mag/ckpt/ckpt_e11.pth.tar'
+        )
+        magnet_ckpt = torch.load(magnet_ckpt_file, map_location='cpu')
+        magnet.load_state_dict(mutils.remove_prefix(magnet_ckpt['state_dict']))
+        for p in magnet.parameters():
+            p.requires_grad = False
+
+        return deepfake_models.SeriesManipulatorDetector(
+            manipulator_model=magnet,
+            detector_model=get_model(
+                'FrameDetector',  # TODO: add option for VideoDetector
+                basemodel_name,
+                pretrained=pretrained,
+                init_name=init_name,
+                normalize=True,
+                rescale=True,
+            ),
+        )
+
+    elif model_name == 'SeriesPretrainedSmallManipulatorDetector':
+        magnet = deepfake_models.MagNet(
+            num_resblk_enc=3, num_resblk_man=1, num_resblk_dec=3
+        )
+        magnet_ckpt_file = os.path.join(
+            dir_path, 'models/deep_motion_mag/ckpt/ckpt_3_1_3_22.pth.tar'
+        )
+        magnet_ckpt = torch.load(magnet_ckpt_file, map_location='cpu')
+        magnet.load_state_dict(mutils.remove_prefix(magnet_ckpt['state_dict']))
+        return deepfake_models.SeriesManipulatorDetector(
+            manipulator_model=magnet,
+            detector_model=get_model(
+                'FrameDetector',  # TODO: add option for VideoDetector
+                basemodel_name,
+                pretrained=pretrained,
+                init_name=init_name,
+                normalize=True,
+                rescale=True,
+            ),
+        )
+
+    elif model_name == 'SeriesPretrainedFrozenSmallManipulatorDetector':
+        magnet = deepfake_models.MagNet(
+            num_resblk_enc=3, num_resblk_man=1, num_resblk_dec=3
+        )
+        magnet_ckpt_file = os.path.join(
+            dir_path, 'models/deep_motion_mag/ckpt/ckpt_3_1_3_22.pth.tar'
+        )
+        magnet_ckpt = torch.load(magnet_ckpt_file, map_location='cpu')
+        magnet.load_state_dict(mutils.remove_prefix(magnet_ckpt['state_dict']))
+        for p in magnet.parameters():
+            p.requires_grad = False
+        return deepfake_models.SeriesManipulatorDetector(
+            manipulator_model=magnet,
+            detector_model=get_model(
+                'FrameDetector',  # TODO: add option for VideoDetector
+                basemodel_name,
+                pretrained=pretrained,
+                init_name=init_name,
+                normalize=True,
+                rescale=True,
+            ),
+        )
+
+    elif model_name == 'SeriesPretrainedMediumManipulatorDetector':
+        magnet = deepfake_models.MagNet(
+            num_resblk_enc=3, num_resblk_man=1, num_resblk_dec=6
+        )
+        magnet_ckpt_file = os.path.join(
+            dir_path, 'models/deep_motion_mag/ckpt/ckpt_3_1_6_22.pth.tar'
+        )
+        magnet_ckpt = torch.load(magnet_ckpt_file, map_location='cpu')
+        magnet.load_state_dict(mutils.remove_prefix(magnet_ckpt['state_dict']))
+        return deepfake_models.SeriesManipulatorDetector(
+            manipulator_model=magnet,
+            detector_model=get_model(
+                'FrameDetector',  # TODO: add option for VideoDetector
+                basemodel_name,
+                pretrained=pretrained,
+                init_name=init_name,
+                normalize=True,
+                rescale=True,
+            ),
+        )
+
+    elif model_name == 'SeriesPretrainedFrozenMediumManipulatorDetector':
+        magnet = deepfake_models.MagNet(
+            num_resblk_enc=3, num_resblk_man=1, num_resblk_dec=6
+        )
+        magnet_ckpt_file = os.path.join(
+            dir_path, 'models/deep_motion_mag/ckpt/ckpt_3_1_6_22.pth.tar'
+        )
+        magnet_ckpt = torch.load(magnet_ckpt_file, map_location='cpu')
+        magnet.load_state_dict(mutils.remove_prefix(magnet_ckpt['state_dict']))
+        for p in magnet.parameters():
+            p.requires_grad = False
+        return deepfake_models.SeriesManipulatorDetector(
+            manipulator_model=magnet,
+            detector_model=get_model(
+                'FrameDetector',  # TODO: add option for VideoDetector
+                basemodel_name,
+                pretrained=pretrained,
+                init_name=init_name,
+                normalize=True,
+                rescale=True,
+            ),
+        )
+
+    elif model_name == 'ResPretrainedManipulatorDetector':
+        magnet = deepfake_models.MagNet()
+        magnet_ckpt_file = os.path.join(
+            dir_path, 'models/deep_motion_mag/ckpt/ckpt_e11.pth.tar'
+        )
+        magnet_ckpt = torch.load(magnet_ckpt_file, map_location='cpu')
+        magnet.load_state_dict(mutils.remove_prefix(magnet_ckpt['state_dict']))
+        return deepfake_models.ResManipulatorDetector(
+            manipulator_model=magnet,
+            detector_model=get_model(
+                'FrameDetector',  # TODO: add option for VideoDetector
+                basemodel_name,
+                pretrained=pretrained,
+                init_name=init_name,
+                normalize=True,
+                rescale=True,
+            ),
+        )
+
+    elif model_name == 'ResPretrainedSmallManipulatorDetector':
+        magnet = deepfake_models.MagNet(
+            num_resblk_enc=3, num_resblk_man=1, num_resblk_dec=1
+        )
+        magnet_ckpt_file = os.path.join(
+            dir_path, 'models/deep_motion_mag/ckpt/ckpt_3_1_3_22.pth.tar'
+        )
+        magnet_ckpt = torch.load(magnet_ckpt_file, map_location='cpu')
+        magnet.load_state_dict(mutils.remove_prefix(magnet_ckpt['state_dict']))
+        return deepfake_models.ResManipulatorDetector(
+            manipulator_model=magnet,
+            detector_model=get_model(
+                'FrameDetector',  # TODO: add option for VideoDetector
+                basemodel_name,
+                pretrained=pretrained,
+                init_name=init_name,
+                normalize=True,
+                rescale=True,
+            ),
+        )
+
+    elif model_name == 'ResPretrainedManipulatorAttnDetector':
+        magnet = deepfake_models.MagNet()
+        magnet_ckpt_file = os.path.join(
+            dir_path, 'models/deep_motion_mag/ckpt/ckpt_e11.pth.tar'
+        )
+        magnet_ckpt = torch.load(magnet_ckpt_file, map_location='cpu')
+        magnet.load_state_dict(mutils.remove_prefix(magnet_ckpt['state_dict']))
+        if basemodel_name not in ['samxresnet18', 'samxresnet50']:
+            print(f'Warning: {basemodel_name} does not support attention')
+            print(f'Switching basemodel to samxresnet18...')
+            basemodel_name = 'samxresnet18'
+        return deepfake_models.ResManipulatorAttnDetector(
+            manipulator_model=magnet,
+            detector_model=get_model(
+                'AttnFrameDetector',
+                basemodel_name,
+                pretrained=pretrained,
+                init_name=init_name,
+                normalize=True,
+                rescale=True,
+            ),
+        )
+
+    elif model_name == 'GradCamCaricatureModel':
         return deepfake_models.GradCamCaricatureModel(
             face_model=deepfake_models.FaceModel(),
             fake_model=get_model(
@@ -107,10 +333,22 @@ def get_model(
         raise ValueError(f'Unreconized model type {model_name}')
 
 
+def do_normalize(model):
+    return not isinstance(model, (deepfake_models.SeriesManipulatorDetector))
+
+
+def do_rescale(model):
+    return not isinstance(model, (deepfake_models.SeriesManipulatorDetector))
+
+
 def get_basemodel(
-    model_name, num_classes=2, pretrained='imagenet', init_name=None, **kwargs
+    model_name: str,
+    num_classes: int = 2,
+    pretrained: Optional[str] = 'imagenet',
+    init_name: Optional[str] = None,
+    **kwargs,
 ):
-    if model_name in ['mxresnet18', 'mxresnet50']:
+    if model_name in ['mxresnet18', 'mxresnet50', 'samxresnet18', 'samxresnet50']:
         model_func = getattr(deepfake_models, model_name)
     else:
         model_func = getattr(models, model_name)
@@ -179,6 +417,8 @@ def get_dataset(
     sampler_type='TemporalSegmentSampler',
     record_set_type='DeepfakeSet',
     segment_count=None,
+    normalize=True,
+    rescale=True,
     **kwargs,
 ):
 
@@ -196,6 +436,8 @@ def get_dataset(
                     sampler_type=sampler_type,
                     record_set_type=record_set_type,
                     segment_count=segment_count,
+                    normalize=normalize,
+                    rescale=rescale,
                     **kwargs,
                 )
                 for n in name
@@ -214,6 +456,8 @@ def get_dataset(
             sampler_type=sampler_type,
             record_set_type=record_set_type,
             segment_count=segment_count,
+            normalize=normalize,
+            rescale=rescale,
             **kwargs,
         )
 
@@ -239,7 +483,9 @@ def get_dataset(
     full_kwargs = {
         'record_set': record_set,
         'sampler': sampler,
-        'transform': data.get_transform(split=split, size=size),
+        'transform': data.get_transform(
+            split=split, size=size, normalize=normalize, rescale=rescale
+        ),
         **kwargs,
     }
     dataset_kwargs, _ = utils.split_kwargs_by_func(Dataset, full_kwargs)
@@ -303,6 +549,8 @@ def get_dataloader(
     drop_last=False,
     distributed=False,
     segment_count=None,
+    normalize=True,
+    rescale=True,
     **kwargs,
 ):
 
@@ -317,6 +565,8 @@ def get_dataloader(
         dataset_type=dataset_type,
         sampler_type=sampler_type,
         record_set_type=record_set_type,
+        normalize=normalize,
+        rescale=rescale,
         **kwargs,
     )
     loader_sampler = (
@@ -347,6 +597,8 @@ def get_dataloaders(
     pin_memory=True,
     drop_last=False,
     splits=['train', 'val'],
+    normalize=True,
+    rescale=True,
     **kwargs,
 ):
     if not isinstance(shuffle, list):
@@ -366,6 +618,8 @@ def get_dataloaders(
             pin_memory=pin_memory,
             drop_last=drop_last,
             distributed=distributed,
+            normalize=normalize,
+            rescale=rescale,
             **kwargs,
         )
         for i, split in enumerate(splits)

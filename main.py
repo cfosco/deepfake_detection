@@ -105,6 +105,8 @@ def main_worker(gpu, ngpus_per_node, args):
         init_name=args.init,
     )
     input_size = model.input_size[-1]
+    args.normalize = core.do_normalize(model)
+    args.rescale = core.do_rescale(model)
 
     if args.distributed:
         # For multiprocessing distributed, DistributedDataParallel constructor
@@ -169,7 +171,10 @@ def main_worker(gpu, ngpus_per_node, args):
             #     best_acc1 may be from a checkpoint from a different GPU
             #     best_acc1 = best_acc1.to(args.gpu)
             model.load_state_dict(checkpoint['state_dict'])
-            optimizer.load_state_dict(checkpoint['optimizer'])
+            try:
+                optimizer.load_state_dict(checkpoint['optimizer'])
+            except Exception:
+                pass
             print(
                 "=> loaded checkpoint '{}' (epoch {})".format(
                     args.resume, checkpoint['epoch']
@@ -194,6 +199,8 @@ def main_worker(gpu, ngpus_per_node, args):
         size=input_size,
         clip_length=args.clip_length,
         frame_step=args.frame_step,
+        normalize=args.normalize,
+        rescale=args.rescale,
     )
     train_loader, val_loader = dataloaders['train'], dataloaders['val']
     train_sampler = train_loader.sampler
@@ -269,6 +276,8 @@ def main_worker(gpu, ngpus_per_node, args):
                 {
                     'epoch': epoch + 1,
                     'arch': args.arch,
+                    'model_name': args.model_name,
+                    'basemodel_name': args.basemodel_name,
                     'state_dict': model.state_dict(),
                     'best_acc1': best_acc1,
                     'optimizer': optimizer.state_dict(),

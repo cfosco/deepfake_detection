@@ -135,6 +135,7 @@ dev
 logs
 weights
 archive
+best_weights
 dist/data
 dist/predictions
 dist/data.zip
@@ -143,6 +144,7 @@ models/data
 models/deep_motion_mag/test_data
 models/deep_motion_mag/test_output
 models/deep_motion_mag/demo
+models/deep_motion_mag/ckpt
 scripts/data
 scripts/models
 notebooks/data
@@ -155,3 +157,7 @@ TODO
 *.lock
 data/gan_dataset.py
 dist/results
+
+classification/faceforensics++_models_subset
+classification/faceforensics++_models.zip
+classification/test_videos

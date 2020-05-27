@@ -144,7 +144,10 @@ class Manipulator(nn.Module):
 
     def _format_attn_map(self, attn_map, size):
         n, c, h, w = size
-        attn_map = attn_map.unsqueeze(1)  # [num_frames, 1, h, w]
+        if attn_map.ndim == 3:
+            attn_map = attn_map.unsqueeze(1)  # [num_frames, 1, h, w]
+        elif attn_map.ndim == 2:
+            attn_map = attn_map.unsqueeze(0).unsqueeze(0)
         scaled_attn_map = nn.functional.interpolate(attn_map, size=(h, w), mode='area')
         scaled_attn_map = scaled_attn_map.expand(*size)
         return scaled_attn_map
@@ -152,7 +155,8 @@ class Manipulator(nn.Module):
     def manip(self, x_a, amp, attn_map=None):
         diff = self.convblks(x_a)
 
-        attn_map = attn_map or self.attn_map
+        if attn_map is None:
+            attn_map = self.attn_map
         if attn_map is not None:
             scaled_attn_map = self._format_attn_map(attn_map, diff.size())
             diff = diff * scaled_attn_map.to(diff.device)
