@@ -25,6 +25,7 @@ num_classes_dict = {
     'Places365': 365,
     'Hybrid1365': 1365,
     'Moments': 339,
+    'kinetics-400': 400,
     'DFDC': 2,
     'FaceForensics': 2,
     'CelebDF': 2,
