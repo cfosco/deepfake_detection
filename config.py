@@ -11,7 +11,7 @@ model_names = sorted(
     if name.islower() and not name.startswith("__") and callable(models.__dict__[name])
 )
 
-DATA_ROOT = '~/Datasets' #os.getenv('DATA_ROOT', '.')
+DATA_ROOT = os.getenv('DATA_ROOT', '~/Datasets')
 
 ALL_DATASETS = [
     'DFDC',
@@ -183,7 +183,7 @@ def get_metadata(
             'DeepfakeZipFaceVideo': defaultdict(lambda: data_root, {}),
         },
     }
-#     print(name, dataset_type, resolution, root_dirs[name])
+    #     print(name, dataset_type, resolution, root_dirs[name])
     root = root_dirs[name][dataset_type][resolution]
     fname = {'train': 'metadata.json', 'val': 'test_metadata.json'}.get(split, 'train')
     if name == 'DFDC' and split == 'val':
