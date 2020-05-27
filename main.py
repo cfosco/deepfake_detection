@@ -318,7 +318,14 @@ def train(train_loader, model, criterion, optimizer, logger, epoch, args, displa
         # measure data loading time
         data_time.update(time.time() - end)
         itr += 1
-
+        
+        
+        # DEBUG
+#         import matplotlib.pyplot as plt
+#         im = images[0][:,0].permute(1,2,0)
+#         plt.imshow((im-im.min())/(im.max()-im.min()))
+#         plt.show()
+        
         if args.gpu is not None:
             images = images.cuda(args.gpu, non_blocking=True)
         target = target.cuda(args.gpu, non_blocking=True)
