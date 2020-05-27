@@ -9,7 +9,7 @@ model_names = sorted(name for name in models.__dict__
                      if name.islower() and not name.startswith("__")
                      and callable(models.__dict__[name]))
 
-DATA_ROOT = os.getenv('DATA_ROOT', '.')
+DATA_ROOT = '~/Datasets' #os.getenv('DATA_ROOT', '.')
 
 ALL_DATASETS = [
     'DFDC',
@@ -85,6 +85,7 @@ def get_root_dirs(name, dataset_type='DeepfakeFrame', resolution=224, data_root=
 
 def get_metadata(name, split='train', dataset_type='DeepfakeFrame',
                  record_set_type='DeepfakeSet', resolution=224, data_root=DATA_ROOT):
+    
     root_dirs = {
         'DFDC': {
             'DeepfakeVideo': defaultdict(lambda: os.path.join(data_root, 'DeepfakeDetection/videos'), {}),
@@ -132,6 +133,7 @@ def get_metadata(name, split='train', dataset_type='DeepfakeFrame',
             'DeepfakeZipFaceVideo': defaultdict(lambda: data_root, {})
         }
     }
+#     print(name, dataset_type, resolution, root_dirs[name])
     root = root_dirs[name][dataset_type][resolution]
     fname = {
         'train': 'metadata.json',

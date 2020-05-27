@@ -1,0 +1,29 @@
+<QuestionForm xmlns="http://mechanicalturk.amazonaws.com/AWSMechanicalTurkDataSchemas/2005-10-01/QuestionForm.xsd">
+    <Overview>
+        <FormattedContent><![CDATA[
+            <h1><strong>%s</strong></h1>
+            <h2>Description</h2>
+            <h4>%s</h4>
+            <h2>Instructions: </h2>
+            <h4>Please follow the link below to complete the task. At the end of the task, you will be given a completion code. Paste the code into the text box below.</h4>
+            <h1><strong><a href="%s">Link to the task</a></strong></h1>
+        ]]>
+        </FormattedContent>
+    </Overview>
+    <Question>
+        <QuestionIdentifier>key</QuestionIdentifier>
+        <DisplayName>Completion Code</DisplayName>
+        <IsRequired>true</IsRequired>
+        <QuestionContent>
+            <Text>Please enter your completion code here: </Text>
+        </QuestionContent>
+        <AnswerSpecification>
+            <FreeTextAnswer>
+                <Constraints>
+                    <Length minLength="3" maxLength="100"/>
+                </Constraints>
+                <NumberOfLinesSuggestion>1</NumberOfLinesSuggestion>
+            </FreeTextAnswer>
+        </AnswerSpecification>
+    </Question>
+</QuestionForm>

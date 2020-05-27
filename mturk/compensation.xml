@@ -1,0 +1,25 @@
+<QuestionForm xmlns="http://mechanicalturk.amazonaws.com/AWSMechanicalTurkDataSchemas/2005-10-01/QuestionForm.xsd">
+    <Overview>
+        <FormattedContent><![CDATA[
+            <h1><strong>Compensation HIT</strong></h1>
+            <h2>Description</h2>
+            <h4>We're sorry you experienced a problem with one of our HITs. Please accept our apologies and compensation for your time.</h4>
+            <h2>Instructions:</h2>
+            <h4>Enter your worker ID in the box below.</h4>
+        ]]>
+        </FormattedContent>
+    </Overview>
+    <Question>
+        <QuestionIdentifier>workerID</QuestionIdentifier>
+        <DisplayName>Worker ID</DisplayName>
+        <IsRequired>true</IsRequired>
+        <QuestionContent>
+            <Text>Please enter your worker ID here: </Text>
+        </QuestionContent>
+        <AnswerSpecification>
+            <FreeTextAnswer>
+                <NumberOfLinesSuggestion>1</NumberOfLinesSuggestion>
+            </FreeTextAnswer>
+        </AnswerSpecification>
+    </Question>
+</QuestionForm>
