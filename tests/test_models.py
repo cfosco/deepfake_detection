@@ -27,7 +27,7 @@ BATCH_SIZE = 4
 TEST_VIDEO_FILE = os.path.join(dir_path, 'data', 'aassnaulhq.mp4')
 TEST_VIDEO_FILE = os.path.join(dir_path, 'data', 'aayfryxljh.mp4')
 
-device = 'cuda' if torch.cuda.is_available() else 'cpu'
+device = 'cpu' if torch.cuda.is_available() else 'cpu'
 
 video = mmcv.VideoReader(TEST_VIDEO_FILE)
 
@@ -136,18 +136,26 @@ def test_caricature_model(frames3D_small):
 
 def test_smooth_attn():
     from models.base import smooth_attn
+
     attn_maps = torch.randn(16, 8, 8)
     smoothed = smooth_attn(attn_maps)
     print(smoothed.shape)
 
 
-def test_attn_detector(frames3D_small):
+def test_simple_self_attn_detector(frames3D_small):
+    model = models.AttnFrameDetector(model=core.get_basemodel('ssamxresnet18'))
+    model = model.to(device)
+    out, attn_map = model(frames3D_small)
+    assert tuple(out.shape) == (BATCH_SIZE, 2)
+    assert tuple(attn_map.shape) == (BATCH_SIZE, frames3D_small.size(2), 64, 64)
+
+
+def test_self_attn_detector(frames3D_small):
     model = models.AttnFrameDetector(model=core.get_basemodel('samxresnet18'))
     model = model.to(device)
     out, attn_map = model(frames3D_small)
-    print(attn_map.shape)
-    print(model.fhooks)
-    print(out)
+    assert tuple(out.shape) == (BATCH_SIZE, 2)
+    assert tuple(attn_map.shape) == (BATCH_SIZE, frames3D_small.size(2), 56, 56)
 
 
 def test_ResManipulatorAttnDetector(frames3D_small):

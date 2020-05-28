@@ -38,10 +38,17 @@ class AttnFrameDetector(FrameDetector):
     def __init__(self, model, consensus_func=torch.mean, normalize=False, rescale=True):
         super().__init__(model, consensus_func, normalize, rescale)
         nm = model.named_modules()
-        hooks = [
-            {'name': 'features.4.1.sa', 'type': 'forward_pre'},
-        ]
+        sa = model.features[4][1].sa
+        hooks = {
+            'Attention': [{'name': 'features.4.1.sa.o', 'type': 'forward'}],
+            'SimpleSelfAttention': [{'name': 'features.4.1.sa', 'type': 'forward_pre'}],
+        }.get(type(sa).__name__)
+        attn_func = {
+            'Attention': self.get_self_attn,
+            'SimpleSelfAttention': self.get_simple_self_attn,
+        }.get(type(sa).__name__)
         self.fhooks = FeatureHooks(hooks, nm)
+        self.attn_func = attn_func
 
     def forward(self, x):
         x = self.norm(x)
@@ -55,11 +62,15 @@ class AttnFrameDetector(FrameDetector):
         attn_maps = torch.stack(attn_maps, dim=1)
         return output, attn_maps
 
-    def get_attn(self, key='features.4.1.sa'):
-        # sa_input = self.fhooks._feature_outputs[torch.device('cuda', index=0)][key
-        # 'features.4.1.sa'
-        # ]
+    def get_attn(self):
+        return self.attn_func()
 
+    def get_self_attn(self):
+        key = list(self.fhooks._feature_outputs.keys())[0]
+        attn_maps = self.fhooks.get_output(key)[0]
+        return attn_maps.mean(1)
+
+    def get_simple_self_attn(self, key='features.4.1.sa'):
         if key is not None:
             base_key = list(self.fhooks._feature_outputs.keys())[0]
             sa_input = self.fhooks.get_output(base_key)[0]
@@ -138,13 +149,14 @@ class ResManipulatorDetector(torch.nn.Module):
 
     def forward(self, x):
         # x: [bs, 3, D, H, W]
+        out = self.detector_model(x)
         o = x / 127.5 - 1.0
         o = self.manipulate(o, amp=self.amp_param)
         o = o - o.min()
         o = o / o.max()
         o = o * 255
-        o = self.detector_model(o) + self.detector_model(x)
-        return o
+        o = self.detector_model(o)
+        return o + out
 
     @property
     def input_size(self):
