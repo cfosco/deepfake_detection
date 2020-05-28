@@ -460,9 +460,10 @@ def read_frames(video, fps=30, step=1):
 
 
 class VideoFolder(torch.utils.data.Dataset):
-    def __init__(self, root, step=2, transform=None, target_file=None, default_target=0):
+    def __init__(self, root, step=2, transform=None, target_file=None, default_target=0, load_as='pil'):
         self.root = root
         self.step = step
+        self.load_as = load_as
         self.videos_filenames = sorted([f for f in os.listdir(root) if f.endswith('.mp4')])
         if transform is None:
             transform = transforms.VideoToTensor(rescale=False)
@@ -480,6 +481,8 @@ class VideoFolder(torch.utils.data.Dataset):
         name = self.videos_filenames[index]
         video_filename = os.path.join(self.root, name)
         frames = read_frames(video_filename, step=self.step)
+        if self.load_as == 'pil':
+            frames = map(Image.fromarray, frames)
         if self.transform is not None:
             frames = self.transform(frames)
         target = int(self.targets.get(name, self.default_target))
