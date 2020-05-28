@@ -479,13 +479,14 @@ class VideoFolder(torch.utils.data.Dataset):
 
     def __getitem__(self, index) -> Tuple[str, torch.Tensor, int]:
         name = self.videos_filenames[index]
+        basename = os.path.basename(name)
         video_filename = os.path.join(self.root, name)
         frames = read_frames(video_filename, step=self.step)
         if self.load_as == 'pil':
             frames = map(Image.fromarray, frames)
         if self.transform is not None:
             frames = self.transform(frames)
-        target = int(self.targets.get(name, self.default_target))
+        target = int(self.targets.get(basename, self.default_target))
         return name, frames, target
 
     def __len__(self):
@@ -523,13 +524,14 @@ class VideoZipFile(VideoFolder):
 
     def __getitem__(self, index):
         name = self.videos_filenames[index]
+        basename = os.path.basename(name)
         with tempfile.NamedTemporaryFile() as temp:
             with zipfile.ZipFile(self.filename) as z:
                 temp.write(z.read(name))
             frames = read_frames(temp.name, step=self.step)
             if self.transform is not None:
                 frames = self.transform(frames)
-        target = int(self.targets.get(name, self.default_target))
+        target = int(self.targets.get(basename, self.default_target))
         return name, frames, target
 
 
