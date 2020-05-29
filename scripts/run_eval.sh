@@ -50,4 +50,26 @@ for dataset in ${DATASETS}; do
             --resume ${CKPT}
     fi
 
+    if false; then
+        CKPT=best_weights/SeriesPretrainedFrozenMediumManipulatorDetector_resnet18_all_TSNFrameSampler_seg_count-16_init-imagenet-ortho_optim-Ranger_lr-0.001_sched-CosineAnnealingLR_bs-36_best.pth.tar
+        python main.py \
+            --model_name SeriesPretrainedFrozenMediumManipulatorDetector \
+            --basemodel_name resnet18 \
+            --dataset ${dataset} --evaluate \
+            -b 32 --segment_count 24 --optimizer Ranger \
+            --pretrained imagenet -j 4 --dataset_type DeepfakeFaceVideo \
+            --resume ${CKPT}
+    fi
+
+    if true; then
+        CKPT=best_weights/FrameDetector_samxresnet18_all_TSNFrameSampler_seg_count-16_init-imagenet-ortho_optim-Ranger_lr-0.001_sched-CosineAnnealingLR_bs-36_best.pth.tar
+        python main.py \
+            --model_name FrameDetector  \
+            --basemodel_name samxresnet18 \
+            --dataset ${dataset} --evaluate \
+            -b 32 --segment_count 24 --optimizer Ranger \
+            --pretrained imagenet -j 4 --dataset_type DeepfakeFaceVideo \
+            --resume ${CKPT}
+    fi
+
 done
