@@ -118,18 +118,21 @@ class SeriesManipulatorDetector(torch.nn.Module):
         self.detector_model = detector_model
         self.amp_param = P(4 * torch.ones(1, 1, 1, 1))
 
-    def manipulate(self, x, amp=None):
-        return torch.stack(
+    def manipulate(self, x, amp=None, pre_process=True, post_process=True):
+        if pre_process:
+            x = x / 127.5 - 1.0
+        o = torch.stack(
             [self.manipulator_model.manipulate(f.transpose(0, 1), amp=amp) for f in x]
         ).transpose(1, 2)
+        if post_process:
+            o = o - o.min()
+            o = o / o.max()
+            o = o * 255
+        return o
 
     def forward(self, x):
         # x: [bs, 3, D, H, W]
-        x = x / 127.5 - 1.0
         o = self.manipulate(x, amp=self.amp_param)
-        o = o - o.min()
-        o = o / o.max()
-        o = o * 255
         o = self.detector_model(o)
         return o
 
@@ -145,19 +148,22 @@ class ResManipulatorDetector(torch.nn.Module):
         self.detector_model = detector_model
         self.amp_param = P(4 * torch.ones(1, 1, 1, 1))
 
-    def manipulate(self, x, amp=None):
-        return torch.stack(
+    def manipulate(self, x, amp=None, pre_process=True, post_process=True):
+        if pre_process:
+            x = x / 127.5 - 1.0
+        o = torch.stack(
             [self.manipulator_model.manipulate(f.transpose(0, 1), amp=amp) for f in x]
         ).transpose(1, 2)
+        if post_process:
+            o = o - o.min()
+            o = o / o.max()
+            o = o * 255
+        return o
 
     def forward(self, x):
         # x: [bs, 3, D, H, W]
         out = self.detector_model(x)
-        o = x / 127.5 - 1.0
-        o = self.manipulate(o, amp=self.amp_param)
-        o = o - o.min()
-        o = o / o.max()
-        o = o * 255
+        o = self.manipulate(x, amp=self.amp_param)
         o = self.detector_model(o)
         return o + out
 
@@ -173,10 +179,14 @@ class ResManipulatorAttnDetector(torch.nn.Module):
         self.detector_model = detector_model
         self.amp_param = P(4 * torch.ones(1, 1, 1, 1))
 
-    def manipulate(self, x, amp=None, attn_map=None):
+    def manipulate(
+        self, x, amp=None, attn_map=None, pre_process=True, post_process=True
+    ):
         if attn_map is None:
             attn_map = [None] * x.size(0)
-        return torch.stack(
+        if pre_process:
+            x = x / 127.5 - 1.0
+        o = torch.stack(
             [
                 self.manipulator_model.manipulate(
                     f.transpose(0, 1), amp=amp, attn_map=a
@@ -184,16 +194,16 @@ class ResManipulatorAttnDetector(torch.nn.Module):
                 for f, a in zip(x, attn_map)
             ]
         ).transpose(1, 2)
+        if post_process:
+            o = o - o.min()
+            o = o / o.max()
+            o = o * 255
+        return o
 
     def forward(self, x):
         # x: [bs, 3, D, H, W]
         out, attn_map = self.detector_model(x)
-
-        o = x / 127.5 - 1.0
         o = self.manipulate(o, amp=self.amp_param, attn_map=attn_map)
-        o = o - o.min()
-        o = o / o.max()
-        o = o * 255
         o = self.detector_model(o)[0] + out
         return o
 

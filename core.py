@@ -372,11 +372,25 @@ def get_model(
 
 
 def do_normalize(model):
-    return not isinstance(model, (deepfake_models.SeriesManipulatorDetector))
+    return not isinstance(
+        model,
+        (
+            deepfake_models.SeriesManipulatorDetector,
+            deepfake_models.ResManipulatorDetector,
+            deepfake_models.ResManipulatorAttnDetector,
+        ),
+    )
 
 
 def do_rescale(model):
-    return not isinstance(model, (deepfake_models.SeriesManipulatorDetector))
+    return not isinstance(
+        model,
+        (
+            deepfake_models.SeriesManipulatorDetector,
+            deepfake_models.ResManipulatorDetector,
+            deepfake_models.ResManipulatorAttnDetector,
+        ),
+    )
 
 
 def get_basemodel(
