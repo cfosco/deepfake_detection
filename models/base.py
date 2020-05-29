@@ -56,28 +56,31 @@ class AttnFrameDetector(FrameDetector):
         outputs = []
         attn_maps = []
         for f in x:
-            outputs.append(self.model(f))
-            attn_maps.append(self.get_attn())
+            out = self.model(f)
+            outputs.append(out)
+            attn_maps.append(self.get_attn(out.device))
         output = self.consensus_func(torch.stack(outputs), dim=0)
         attn_maps = torch.stack(attn_maps, dim=1)
         return output, attn_maps
 
-    def get_attn(self):
-        return self.attn_func()
+    def get_attn(self, key=None):
+        return self.attn_func(key)
 
-    def get_self_attn(self):
-        key = list(self.fhooks._feature_outputs.keys())[0]
+    def get_self_attn(self, key=None):
+        if key is None:
+            key = list(self.fhooks._feature_outputs.keys())[0]
         attn_maps = self.fhooks.get_output(key)[0]
         return attn_maps.mean(1)
 
-    def get_simple_self_attn(self, key='features.4.1.sa'):
+    def get_simple_self_attn(self, key=None):
         if key is not None:
-            base_key = list(self.fhooks._feature_outputs.keys())[0]
-            sa_input = self.fhooks.get_output(base_key)[0]
-            # Compute attention map here
-            size = sa_input.size()
-            sa_input = sa_input.view(*size[:2], -1)
-            attn = torch.bmm(sa_input, sa_input.permute(0, 2, 1).contiguous())
+            key = list(self.fhooks._feature_outputs.keys())[0]
+
+        sa_input = self.fhooks.get_output(key)[0]
+        # Compute attention map here
+        size = sa_input.size()
+        sa_input = sa_input.view(*size[:2], -1)
+        attn = torch.bmm(sa_input, sa_input.permute(0, 2, 1).contiguous())
         return attn
 
 
@@ -191,7 +194,7 @@ class ResManipulatorAttnDetector(torch.nn.Module):
         o = o - o.min()
         o = o / o.max()
         o = o * 255
-        o = self.detector_model(o) + out
+        o = self.detector_model(o)[0] + out
         return o
 
     @property
