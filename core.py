@@ -297,6 +297,29 @@ def get_model(
                 rescale=True,
             ),
         )
+    elif model_name == 'ResPretrainedFrozenSmallManipulatorDetector':
+        magnet = deepfake_models.MagNet(
+            num_resblk_enc=3, num_resblk_man=1, num_resblk_dec=3
+        )
+        magnet_ckpt_file = os.path.join(
+            dir_path, 'models/deep_motion_mag/ckpt/ckpt_3_1_3_22.pth.tar'
+        )
+        magnet_ckpt = torch.load(magnet_ckpt_file, map_location='cpu')
+        magnet.load_state_dict(mutils.remove_prefix(magnet_ckpt['state_dict']))
+        for p in magnet.parameters():
+            p.requires_grad = False
+
+        return deepfake_models.ResManipulatorDetector(
+            manipulator_model=magnet,
+            detector_model=get_model(
+                'FrameDetector',  # TODO: add option for VideoDetector
+                basemodel_name,
+                pretrained=pretrained,
+                init_name=init_name,
+                normalize=True,
+                rescale=True,
+            ),
+        )
 
     elif model_name == 'ResPretrainedManipulatorAttnDetector':
         magnet = deepfake_models.MagNet()
