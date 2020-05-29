@@ -279,7 +279,7 @@ def get_model(
 
     elif model_name == 'ResPretrainedSmallManipulatorDetector':
         magnet = deepfake_models.MagNet(
-            num_resblk_enc=3, num_resblk_man=1, num_resblk_dec=1
+            num_resblk_enc=3, num_resblk_man=1, num_resblk_dec=3
         )
         magnet_ckpt_file = os.path.join(
             dir_path, 'models/deep_motion_mag/ckpt/ckpt_3_1_3_22.pth.tar'
@@ -305,7 +305,45 @@ def get_model(
         )
         magnet_ckpt = torch.load(magnet_ckpt_file, map_location='cpu')
         magnet.load_state_dict(mutils.remove_prefix(magnet_ckpt['state_dict']))
-        if basemodel_name not in ['samxresnet18', 'samxresnet50']:
+        if basemodel_name not in [
+            'ssamxresnet18',
+            'ssamxresnet50',
+            'samxresnet18',
+            'samxresnet50',
+        ]:
+            print(f'Warning: {basemodel_name} does not support attention')
+            print(f'Switching basemodel to samxresnet18...')
+            basemodel_name = 'samxresnet18'
+        return deepfake_models.ResManipulatorAttnDetector(
+            manipulator_model=magnet,
+            detector_model=get_model(
+                'AttnFrameDetector',
+                basemodel_name,
+                pretrained=pretrained,
+                init_name=init_name,
+                normalize=True,
+                rescale=True,
+            ),
+        )
+
+    elif model_name == 'ResPretrainedFrozenSmallManipulatorAttnDetector':
+        magnet = deepfake_models.MagNet(
+            num_resblk_enc=3, num_resblk_man=1, num_resblk_dec=3
+        )
+        magnet_ckpt_file = os.path.join(
+            dir_path, 'models/deep_motion_mag/ckpt/ckpt_3_1_3_22.pth.tar'
+        )
+        magnet_ckpt = torch.load(magnet_ckpt_file, map_location='cpu')
+        magnet.load_state_dict(mutils.remove_prefix(magnet_ckpt['state_dict']))
+        for p in magnet.parameters():
+            p.requires_grad = False
+
+        if basemodel_name not in [
+            'ssamxresnet18',
+            'ssamxresnet50',
+            'samxresnet18',
+            'samxresnet50',
+        ]:
             print(f'Warning: {basemodel_name} does not support attention')
             print(f'Switching basemodel to samxresnet18...')
             basemodel_name = 'samxresnet18'
@@ -477,7 +515,7 @@ def get_dataset(
     Sampler = getattr(samplers, sampler_type, 'TSNFrameSampler')
     r_kwargs, _ = utils.split_kwargs_by_func(RecSet, kwargs)
     s_kwargs, _ = utils.split_kwargs_by_func(Sampler, kwargs)
-    
+
     record_set = RecSet(**r_kwargs)
     sampler = Sampler(**s_kwargs)
     full_kwargs = {
