@@ -61,7 +61,7 @@ for dataset in ${DATASETS}; do
             --resume ${CKPT}
     fi
 
-    if true; then
+    if false; then
         CKPT=best_weights/FrameDetector_samxresnet18_all_TSNFrameSampler_seg_count-16_init-imagenet-ortho_optim-Ranger_lr-0.001_sched-CosineAnnealingLR_bs-36_best.pth.tar
         python main.py \
             --model_name FrameDetector  \
@@ -72,4 +72,14 @@ for dataset in ${DATASETS}; do
             --resume ${CKPT}
     fi
 
+    if false; then
+        CKPT=best_weights/FrameDetector_resnet34_all_TSNFrameSampler_seg_count-16_init-imagenet-ortho_optim-Ranger_lr-0.001_sched-CosineAnnealingLR_bs-48_best.pth.tar
+        python main.py \
+            --model_name FrameDetector  \
+            --basemodel_name resnet34 \
+            --dataset ${dataset} --evaluate \
+            -b 32 --segment_count 64 --optimizer Ranger \
+            --pretrained imagenet -j 4 --dataset_type DeepfakeFaceVideo \
+            --resume ${CKPT}
+    fi
 done
