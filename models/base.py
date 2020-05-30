@@ -171,9 +171,9 @@ class SeriesManipulatorAttnDetector(torch.nn.Module):
 
     def forward(self, x):
         # x: [bs, 3, D, H, W]
-        o = self.manipulate(x, amp=self.amp_param)
-        o = self.detector_model(o)
-        return o
+        out, attn_map = self.detector_model(x)
+        o = self.manipulate(x, amp=self.amp_param, attn_map=attn_map)
+        return self.detector_model(o)[0]
 
     @property
     def input_size(self):
