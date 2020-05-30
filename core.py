@@ -439,6 +439,7 @@ def do_normalize(model):
         (
             deepfake_models.SeriesManipulatorDetector,
             deepfake_models.ResManipulatorDetector,
+            deepfake_models.SeriesManipulatorAttnDetector,
             deepfake_models.ResManipulatorAttnDetector,
         ),
     )
@@ -449,6 +450,7 @@ def do_rescale(model):
         model,
         (
             deepfake_models.SeriesManipulatorDetector,
+            deepfake_models.SeriesManipulatorAttnDetector,
             deepfake_models.ResManipulatorDetector,
             deepfake_models.ResManipulatorAttnDetector,
         ),
