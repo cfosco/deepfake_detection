@@ -81,7 +81,9 @@ class AttnFrameDetector(FrameDetector):
         size = sa_input.size()
         sa_input = sa_input.view(*size[:2], -1)
         attn = torch.bmm(sa_input, sa_input.permute(0, 2, 1).contiguous())
-        return attn
+        convx = self.model.features[4][1].sa.conv(sa_input)
+        o = torch.bmm(attn, convx).view(*size).mean(1)
+        return o
 
 
 class VideoDetector(Detector):
