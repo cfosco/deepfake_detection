@@ -370,7 +370,7 @@ def _process_ff_sequence(data_root, dirname, label, num_workers=12,
         for compression_level in os.listdir(os.path.join(root, opart)):
             vroot = os.path.join(root, opart, compression_level, 'videos')
             videos = [v for v in os.listdir(vroot) if v.endswith('.mp4')]
-            vdata = {**vdata, **{v:
+            vdata = {**vdata, **{os.path.join(opart, v):
                                  {
                                      'path': os.path.join(dirname, opart, compression_level, 'videos', v),
                                      'filename': v,
@@ -398,8 +398,8 @@ def _process_ff_sequence(data_root, dirname, label, num_workers=12,
                     fdata = json.load(f)
                     d[face_dir] = {**fdata, 'path': path}
             except Exception:
-                missing_faces[face_dir].append(d['filename'])
-            metadata[d['filename']] = d
+                missing_faces[face_dir].append(d['path'])
+            metadata[d['path']] = d
 
     return metadata, missing_faces
 
@@ -447,7 +447,6 @@ def generate_FaceForensics_metadata(data_root, num_workers=4):
     # print('all_metadata', len(all_metadata))
     parts = set([d['part'] for d in all_metadata.values()])
     m = {part: {k: v for k, v in all_metadata.items() if v['part'] == part} for part in parts}
-    # print(m, len(m))
 
     with open(os.path.join(data_root, 'metadata.json'), 'w') as ff:
         json.dump(m, ff)
@@ -465,8 +464,9 @@ def generate_FaceForensics_metadata(data_root, num_workers=4):
             split_metadata = defaultdict(dict)
             for part, part_data in m.items():
                 for filename in split_data[split]:
-                    if filename in part_data:
-                        split_metadata[part] = {**split_metadata[part], filename: part_data[filename]}
+                    for pd in part_data:
+                        if filename in pd:
+                            split_metadata[part] = {**split_metadata[part], pd: part_data[pd]}
             print(f'Total of {sum([len(d) for d in split_metadata.values()])} videos in {split} split')
             json.dump(split_metadata, f)
 
