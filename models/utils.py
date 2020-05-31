@@ -86,6 +86,16 @@ class Normalize(nn.Module):
         x.div_(255.0) if rescale else None
         return (x - self.mean) / self.std
 
+    def __repr__(self):
+        return (
+            self.__class__.__name__
+            + "(mean={mean}, std={std}, rescale={rescale!r})".format(
+                mean=[float(f'{x:.3f}') for x in self.mean.flatten().tolist()],
+                std=[float(f'{x:.3f}') for x in self.std.flatten().tolist()],
+                rescale=self.rescale,
+            )
+        )
+
 
 class FeatureHooks:
     def __init__(self, hooks, named_modules):
