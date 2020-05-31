@@ -122,14 +122,12 @@ class SeriesManipulatorDetector(torch.nn.Module):
 
     def manipulate(self, x, amp=None, pre_process=True, post_process=True):
         if pre_process:
-            x = x / 127.5 - 1.0
+            x = self.manipulator_model.pre_process(x)
         o = torch.stack(
             [self.manipulator_model.manipulate(f.transpose(0, 1), amp=amp) for f in x]
         ).transpose(1, 2)
         if post_process:
-            o = o - o.min()
-            o = o / o.max()
-            o = o * 255
+            o = self.manipulator_model.post_process(o)
         return o
 
     def forward(self, x):
@@ -156,7 +154,7 @@ class SeriesManipulatorAttnDetector(torch.nn.Module):
         if attn_map is None:
             attn_map = [None] * x.size(0)
         if pre_process:
-            x = x / 127.5 - 1.0
+            x = self.manipulator_model.pre_process(x)
         o = torch.stack(
             [
                 self.manipulator_model.manipulate(
@@ -166,9 +164,7 @@ class SeriesManipulatorAttnDetector(torch.nn.Module):
             ]
         ).transpose(1, 2)
         if post_process:
-            o = o - o.min()
-            o = o / o.max()
-            o = o * 255
+            o = self.manipulator_model.post_process(o)
         return o
 
     def forward(self, x):
@@ -191,14 +187,12 @@ class ResManipulatorDetector(torch.nn.Module):
 
     def manipulate(self, x, amp=None, pre_process=True, post_process=True):
         if pre_process:
-            x = x / 127.5 - 1.0
+            x = self.manipulator_model.pre_process(x)
         o = torch.stack(
             [self.manipulator_model.manipulate(f.transpose(0, 1), amp=amp) for f in x]
         ).transpose(1, 2)
         if post_process:
-            o = o - o.min()
-            o = o / o.max()
-            o = o * 255
+            o = self.manipulator_model.post_process(o)
         return o
 
     def forward(self, x):
@@ -226,7 +220,7 @@ class ResManipulatorAttnDetector(torch.nn.Module):
         if attn_map is None:
             attn_map = [None] * x.size(0)
         if pre_process:
-            x = x / 127.5 - 1.0
+            x = self.manipulator_model.pre_process(x)
         o = torch.stack(
             [
                 self.manipulator_model.manipulate(
@@ -236,9 +230,7 @@ class ResManipulatorAttnDetector(torch.nn.Module):
             ]
         ).transpose(1, 2)
         if post_process:
-            o = o - o.min()
-            o = o / o.max()
-            o = o * 255
+            o = self.manipulator_model.post_process(o)
         return o
 
     def forward(self, x):

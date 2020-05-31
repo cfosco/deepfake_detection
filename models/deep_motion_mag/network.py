@@ -211,6 +211,15 @@ class MagNet(nn.Module):
         #        n = m.kernel_size[0] * m.kernel_size[1] * m.out_channels
         #        m.weight.data.normal_(0, math.sqrt(2. / n))
 
+    def pre_process(self, x):
+        return x / 127.5 - 1.0
+
+    def post_process(self, o):
+        o = o - o.min()
+        o = o / o.max()
+        o = o * 255
+        return o
+
     def forward(self, x_a, x_b, x_c, amp):  # v: texture, m: shape
         v_a, m_a = self.encoder(x_a)
         v_b, m_b = self.encoder(x_b)
@@ -231,8 +240,19 @@ class MagNet(nn.Module):
         return y_hat
 
     def manipulate_video(
-        self, x, amp=None, attn_maps=None, mode='temporal', fh=1, fl=0.5, fs=30
+        self,
+        x,
+        amp=None,
+        attn_maps=None,
+        mode='temporal',
+        fh=1,
+        fl=0.5,
+        fs=30,
+        pre_process=True,
+        post_process=True,
     ):
+        if pre_process:
+            x = self.pre_process(x)
 
         if mode == 'temporal':
             # temporal mode (difference of IIR)
@@ -281,7 +301,9 @@ class MagNet(nn.Module):
                 mag_frames.append(y_hat)
 
             mag_frames = torch.stack(mag_frames, 2)
-            return mag_frames
+        if post_process:
+            mag_frames = self.post_process(mag_frames)
+        return mag_frames
 
 
 if __name__ == '__main__':
