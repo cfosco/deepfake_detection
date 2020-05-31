@@ -139,7 +139,7 @@ class DeepfakeSet:
                     if not record.has_face_data:
                         continue
 
-                if name not in self.blacklist:
+                if name not in self.blacklist and os.path.basename(name) not in self.blacklist:
                     self.records.append(record)
                     self.records_dict[part].append(record)
                 else:
