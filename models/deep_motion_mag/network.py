@@ -146,7 +146,7 @@ class Manipulator(nn.Module):
     def _format_attn_map(self, attn_map, size):
         n, c, h, w = size
         if attn_map.ndim == 3:
-            attn_map = attn_map.unsqueeze(1)  # [num_frames, 1, h, w]
+            attn_map = attn_map.unsqueeze(1)  # [bs, 1, h, w]
         elif attn_map.ndim == 2:
             attn_map = attn_map.unsqueeze(0).unsqueeze(0)
         scaled_attn_map = nn.functional.interpolate(attn_map, size=(h, w), mode='area')
@@ -243,7 +243,7 @@ class MagNet(nn.Module):
         self,
         x,
         amp=None,
-        attn_maps=None,
+        attn_map=None,
         mode='temporal',
         fh=1,
         fl=0.5,
@@ -264,15 +264,12 @@ class MagNet(nn.Module):
             if amp is None:
                 amp = self.amp
 
-            if attn_maps is None:
-                attn_maps = [None] * x.size(2)
-
             x_state = []
             y_state = []
 
             mag_frames = [x[:, :, 0]]
-            for i in range(1, x.size(2)):
-                xb = x[:, :, i]  # [bs, 3, h, w] (i-th frame)
+            for n in range(1, x.size(2)):
+                xb = x[:, :, n]  # [bs, 3, h, w] (n-th frame)
 
                 vb, mb = self.encoder(xb)
                 # TODO: Determine if "detach" needs to be removed
@@ -294,7 +291,8 @@ class MagNet(nn.Module):
                 if len(y_state) > len(filter_a):
                     y_state = y_state[: len(filter_a)]
 
-                mb_m = self.manipulator(0.0, y, amp, attn_map=attn_maps[i])
+                am = attn_map[:, n] if attn_map is not None else None
+                mb_m = self.manipulator(0.0, y, amp, attn_map=am)
                 mb_m += mb - y
 
                 y_hat = self.decoder(vb, mb_m)
