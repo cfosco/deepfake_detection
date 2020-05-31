@@ -74,16 +74,22 @@ class Normalize(nn.Module):
         std=[0.229, 0.224, 0.225],
         shape=(1, -1, 1, 1, 1),
         rescale=True,
+        inplace=False,
     ):
         super().__init__()
         self.shape = shape
         self.mean = P(torch.tensor(mean).view(shape), requires_grad=False)
         self.std = P(torch.tensor(std).view(shape), requires_grad=False)
         self.rescale = rescale
+        self.inplace = inplace
 
     def forward(self, x, rescale=None):
         rescale = self.rescale if rescale is None else rescale
-        x.div_(255.0) if rescale else None
+        if rescale:
+            if self.inplace:
+                x.div_(255.0) if rescale else None
+            else:
+                x = x / 255.0
         return (x - self.mean) / self.std
 
     def __repr__(self):
