@@ -131,7 +131,8 @@ class Manipulator(nn.Module):
         diff = x_b - x_a
         diff = self.convblks(diff)
 
-        attn_map = attn_map or self.attn_map
+        if attn_map is None:
+            attn_map = self.attn_map
         if attn_map is not None:
             scaled_attn_map = self._format_attn_map(attn_map, diff.size())
             diff = diff * scaled_attn_map.to(diff.device)
@@ -228,6 +229,59 @@ class MagNet(nn.Module):
         m_enc = self.manipulator.manip(m, amp, attn_map)
         y_hat = self.decoder(v, m_enc)
         return y_hat
+
+    def manipulate_video(
+        self, x, amp=None, attn_maps=None, mode='temporal', fh=1, fl=0.5, fs=30
+    ):
+
+        if mode == 'temporal':
+            # temporal mode (difference of IIR)
+            # copy filter coefficients and follow codes from https://github.com/12dmodel/deep_motion_mag
+            mag_frames = []
+            filter_b = [fh - fl, fl - fh]
+            filter_a = [-1.0 * (2.0 - fh - fl), (1.0 - fl) * (1.0 - fh)]
+
+            if amp is None:
+                amp = self.amp
+
+            if attn_maps is None:
+                attn_maps = [None] * x.size(2)
+
+            x_state = []
+            y_state = []
+
+            mag_frames = [x[:, :, 0]]
+            for i in range(1, x.size(2)):
+                xb = x[:, :, i]  # [bs, 3, h, w] (i-th frame)
+
+                vb, mb = self.encoder(xb)
+                # TODO: Determine if "detach" needs to be removed
+                x_state.insert(0, mb.detach())
+
+                while len(x_state) < len(filter_b):
+                    # TODO: Determine if "detach" needs to be removed
+                    x_state.insert(0, mb.detach())
+                if len(x_state) > len(filter_b):
+                    x_state = x_state[: len(filter_b)]
+                y = torch.zeros_like(mb)
+                for i in range(len(x_state)):
+                    y += x_state[i] * filter_b[i]
+                for i in range(len(y_state)):
+                    y -= y_state[i] * filter_a[i]
+
+                # TODO: Determine if "detach" needs to be removed
+                y_state.insert(0, y.detach())
+                if len(y_state) > len(filter_a):
+                    y_state = y_state[: len(filter_a)]
+
+                mb_m = self.manipulator(0.0, y, amp, attn_map=attn_maps[i])
+                mb_m += mb - y
+
+                y_hat = self.decoder(vb, mb_m)
+                mag_frames.append(y_hat)
+
+            mag_frames = torch.stack(mag_frames, 2)
+            return mag_frames
 
 
 if __name__ == '__main__':

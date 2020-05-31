@@ -108,6 +108,12 @@ def test_manipulate_detector(frames3D_small):
     print(out.shape)
 
 
+def test_manipulate_video(frames3D_small):
+    model = models.MagNet().to(device)
+    out = model.manipulate_video(frames3D_small)
+    assert tuple(out.shape) == frames3D_small.shape
+
+
 @pytest.mark.parametrize(
     'model_name, basemodel_name',
     [('FrameModel', 'resnet18'), ('ManipulatorDetector', 'resnet18')],
