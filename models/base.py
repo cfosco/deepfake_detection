@@ -114,13 +114,18 @@ class DeepfakeDetector(torch.nn.Module):
 
 
 class SeriesManipulatorDetector(torch.nn.Module):
-    def __init__(self, manipulator_model, detector_model):
+    def __init__(self, manipulator_model, detector_model, manipulate_func='video'):
         super().__init__()
         self.manipulator_model = manipulator_model
         self.detector_model = detector_model
-        self.amp_param = P(4 * torch.ones(1, 1, 1, 1))
+        self.amp_param = P(5 * torch.ones(1, 1, 1, 1))
+        self.manipulate_func = manipulate_func
+        self.manipulate = {
+            'video': self.manipulator_model.manipulate_video,
+            'frame': self.manipulate_frame,
+        }.get(manipulate_func, 'video')
 
-    def manipulate(self, x, amp=None, pre_process=True, post_process=True):
+    def manipulate_frame(self, x, amp=None, pre_process=True, post_process=True):
         if pre_process:
             x = self.manipulator_model.pre_process(x)
         o = torch.stack(
@@ -142,13 +147,18 @@ class SeriesManipulatorDetector(torch.nn.Module):
 
 
 class SeriesManipulatorAttnDetector(torch.nn.Module):
-    def __init__(self, manipulator_model, detector_model):
+    def __init__(self, manipulator_model, detector_model, manipulate_func='video'):
         super().__init__()
         self.manipulator_model = manipulator_model
         self.detector_model = detector_model
-        self.amp_param = P(4 * torch.ones(1, 1, 1, 1))
+        self.amp_param = P(5 * torch.ones(1, 1, 1, 1))
+        self.manipulate_func = manipulate_func
+        self.manipulate = {
+            'video': self.manipulator_model.manipulate_video,
+            'frame': self.manipulate_frame,
+        }.get(manipulate_func, 'video')
 
-    def manipulate(
+    def manipulate_frame(
         self, x, amp=None, attn_map=None, pre_process=True, post_process=True
     ):
         if attn_map is None:
@@ -179,13 +189,18 @@ class SeriesManipulatorAttnDetector(torch.nn.Module):
 
 
 class ResManipulatorDetector(torch.nn.Module):
-    def __init__(self, manipulator_model, detector_model):
+    def __init__(self, manipulator_model, detector_model, manipulate_func='video'):
         super().__init__()
         self.manipulator_model = manipulator_model
         self.detector_model = detector_model
-        self.amp_param = P(4 * torch.ones(1, 1, 1, 1))
+        self.amp_param = P(5 * torch.ones(1, 1, 1, 1))
+        self.manipulate_func = manipulate_func
+        self.manipulate = {
+            'video': self.manipulator_model.manipulate_video,
+            'frame': self.manipulate_frame,
+        }.get(manipulate_func, 'video')
 
-    def manipulate(self, x, amp=None, pre_process=True, post_process=True):
+    def manipulate_frame(self, x, amp=None, pre_process=True, post_process=True):
         if pre_process:
             x = self.manipulator_model.pre_process(x)
         o = torch.stack(
@@ -208,13 +223,18 @@ class ResManipulatorDetector(torch.nn.Module):
 
 
 class ResManipulatorAttnDetector(torch.nn.Module):
-    def __init__(self, manipulator_model, detector_model):
+    def __init__(self, manipulator_model, detector_model, manipulate_func='video'):
         super().__init__()
         self.manipulator_model = manipulator_model
         self.detector_model = detector_model
-        self.amp_param = P(4 * torch.ones(1, 1, 1, 1))
+        self.amp_param = P(5 * torch.ones(1, 1, 1, 1))
+        self.manipulator_func = manipulate_func
+        self.manipulate = {
+            'video': self.manipulator_model.manipulate_video,
+            'frame': self.manipulate_frame,
+        }.get(manipulate_func, 'video')
 
-    def manipulate(
+    def manipulate_frame(
         self, x, amp=None, attn_map=None, pre_process=True, post_process=True
     ):
         if attn_map is None:
