@@ -107,7 +107,10 @@ def get_model(
             init_name=init_name,
         )
         return deepfake_models.AttnFrameDetector(
-            basemodel, normalize=normalize, rescale=rescale
+            basemodel,
+            normalize=normalize,
+            rescale=rescale,
+            basemodel_name=basemodel_name,
         )
 
     elif model_name == 'VideoDetector':

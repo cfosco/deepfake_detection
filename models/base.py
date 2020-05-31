@@ -35,18 +35,40 @@ class FrameDetector(Detector):
 
 
 class AttnFrameDetector(FrameDetector):
-    def __init__(self, model, consensus_func=torch.mean, normalize=False, rescale=True):
+    def __init__(
+        self,
+        model,
+        consensus_func=torch.mean,
+        normalize=False,
+        rescale=True,
+        basemodel_name='samxresnet18',
+    ):
         super().__init__(model, consensus_func, normalize, rescale)
         nm = model.named_modules()
-        sa = model.features[4][1].sa
-        hooks = {
-            'Attention': [{'name': 'features.4.1.sa.o', 'type': 'forward'}],
-            'SimpleSelfAttention': [{'name': 'features.4.1.sa', 'type': 'forward_pre'}],
-        }.get(type(sa).__name__)
+        if basemodel_name.endswith('18'):
+            sa = model.features[4][1].sa
+            hooks = {
+                'Attention': [{'name': 'features.4.1.sa.o', 'type': 'forward'}],
+                'SimpleSelfAttention': [
+                    {'name': 'features.4.1.sa', 'type': 'forward_pre'}
+                ],
+            }.get(type(sa).__name__)
+        elif basemodel_name.endswith('34'):
+            sa = model.features[4][2].sa
+            hooks = {
+                'Attention': [{'name': 'features.4.2.sa.o', 'type': 'forward'}],
+                'SimpleSelfAttention': [
+                    {'name': 'features.4.2.sa', 'type': 'forward_pre'}
+                ],
+            }.get(type(sa).__name__)
+        else:
+            raise ValueError(f'Unsupport basemodel type {basemodel_name}')
+
         attn_func = {
             'Attention': self.get_self_attn,
             'SimpleSelfAttention': self.get_simple_self_attn,
         }.get(type(sa).__name__)
+
         self.fhooks = FeatureHooks(hooks, nm)
         self.attn_func = attn_func
 
