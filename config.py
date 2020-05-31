@@ -267,7 +267,7 @@ def parse_args():
     parser.add_argument('--frame_step', type=int, default=5)
     parser.add_argument('--dataset_type', type=str, default='DeepfakeFaceVideo')
     parser.add_argument('--record_set_type', type=str, default='DeepfakeFaceSet')
-    parser.add_argument('--sampler_type', type=str, default='TSNFrameSampler')
+    parser.add_argument('--sampler_type', type=str, default='ClipSampler')
     parser.add_argument(
         '--pretrained',
         type=str,
