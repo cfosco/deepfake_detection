@@ -153,6 +153,7 @@ notebooks/models
 notebooks/results
 notebooks/DeepfakeDetection
 notebooks/cam_videos
+notebooks/caricatures
 TODO
 
 *.lock
