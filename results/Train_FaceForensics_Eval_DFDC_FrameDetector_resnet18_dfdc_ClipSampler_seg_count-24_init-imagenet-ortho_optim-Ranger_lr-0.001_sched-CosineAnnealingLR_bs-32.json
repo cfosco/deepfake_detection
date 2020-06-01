@@ -1,6 +1,6 @@
 {
-    "acc": 54.5,
-    "loss": 1.2479410314559936,
+    "acc": 55.5,
+    "loss": 1.2467129278182982,
     "dataset": "DFDC",
     "checkpoint_file": "weights/FrameDetector_resnet18_faceforensics_TSNFrameSampler_seg_count-16_init-imagenet-ortho_optim-Ranger_lr-0.001_sched-CosineAnnealingLR_bs-64_best.pth.tar",
     "data_root": "/data/datasets",

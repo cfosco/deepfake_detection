@@ -1,6 +1,6 @@
 {
-    "acc": 97.14285714285714,
-    "loss": 0.06792273042457445,
+    "acc": 96.07142857142857,
+    "loss": 0.09267228099384478,
     "dataset": "FaceForensics",
     "checkpoint_file": "weights/FrameDetector_resnet18_faceforensics_TSNFrameSampler_seg_count-16_init-imagenet-ortho_optim-Ranger_lr-0.001_sched-CosineAnnealingLR_bs-64_best.pth.tar",
     "data_root": "/data/datasets",
