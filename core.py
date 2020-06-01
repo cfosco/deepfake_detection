@@ -766,7 +766,9 @@ def name_from_args(args):
             args.basemodel_name,
             args.dataset.lower(),
             args.sampler_type,
-            f'seg_count-{args.segment_count}',
+            f'seg_count-{args.segment_count}'
+            if args.sampler_type == 'TSNFrameSampler'
+            else f'clip_length-{args.clip_length}_frame_step-{args.frame_step}',
             f'init-{"-".join([args.pretrained, args.init]) if args.pretrained else args.init}',
             f'optim-{args.optimizer}',
             f'lr-{args.lr}',
