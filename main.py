@@ -206,7 +206,9 @@ def main_worker(gpu, ngpus_per_node, args):
     train_sampler = train_loader.sampler
 
     if args.evaluate:
-        results_file = os.path.join(args.results_dir, save_name + '.json')
+        train_args = vars(checkpoint.get('args'))
+        train_dataset = train_args['dataset']
+        results_file = os.path.join(args.results_dir, f'Train_{train_dataset}_Eval_{args.dataset}_' + save_name + '.json')
         print(f'Evaluating: {results_file}')
         acc, loss = validate(val_loader, model, criterion, args)
         with open(results_file, 'w') as f:
@@ -318,14 +320,14 @@ def train(train_loader, model, criterion, optimizer, logger, epoch, args, displa
         # measure data loading time
         data_time.update(time.time() - end)
         itr += 1
-        
-        
+
+
         # DEBUG
 #         import matplotlib.pyplot as plt
 #         im = images[0][:,0].permute(1,2,0)
 #         plt.imshow((im-im.min())/(im.max()-im.min()))
 #         plt.show()
-        
+
         if args.gpu is not None:
             images = images.cuda(args.gpu, non_blocking=True)
         target = target.cuda(args.gpu, non_blocking=True)

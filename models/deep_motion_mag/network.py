@@ -131,7 +131,8 @@ class Manipulator(nn.Module):
         diff = x_b - x_a
         diff = self.convblks(diff)
 
-        attn_map = attn_map or self.attn_map
+        if attn_map is None:
+            attn_map = self.attn_map
         if attn_map is not None:
             scaled_attn_map = self._format_attn_map(attn_map, diff.size())
             diff = diff * scaled_attn_map.to(diff.device)
@@ -145,7 +146,7 @@ class Manipulator(nn.Module):
     def _format_attn_map(self, attn_map, size):
         n, c, h, w = size
         if attn_map.ndim == 3:
-            attn_map = attn_map.unsqueeze(1)  # [num_frames, 1, h, w]
+            attn_map = attn_map.unsqueeze(1)  # [bs, 1, h, w]
         elif attn_map.ndim == 2:
             attn_map = attn_map.unsqueeze(0).unsqueeze(0)
         scaled_attn_map = nn.functional.interpolate(attn_map, size=(h, w), mode='area')
@@ -210,6 +211,15 @@ class MagNet(nn.Module):
         #        n = m.kernel_size[0] * m.kernel_size[1] * m.out_channels
         #        m.weight.data.normal_(0, math.sqrt(2. / n))
 
+    def pre_process(self, x):
+        return x / 127.5 - 1.0
+
+    def post_process(self, o):
+        o = o - o.min()
+        o = o / o.max()
+        o = o * 255
+        return o
+
     def forward(self, x_a, x_b, x_c, amp):  # v: texture, m: shape
         v_a, m_a = self.encoder(x_a)
         v_b, m_b = self.encoder(x_b)
@@ -228,6 +238,70 @@ class MagNet(nn.Module):
         m_enc = self.manipulator.manip(m, amp, attn_map)
         y_hat = self.decoder(v, m_enc)
         return y_hat
+
+    def manipulate_video(
+        self,
+        x,
+        amp=None,
+        attn_map=None,
+        mode='temporal',
+        fh=1,
+        fl=0.5,
+        fs=30,
+        pre_process=True,
+        post_process=True,
+    ):
+        if pre_process:
+            x = self.pre_process(x)
+
+        if mode == 'temporal':
+            # temporal mode (difference of IIR)
+            # copy filter coefficients and follow codes from https://github.com/12dmodel/deep_motion_mag
+            mag_frames = []
+            filter_b = [fh - fl, fl - fh]
+            filter_a = [-1.0 * (2.0 - fh - fl), (1.0 - fl) * (1.0 - fh)]
+
+            if amp is None:
+                amp = self.amp
+
+            x_state = []
+            y_state = []
+
+            mag_frames = [x[:, :, 0]]
+            for n in range(1, x.size(2)):
+                xb = x[:, :, n]  # [bs, 3, h, w] (n-th frame)
+
+                vb, mb = self.encoder(xb)
+                # TODO: Determine if "detach" needs to be removed
+                x_state.insert(0, mb.detach())
+
+                while len(x_state) < len(filter_b):
+                    # TODO: Determine if "detach" needs to be removed
+                    x_state.insert(0, mb.detach())
+                if len(x_state) > len(filter_b):
+                    x_state = x_state[: len(filter_b)]
+                y = torch.zeros_like(mb)
+                for i in range(len(x_state)):
+                    y += x_state[i] * filter_b[i]
+                for i in range(len(y_state)):
+                    y -= y_state[i] * filter_a[i]
+
+                # TODO: Determine if "detach" needs to be removed
+                y_state.insert(0, y.detach())
+                if len(y_state) > len(filter_a):
+                    y_state = y_state[: len(filter_a)]
+
+                am = attn_map[:, n] if attn_map is not None else None
+                mb_m = self.manipulator(0.0, y, amp, attn_map=am)
+                mb_m += mb - y
+
+                y_hat = self.decoder(vb, mb_m)
+                mag_frames.append(y_hat)
+
+            mag_frames = torch.stack(mag_frames, 2)
+        if post_process:
+            mag_frames = self.post_process(mag_frames)
+        return mag_frames
 
 
 if __name__ == '__main__':

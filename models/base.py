@@ -35,13 +35,42 @@ class FrameDetector(Detector):
 
 
 class AttnFrameDetector(FrameDetector):
-    def __init__(self, model, consensus_func=torch.mean, normalize=False, rescale=True):
+    def __init__(
+        self,
+        model,
+        consensus_func=torch.mean,
+        normalize=False,
+        rescale=True,
+        basemodel_name='samxresnet18',
+    ):
         super().__init__(model, consensus_func, normalize, rescale)
         nm = model.named_modules()
-        hooks = [
-            {'name': 'features.4.1.sa', 'type': 'forward_pre'},
-        ]
+        if basemodel_name.endswith('18'):
+            sa = model.features[4][1].sa
+            hooks = {
+                'Attention': [{'name': 'features.4.1.sa.o', 'type': 'forward'}],
+                'SimpleSelfAttention': [
+                    {'name': 'features.4.1.sa', 'type': 'forward_pre'}
+                ],
+            }.get(type(sa).__name__)
+        elif basemodel_name.endswith('34'):
+            sa = model.features[4][2].sa
+            hooks = {
+                'Attention': [{'name': 'features.4.2.sa.o', 'type': 'forward'}],
+                'SimpleSelfAttention': [
+                    {'name': 'features.4.2.sa', 'type': 'forward_pre'}
+                ],
+            }.get(type(sa).__name__)
+        else:
+            raise ValueError(f'Unsupport basemodel type {basemodel_name}')
+
+        attn_func = {
+            'Attention': self.get_self_attn,
+            'SimpleSelfAttention': self.get_simple_self_attn,
+        }.get(type(sa).__name__)
+
         self.fhooks = FeatureHooks(hooks, nm)
+        self.attn_func = attn_func
 
     def forward(self, x):
         x = self.norm(x)
@@ -49,25 +78,34 @@ class AttnFrameDetector(FrameDetector):
         outputs = []
         attn_maps = []
         for f in x:
-            outputs.append(self.model(f))
-            attn_maps.append(self.get_attn())
+            out = self.model(f)
+            outputs.append(out)
+            attn_maps.append(self.get_attn(out.device))
         output = self.consensus_func(torch.stack(outputs), dim=0)
         attn_maps = torch.stack(attn_maps, dim=1)
         return output, attn_maps
 
-    def get_attn(self, key='features.4.1.sa'):
-        # sa_input = self.fhooks._feature_outputs[torch.device('cuda', index=0)][key
-        # 'features.4.1.sa'
-        # ]
+    def get_attn(self, key=None):
+        return self.attn_func(key)
 
+    def get_self_attn(self, key=None):
+        if key is None:
+            key = list(self.fhooks._feature_outputs.keys())[0]
+        attn_maps = self.fhooks.get_output(key)[0]
+        return attn_maps.mean(1)
+
+    def get_simple_self_attn(self, key=None):
         if key is not None:
-            base_key = list(self.fhooks._feature_outputs.keys())[0]
-            sa_input = self.fhooks.get_output(base_key)[0]
-            # Compute attention map here
-            size = sa_input.size()
-            sa_input = sa_input.view(*size[:2], -1)
-            attn = torch.bmm(sa_input, sa_input.permute(0, 2, 1).contiguous())
-        return attn
+            key = list(self.fhooks._feature_outputs.keys())[0]
+
+        sa_input = self.fhooks.get_output(key)[0]
+        # Compute attention map here
+        size = sa_input.size()
+        sa_input = sa_input.view(*size[:2], -1)
+        attn = torch.bmm(sa_input, sa_input.permute(0, 2, 1).contiguous())
+        convx = self.model.features[4][1].sa.conv(sa_input)
+        o = torch.bmm(attn, convx).view(*size).mean(1)
+        return o
 
 
 class VideoDetector(Detector):
@@ -98,24 +136,30 @@ class DeepfakeDetector(torch.nn.Module):
 
 
 class SeriesManipulatorDetector(torch.nn.Module):
-    def __init__(self, manipulator_model, detector_model):
+    def __init__(self, manipulator_model, detector_model, manipulate_func='video'):
         super().__init__()
         self.manipulator_model = manipulator_model
         self.detector_model = detector_model
-        self.amp_param = P(4 * torch.ones(1, 1, 1, 1))
+        self.amp_param = P(5 * torch.ones(1, 1, 1, 1))
+        self.manipulate_func = manipulate_func
+        self.manipulate = {
+            'video': self.manipulator_model.manipulate_video,
+            'frame': self.manipulate_frame,
+        }.get(manipulate_func, 'video')
 
-    def manipulate(self, x, amp=None):
-        return torch.stack(
+    def manipulate_frame(self, x, amp=None, pre_process=True, post_process=True):
+        if pre_process:
+            x = self.manipulator_model.pre_process(x)
+        o = torch.stack(
             [self.manipulator_model.manipulate(f.transpose(0, 1), amp=amp) for f in x]
         ).transpose(1, 2)
+        if post_process:
+            o = self.manipulator_model.post_process(o)
+        return o
 
     def forward(self, x):
         # x: [bs, 3, D, H, W]
-        x = x / 127.5 - 1.0
         o = self.manipulate(x, amp=self.amp_param)
-        o = o - o.min()
-        o = o / o.max()
-        o = o * 255
         o = self.detector_model(o)
         return o
 
@@ -124,44 +168,26 @@ class SeriesManipulatorDetector(torch.nn.Module):
         return self.detector_model.input_size
 
 
-class ResManipulatorDetector(torch.nn.Module):
-    def __init__(self, manipulator_model, detector_model):
+class SeriesManipulatorAttnDetector(torch.nn.Module):
+    def __init__(self, manipulator_model, detector_model, manipulate_func='video'):
         super().__init__()
         self.manipulator_model = manipulator_model
         self.detector_model = detector_model
-        self.amp_param = P(4 * torch.ones(1, 1, 1, 1))
+        self.amp_param = P(5 * torch.ones(1, 1, 1, 1))
+        self.manipulate_func = manipulate_func
+        self.manipulate = {
+            'video': self.manipulator_model.manipulate_video,
+            'frame': self.manipulate_frame,
+        }.get(manipulate_func, 'video')
 
-    def manipulate(self, x, amp=None):
-        return torch.stack(
-            [self.manipulator_model.manipulate(f.transpose(0, 1), amp=amp) for f in x]
-        ).transpose(1, 2)
-
-    def forward(self, x):
-        # x: [bs, 3, D, H, W]
-        o = x / 127.5 - 1.0
-        o = self.manipulate(o, amp=self.amp_param)
-        o = o - o.min()
-        o = o / o.max()
-        o = o * 255
-        o = self.detector_model(o) + self.detector_model(x)
-        return o
-
-    @property
-    def input_size(self):
-        return self.detector_model.input_size
-
-
-class ResManipulatorAttnDetector(torch.nn.Module):
-    def __init__(self, manipulator_model, detector_model):
-        super().__init__()
-        self.manipulator_model = manipulator_model
-        self.detector_model = detector_model
-        self.amp_param = P(4 * torch.ones(1, 1, 1, 1))
-
-    def manipulate(self, x, amp=None, attn_map=None):
+    def manipulate_frame(
+        self, x, amp=None, attn_map=None, pre_process=True, post_process=True
+    ):
         if attn_map is None:
             attn_map = [None] * x.size(0)
-        return torch.stack(
+        if pre_process:
+            x = self.manipulator_model.pre_process(x)
+        o = torch.stack(
             [
                 self.manipulator_model.manipulate(
                     f.transpose(0, 1), amp=amp, attn_map=a
@@ -169,17 +195,91 @@ class ResManipulatorAttnDetector(torch.nn.Module):
                 for f, a in zip(x, attn_map)
             ]
         ).transpose(1, 2)
+        if post_process:
+            o = self.manipulator_model.post_process(o)
+        return o
 
     def forward(self, x):
         # x: [bs, 3, D, H, W]
         out, attn_map = self.detector_model(x)
+        o = self.manipulate(x, amp=self.amp_param, attn_map=attn_map)
+        return self.detector_model(o)[0]
 
-        o = x / 127.5 - 1.0
-        o = self.manipulate(o, amp=self.amp_param, attn_map=attn_map)
-        o = o - o.min()
-        o = o / o.max()
-        o = o * 255
-        o = self.detector_model(o) + out
+    @property
+    def input_size(self):
+        return self.detector_model.input_size
+
+
+class ResManipulatorDetector(torch.nn.Module):
+    def __init__(self, manipulator_model, detector_model, manipulate_func='video'):
+        super().__init__()
+        self.manipulator_model = manipulator_model
+        self.detector_model = detector_model
+        self.amp_param = P(5 * torch.ones(1, 1, 1, 1))
+        self.manipulate_func = manipulate_func
+        self.manipulate = {
+            'video': self.manipulator_model.manipulate_video,
+            'frame': self.manipulate_frame,
+        }.get(manipulate_func, 'video')
+
+    def manipulate_frame(self, x, amp=None, pre_process=True, post_process=True):
+        if pre_process:
+            x = self.manipulator_model.pre_process(x)
+        o = torch.stack(
+            [self.manipulator_model.manipulate(f.transpose(0, 1), amp=amp) for f in x]
+        ).transpose(1, 2)
+        if post_process:
+            o = self.manipulator_model.post_process(o)
+        return o
+
+    def forward(self, x):
+        # x: [bs, 3, D, H, W]
+        out = self.detector_model(x)
+        o = self.manipulate(x, amp=self.amp_param)
+        o = self.detector_model(o)
+        return o + out
+
+    @property
+    def input_size(self):
+        return self.detector_model.input_size
+
+
+class ResManipulatorAttnDetector(torch.nn.Module):
+    def __init__(self, manipulator_model, detector_model, manipulate_func='video'):
+        super().__init__()
+        self.manipulator_model = manipulator_model
+        self.detector_model = detector_model
+        self.amp_param = P(5 * torch.ones(1, 1, 1, 1))
+        self.manipulator_func = manipulate_func
+        self.manipulate = {
+            'video': self.manipulator_model.manipulate_video,
+            'frame': self.manipulate_frame,
+        }.get(manipulate_func, 'video')
+
+    def manipulate_frame(
+        self, x, amp=None, attn_map=None, pre_process=True, post_process=True
+    ):
+        if attn_map is None:
+            attn_map = [None] * x.size(0)
+        if pre_process:
+            x = self.manipulator_model.pre_process(x)
+        o = torch.stack(
+            [
+                self.manipulator_model.manipulate(
+                    f.transpose(0, 1), amp=amp, attn_map=a
+                )
+                for f, a in zip(x, attn_map)
+            ]
+        ).transpose(1, 2)
+        if post_process:
+            o = self.manipulator_model.post_process(o)
+        return o
+
+    def forward(self, x):
+        # x: [bs, 3, D, H, W]
+        out, attn_map = self.detector_model(x)
+        o = self.manipulate(x, amp=self.amp_param, attn_map=attn_map)
+        o = self.detector_model(o)[0] + out
         return o
 
     @property

@@ -261,7 +261,7 @@ def validate(val_loader, model, criterion, device='cuda', display=True, print_fr
                     progress.display(i)
 
             except Exception as e:
-                exceptions.append((filenames, e))
+                exceptions.append((filenames, str(e)))
                 for fn in filenames:
                     preds[fn] = np.random.rand()
 

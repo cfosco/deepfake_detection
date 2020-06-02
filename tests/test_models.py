@@ -27,7 +27,7 @@ BATCH_SIZE = 4
 TEST_VIDEO_FILE = os.path.join(dir_path, 'data', 'aassnaulhq.mp4')
 TEST_VIDEO_FILE = os.path.join(dir_path, 'data', 'aayfryxljh.mp4')
 
-device = 'cuda' if torch.cuda.is_available() else 'cpu'
+device = 'cpu' if torch.cuda.is_available() else 'cpu'
 
 video = mmcv.VideoReader(TEST_VIDEO_FILE)
 
@@ -82,7 +82,9 @@ def test_facenet(frames):
 
 
 def test_facenet3D_get_faces(frames3D):
-    facenet = models.FaceModel(keep_all=True, select_largest=False, chunk_size=100)
+    facenet = models.FaceModel(
+        keep_all=True, select_largest=False, chunk_size=100, device=device
+    )
     with torch.no_grad():
         out = facenet.get_faces(frames3D)
         print(out)
@@ -101,16 +103,22 @@ def test_deepfake_detector(frames3D):
 
 def test_manipulate_detector(frames3D_small):
     model = pmodels.resnet18()
-    manipulator_detector = models.ManipulatorDetector(
+    manipulator_detector = models.SeriesManipulatorDetector(
         manipulator_model=models.MagNet(), detector_model=models.FrameDetector(model)
     ).to(device)
     out = manipulator_detector(frames3D_small)
     print(out.shape)
 
 
+def test_manipulate_video(frames3D_small):
+    model = models.MagNet().to(device)
+    out = model.manipulate_video(frames3D_small)
+    assert tuple(out.shape) == frames3D_small.shape
+
+
 @pytest.mark.parametrize(
     'model_name, basemodel_name',
-    [('FrameModel', 'resnet18'), ('ManipulatorDetector', 'resnet18')],
+    [('FrameDetector', 'resnet18'), ('SeriesManipulatorDetector', 'resnet18')],
 )
 def test_get_model(model_name, basemodel_name, frames3D_small):
     model = core.get_model(model_name, basemodel_name)
@@ -128,26 +136,35 @@ def test_manipulator_with_attn(frames3D_small):
 
 
 def test_caricature_model(frames3D_small):
-    model = core.get_model('CaricatureModel').to(device)
+    model = core.get_model('GradCamCaricatureModel').to(device)
     # frames = frames3D_small[0]
     out, attn_maps = model(frames3D_small[0:1])
     assert tuple(out.size()) == (1, 3, 16, 224, 224)
 
 
+@pytest.mark.skip
 def test_smooth_attn():
     from models.base import smooth_attn
+
     attn_maps = torch.randn(16, 8, 8)
     smoothed = smooth_attn(attn_maps)
     print(smoothed.shape)
 
 
-def test_attn_detector(frames3D_small):
+def test_simple_self_attn_detector(frames3D_small):
+    model = models.AttnFrameDetector(model=core.get_basemodel('ssamxresnet18'))
+    model = model.to(device)
+    out, attn_map = model(frames3D_small)
+    assert tuple(out.shape) == (BATCH_SIZE, 2)
+    assert tuple(attn_map.shape) == (BATCH_SIZE, frames3D_small.size(2), 56, 56)
+
+
+def test_self_attn_detector(frames3D_small):
     model = models.AttnFrameDetector(model=core.get_basemodel('samxresnet18'))
     model = model.to(device)
     out, attn_map = model(frames3D_small)
-    print(attn_map.shape)
-    print(model.fhooks)
-    print(out)
+    assert tuple(out.shape) == (BATCH_SIZE, 2)
+    assert tuple(attn_map.shape) == (BATCH_SIZE, frames3D_small.size(2), 56, 56)
 
 
 def test_ResManipulatorAttnDetector(frames3D_small):

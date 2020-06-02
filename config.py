@@ -11,7 +11,7 @@ model_names = sorted(
     if name.islower() and not name.startswith("__") and callable(models.__dict__[name])
 )
 
-DATA_ROOT = '~/Datasets' #os.getenv('DATA_ROOT', '.')
+DATA_ROOT = os.getenv('DATA_ROOT', '~/Datasets')
 
 ALL_DATASETS = [
     'DFDC',
@@ -25,6 +25,7 @@ num_classes_dict = {
     'Places365': 365,
     'Hybrid1365': 1365,
     'Moments': 339,
+    'kinetics-400': 400,
     'DFDC': 2,
     'FaceForensics': 2,
     'CelebDF': 2,
@@ -182,7 +183,7 @@ def get_metadata(
             'DeepfakeZipFaceVideo': defaultdict(lambda: data_root, {}),
         },
     }
-#     print(name, dataset_type, resolution, root_dirs[name])
+    #     print(name, dataset_type, resolution, root_dirs[name])
     root = root_dirs[name][dataset_type][resolution]
     fname = {'train': 'metadata.json', 'val': 'test_metadata.json'}.get(split, 'train')
     if name == 'DFDC' and split == 'val':
@@ -266,7 +267,7 @@ def parse_args():
     parser.add_argument('--frame_step', type=int, default=5)
     parser.add_argument('--dataset_type', type=str, default='DeepfakeFaceVideo')
     parser.add_argument('--record_set_type', type=str, default='DeepfakeFaceSet')
-    parser.add_argument('--sampler_type', type=str, default='TSNFrameSampler')
+    parser.add_argument('--sampler_type', type=str, default='ClipSampler')
     parser.add_argument(
         '--pretrained',
         type=str,

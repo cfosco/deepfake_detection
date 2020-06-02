@@ -8,4 +8,5 @@ ln -s ../logs .
 ln -s ../data .
 ln -s ../models .
 ln -s ../weights .
+ln -s ../best_weights .
 ln -s ../results .

@@ -135,6 +135,7 @@ dev
 logs
 weights
 archive
+best_logs
 best_weights
 dist/data
 dist/predictions
@@ -152,6 +153,7 @@ notebooks/models
 notebooks/results
 notebooks/DeepfakeDetection
 notebooks/cam_videos
+notebooks/caricatures
 TODO
 
 *.lock
