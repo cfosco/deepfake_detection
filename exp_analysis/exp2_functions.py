@@ -14,7 +14,7 @@ from scipy.ndimage import gaussian_filter
 from multiprocessing import Pool
 from tqdm import tqdm
 
-
+DATA_PATH = '/home/camilo/Datasets/'
 
 FPS = 30    
 UI_VIDEO_FACTOR = 540
@@ -129,10 +129,15 @@ def view(heatvol):
     plt.yticks([])
     plt.show()
     
-def make_avg_heatvol(vid_url_and_annots, convolve=True, 
-                     view_single=False, view_full=False, out_path='../../heatvols',
+def make_avg_heatvol(vid_url_and_annots, 
+                     convolve=True, 
+                     view_single=False, 
+                     view_full=False, 
+                     out_path='../../heatvols',
                      save=True,
-                    recompute_existing=True):
+                     recompute_existing=True,
+                    loadvid=False):
+    '''Computes average heatvolumes given a set of annotations. Optionally displays the video and annotations.'''
     
     vid_url = vid_url_and_annots[0]
     annots =  vid_url_and_annots[1]
@@ -141,8 +146,11 @@ def make_avg_heatvol(vid_url_and_annots, convolve=True,
     if not recompute_existing:
         if os.path.exists(out_name):
             return
-        
-    vid = load_video(vid_url, plot=True)
+    
+    if loadvid:
+        vid = load_video(vid_url, plot=True)
+    else:
+        vid = np.zeros(299,360,360,3)
     
     resc_factor_x = vid.shape[2]/UI_VIDEO_FACTOR
     resc_factor_y = vid.shape[1]/UI_VIDEO_FACTOR
@@ -229,9 +237,7 @@ def visualize_mturk_responses(resp_list, overlay_on_first_frame=True):
             
 
 
-def load_video(url, plot=False, verbose=False, data_path = '/home/camilo/Datasets/'):
-    '''Loads video from scratch if scratch is mounted. Else, downloads the video.'''
-    
+def load_video(url, plot=False, verbose=False, data_path = DATA_PATH):    
     vid_name = url.split('DeepfakeDetection/')[-1]
     
     if os.path.isdir(data_path):
