@@ -1,3 +1,6 @@
+"""
+Warning: this is an extremely ugly throwaway script...proceed with caution...
+"""
 import glob
 import json
 import os
@@ -81,7 +84,7 @@ def _make_caricatures(
         attn_map = None
         model.zero_grad()
         if mode.lower() == 'gradcam':
-            normalize_attn = False
+            normalize_attn = True
             gcam_model = vutils.grad_cam.GradCAM(model.detector_model.model)
             out, attn_map = gcam_forward(gcam_model, frames)
             attn_map.detach_()
@@ -141,7 +144,9 @@ def normalize(x):
     return x
 
 
-def gcam_forward(gcam_model, frames, target_layer='layer4', fake_weighted=True):
+def gcam_forward(
+    gcam_model, frames, target_layer='layer4', fake_weighted=True, threshold=0.1
+):
     # TODO: Finish
     outputs = []
     attn_maps = []
@@ -149,6 +154,8 @@ def gcam_forward(gcam_model, frames, target_layer='layer4', fake_weighted=True):
         frame = frame.transpose(0, 1)
         gcam_model.model.zero_grad()
         probs, idx = gcam_model.forward(frame)
+        print(probs.tolist())
+        print(idx.tolist())
         gcam_model.backward(idx=idx[0])
         attn_map = gcam_model.generate(target_layer=target_layer)
         attn_map.detach_()
@@ -157,8 +164,8 @@ def gcam_forward(gcam_model, frames, target_layer='layer4', fake_weighted=True):
         del gcam_model.probs
         del gcam_model.image
 
-        if fake_weighted:
-            attn_map = attn_map * probs[1].detach()
+        print(idx.tolist()[0])
+        outputs.append(idx.tolist()[0] == 1)
         attn_maps.append(attn_map)
     # TODO: smooth and threshold attn maps
     attn_maps = torch.stack(attn_maps)
@@ -227,7 +234,7 @@ def make_caricatures(
     # )
 
     # for i, ((names, frames, target), (_, frames_orig, _)) in enumerate(
-        # zip(dataset, dataset_orig)
+    # zip(dataset, dataset_orig)
     # ):
     names, frames, target = dataset[idx]
     names, frames_orig, target = dataset_orig[idx]
@@ -256,12 +263,15 @@ def process(i, frames, frames_orig, names, basemodel_name, size, amp, mode):
     model.eval()
     frames = frames.to(device)
 
+    do_mag = True
     attn_map = None
     model.zero_grad()
     if mode.lower() == 'gradcam':
-        normalize_attn = False
+        normalize_attn = True
         gcam_model = vutils.grad_cam.GradCAM(model.detector_model.model)
-        out, attn_map = gcam_forward(gcam_model, frames)
+        frames = model.detector_model.norm(frames)
+        do_mag, attn_map = gcam_forward(gcam_model, frames)
+        print(do_mag)
         attn_map.detach_()
         attn_map = attn_map.cpu()
         del gcam_model
@@ -276,12 +286,19 @@ def process(i, frames, frames_orig, names, basemodel_name, size, amp, mode):
         frames_orig = frames_orig.to(device)
         torch.cuda.empty_cache()
         a = torch.tensor(amp, requires_grad=False)
-        cari = model.manipulate(
-            frames_orig,
-            amp=a,
-            attn_map=attn_map,
-            normalize_attn=normalize_attn,
-        )
+
+        # NOTE: Cannot use a batch size larger than 1!
+        if len(do_mag) == 1:
+            do_mag = do_mag[0]
+
+        if do_mag:
+            print('doing mag')
+            cari = model.manipulate(
+                frames_orig, amp=a, attn_map=attn_map, normalize_attn=normalize_attn,
+            )
+        else:
+            print('skipping mag')
+            cari = frames_orig
         del model
         cari = cari.cpu()
         del frames_orig
