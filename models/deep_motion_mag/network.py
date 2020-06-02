@@ -127,23 +127,25 @@ class Manipulator(nn.Module):
         self.gaussian_tensor = torch.from_numpy(g).float().repeat(1, 32, 1, 1)
         # print("self.gaussian_tensor.shape", self.gaussian_tensor.shape)
 
-    def forward(self, x_a, x_b, amp, attn_map=None):
+    def forward(self, x_a, x_b, amp, attn_map=None, normalize_attn=True):
         diff = x_b - x_a
         diff = self.convblks(diff)
 
         if attn_map is None:
             attn_map = self.attn_map
         if attn_map is not None:
-            scaled_attn_map = self._format_attn_map(attn_map, diff.size())
+            scaled_attn_map = self._format_attn_map(
+                attn_map, diff.size(), normalize=normalize_attn
+            )
             diff = diff * scaled_attn_map.to(diff.device)
 
-        diff = (amp - 1.0) * diff
+        diff = (amp.to(diff.device) - 1.0) * diff
         diff = self.convblks_after(diff)
         diff = self.resblks(diff)
 
         return x_b + diff
 
-    def _format_attn_map(self, attn_map, size):
+    def _format_attn_map(self, attn_map, size, normalize=True):
         n, c, h, w = size
         if attn_map.ndim == 3:
             attn_map = attn_map.unsqueeze(1)  # [bs, 1, h, w]
@@ -151,15 +153,20 @@ class Manipulator(nn.Module):
             attn_map = attn_map.unsqueeze(0).unsqueeze(0)
         scaled_attn_map = nn.functional.interpolate(attn_map, size=(h, w), mode='area')
         scaled_attn_map = scaled_attn_map.expand(*size)
+        if normalize:
+            scaled_attn_map = scaled_attn_map - scaled_attn_map.min()
+            scaled_attn_map = scaled_attn_map / scaled_attn_map.max()
         return scaled_attn_map
 
-    def manip(self, x_a, amp, attn_map=None):
+    def manip(self, x_a, amp, attn_map=None, normalize_attn=True):
         diff = self.convblks(x_a)
 
         if attn_map is None:
             attn_map = self.attn_map
         if attn_map is not None:
-            scaled_attn_map = self._format_attn_map(attn_map, diff.size())
+            scaled_attn_map = self._format_attn_map(
+                attn_map, diff.size(), normalize=normalize_attn
+            )
             diff = diff * scaled_attn_map.to(diff.device)
 
         diff = (amp - 1.0) * diff
@@ -250,6 +257,7 @@ class MagNet(nn.Module):
         fs=30,
         pre_process=True,
         post_process=True,
+        normalize_attn=True,
     ):
         if pre_process:
             x = self.pre_process(x)
@@ -267,17 +275,27 @@ class MagNet(nn.Module):
             x_state = []
             y_state = []
 
+            device = next(self.encoder.parameters()).device
             mag_frames = [x[:, :, 0]]
             for n in range(1, x.size(2)):
                 xb = x[:, :, n]  # [bs, 3, h, w] (n-th frame)
 
+                # print('-----')
+                # print('xb', xb.device)
+                xb = xb.to(device)
+                # print('xb', xb.device)
+
+                # print('encoder', next(self.encoder.parameters()).device)
+                # print('-----')
                 vb, mb = self.encoder(xb)
                 # TODO: Determine if "detach" needs to be removed
-                x_state.insert(0, mb.detach())
+                # x_state.insert(0, mb.detach())
+                x_state.insert(0, mb)
 
                 while len(x_state) < len(filter_b):
                     # TODO: Determine if "detach" needs to be removed
-                    x_state.insert(0, mb.detach())
+                    # x_state.insert(0, mb.detach())
+                    x_state.insert(0, mb)
                 if len(x_state) > len(filter_b):
                     x_state = x_state[: len(filter_b)]
                 y = torch.zeros_like(mb)
@@ -287,15 +305,18 @@ class MagNet(nn.Module):
                     y -= y_state[i] * filter_a[i]
 
                 # TODO: Determine if "detach" needs to be removed
-                y_state.insert(0, y.detach())
+                # y_state.insert(0, y.detach())
+                y_state.insert(0, y)
                 if len(y_state) > len(filter_a):
                     y_state = y_state[: len(filter_a)]
 
                 am = attn_map[:, n] if attn_map is not None else None
-                mb_m = self.manipulator(0.0, y, amp, attn_map=am)
+                mb_m = self.manipulator(
+                    0.0, y, amp, attn_map=am, normalize_attn=normalize_attn
+                )
                 mb_m += mb - y
 
-                y_hat = self.decoder(vb, mb_m)
+                y_hat = self.decoder(vb, mb_m).to(device)
                 mag_frames.append(y_hat)
 
             mag_frames = torch.stack(mag_frames, 2)
