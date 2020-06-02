@@ -145,6 +145,9 @@ class DeepfakeSet:
                 else:
                     self.blacklist_records.append(record)
 
+        for b in self.blacklist_records:
+            assert b not in self.records
+
     def __getitem__(self, idx: int) -> Union[DeepfakeRecord, DeepfakeFaceRecord]:
         return self.records[idx]
 
