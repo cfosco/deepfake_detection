@@ -5,7 +5,7 @@ cd "$(dirname "${BASH_SOURCE[0]}")/../"
 
 DATASETS="DFDC FaceForensics CelebDF YouTubeDeepfakes"
 for dataset in ${DATASETS}; do
-    if true; then
+    if false; then
         CKPTS="
         weights/FrameDetector_mxresnet18_celebdf_ClipSampler_seg_count-16_init-imagenet-ortho_optim-Ranger_lr-0.001_sched-CosineAnnealingLR_bs-32_best.pth.tar
         weights/FrameDetector_mxresnet18_faceforensics_ClipSampler_seg_count-16_init-imagenet-ortho_optim-Ranger_lr-0.001_sched-CosineAnnealingLR_bs-32_best.pth.tar
@@ -22,7 +22,7 @@ for dataset in ${DATASETS}; do
         done
     fi
 
-    if true; then
+    if false; then
         CKPTS="
             weights/FrameDetector_mxresnet34_celebdf_ClipSampler_seg_count-16_init-imagenet-ortho_optim-Ranger_lr-0.001_sched-CosineAnnealingLR_bs-32_best.pth.tar
             weights/FrameDetector_mxresnet34_faceforensics_ClipSampler_seg_count-16_init-imagenet-ortho_optim-Ranger_lr-0.001_sched-CosineAnnealingLR_bs-32_best.pth.tar
@@ -39,25 +39,43 @@ for dataset in ${DATASETS}; do
         done
     fi
 
-    if true; then
+    if false; then
         CKPTS="
-        weights/FrameDetector_resnet18_celebdf_ClipSampler_seg_count-16_init-imagenet-ortho_optim-Ranger_lr-0.001_sched-CosineAnnealingLR_bs-64_best.pth.tar
-        weights/FrameDetector_resnet18_faceforensics_TSNFrameSampler_seg_count-16_init-imagenet-ortho_optim-Ranger_lr-0.001_sched-CosineAnnealingLR_bs-64_best.pth.tar
+        weights/VideoDetector_resnet3d18_all_ClipSampler_seg_count-16_init-kinetics-400-ortho_optim-Ranger_lr-0.001_sched-CosineAnnealingLR_bs-256_best.pth.tar
         "
+        for CKPT in ${CKPTS}; do
+            echo ${CKPT}
+            python main.py \
+                --model_name VideoDetector \
+                --basemodel_name resnet3d18 \
+                --dataset ${dataset} --evaluate \
+                -b 32 --clip_length 64 --optimizer Ranger \
+                --pretrained kinetics-400 -j 4 --dataset_type DeepfakeFaceVideo \
+                --resume ${CKPT}
+        done
+    fi
+
+    if false; then
+        CKPTS="
+        weights/FrameDetector_resnet18_all_TSNFrameSampler_seg_count-16_init-imagenet-ortho_optim-Ranger_lr-0.001_sched-CosineAnnealingLR_bs-64_best.pth.tar
+        "
+        # weights/FrameDetector_resnet18_celebdf_ClipSampler_seg_count-16_init-imagenet-ortho_optim-Ranger_lr-0.001_sched-CosineAnnealingLR_bs-64_best.pth.tar
+        # weights/FrameDetector_resnet18_faceforensics_TSNFrameSampler_seg_count-16_init-imagenet-ortho_optim-Ranger_lr-0.001_sched-CosineAnnealingLR_bs-64_best.pth.tar
         for CKPT in ${CKPTS}; do
             echo ${CKPT}
             python main.py \
                 --model_name FrameDetector \
                 --basemodel_name resnet18 \
+                --clip_length 64 \
                 --dataset ${dataset} --evaluate \
-                -b 32 --segment_count 24 --optimizer Ranger \
+                -b 32 --optimizer Ranger \
                 --pretrained imagenet -j 4 --dataset_type DeepfakeFaceVideo \
                 --resume ${CKPT}
         done
 
     fi
 
-    if true; then
+    if false; then
         CKPTS="
         weights/FrameDetector_resnet34_celebdf_ClipSampler_seg_count-16_init-imagenet-ortho_optim-Ranger_lr-0.001_sched-CosineAnnealingLR_bs-64_best.pth.tar
         weights/FrameDetector_resnet34_celebdf_TSNFrameSampler_seg_count-16_init-imagenet-ortho_optim-Ranger_lr-0.001_sched-CosineAnnealingLR_bs-64_best.pth.tar
@@ -75,7 +93,7 @@ for dataset in ${DATASETS}; do
         done
     fi
 
-    if true; then
+    if false; then
         CKPTS="
         weights/FrameDetector_resnet50_celebdf_ClipSampler_seg_count-16_init-imagenet-ortho_optim-Ranger_lr-0.001_sched-CosineAnnealingLR_bs-32_best.pth.tar
         weights/FrameDetector_resnet50_faceforensics_TSNFrameSampler_seg_count-16_init-imagenet-ortho_optim-Ranger_lr-0.001_sched-CosineAnnealingLR_bs-32_best.pth.tar
@@ -92,7 +110,7 @@ for dataset in ${DATASETS}; do
         done
     fi
 
-    if true; then
+    if false; then
         CKPTS="
         weights/FrameDetector_samxresnet18_celebdf_ClipSampler_seg_count-16_init-imagenet-ortho_optim-Ranger_lr-0.001_sched-CosineAnnealingLR_bs-24_best.pth.tar
         weights/FrameDetector_samxresnet18_faceforensics_ClipSampler_seg_count-16_init-imagenet-ortho_optim-Ranger_lr-0.001_sched-CosineAnnealingLR_bs-24_best.pth.tar
@@ -109,7 +127,7 @@ for dataset in ${DATASETS}; do
         done
     fi
 
-    if true; then
+    if false; then
         CKPTS="
         weights/FrameDetector_samxresnet34_celebdf_ClipSampler_seg_count-16_init-imagenet-ortho_optim-Ranger_lr-0.001_sched-CosineAnnealingLR_bs-32_best.pth.tar
         weights/FrameDetector_samxresnet34_faceforensics_ClipSampler_seg_count-16_init-imagenet-ortho_optim-Ranger_lr-0.001_sched-CosineAnnealingLR_bs-32_best.pth.tar
@@ -121,6 +139,91 @@ for dataset in ${DATASETS}; do
                 --basemodel_name samxresnet34 \
                 --dataset ${dataset} --evaluate \
                 -b 32 --segment_count 24 --optimizer Ranger \
+                --pretrained imagenet -j 4 --dataset_type DeepfakeFaceVideo \
+                --resume ${CKPT}
+        done
+    fi
+
+    if false; then
+        CKPTS="
+        weights/SeriesPretrainedSmallManipulatorDetector_resnet18_celebdf_ClipSampler_seg_count-16_init-imagenet-ortho_optim-Ranger_lr-0.001_sched-CosineAnnealingLR_bs-32_best.pth.tar
+        "
+        for CKPT in ${CKPTS}; do
+            echo ${CKPT}
+            python main.py \
+                --model_name SeriesPretrainedSmallManipulatorDetector \
+                --basemodel_name resnet18 \
+                --dataset ${dataset} --evaluate \
+                --sampler_type TSNFrameSampler \
+                -b 32 --segment_count 24 --optimizer Ranger \
+                --pretrained imagenet -j 4 --dataset_type DeepfakeFaceVideo \
+                --resume ${CKPT}
+        done
+    fi
+
+    if false; then
+        CKPTS="
+        weights/SeriesPretrainedSmallManipulatorDetector_resnet34_celebdf_ClipSampler_seg_count-16_init-imagenet-ortho_optim-Ranger_lr-0.001_sched-CosineAnnealingLR_bs-32_best.pth.tar
+        "
+        for CKPT in ${CKPTS}; do
+            echo ${CKPT}
+            python main.py \
+                --model_name SeriesPretrainedSmallManipulatorDetector \
+                --basemodel_name resnet34 \
+                --dataset ${dataset} --evaluate \
+                -b 32 --segment_count 24 --optimizer Ranger \
+                --sampler_type TSNFrameSampler \
+                --pretrained imagenet -j 4 --dataset_type DeepfakeFaceVideo \
+                --resume ${CKPT}
+        done
+    fi
+
+    if false; then
+        CKPTS="
+        weights/SeriesPretrainedSmallManipulatorDetector_samxresnet34_celebdf_ClipSampler_seg_count-16_init-imagenet-ortho_optim-Ranger_lr-0.001_sched-CosineAnnealingLR_bs-24_best.pth.tar
+        "
+        for CKPT in ${CKPTS}; do
+            echo ${CKPT}
+            python main.py \
+                --model_name SeriesPretrainedSmallManipulatorDetector \
+                --basemodel_name samxresnet34 \
+                --dataset ${dataset} --evaluate \
+                -b 32 --segment_count 24 --optimizer Ranger \
+                --sampler_type TSNFrameSampler \
+                --pretrained imagenet -j 4 --dataset_type DeepfakeFaceVideo \
+                --resume ${CKPT}
+        done
+    fi
+
+    if false; then
+        CKPTS="
+        weights/SeriesPretrainedSmallManipulatorDetector_samxresnet18_faceforensics_ClipSampler_seg_count-16_init-imagenet-ortho_optim-Ranger_lr-0.001_sched-CosineAnnealingLR_bs-24_best.pth.tar
+        "
+        for CKPT in ${CKPTS}; do
+            echo ${CKPT}
+            python main.py \
+                --model_name SeriesPretrainedSmallManipulatorDetector \
+                --basemodel_name samxresnet18 \
+                --dataset ${dataset} --evaluate \
+                -b 32 --segment_count 24 --optimizer Ranger \
+                --sampler_type TSNFrameSampler \
+                --pretrained imagenet -j 4 --dataset_type DeepfakeFaceVideo \
+                --resume ${CKPT}
+        done
+    fi
+
+    if false; then
+        CKPTS="
+        weights/SeriesPretrainedFrozenMediumManipulatorDetector_resnet18_all_TSNFrameSampler_seg_count-16_init-imagenet-ortho_optim-Ranger_lr-0.001_sched-CosineAnnealingLR_bs-36_checkpoint.pth.tar
+        "
+        for CKPT in ${CKPTS}; do
+            echo ${CKPT}
+            python main.py \
+                --model_name SeriesPretrainedFrozenMediumManipulatorDetector \
+                --basemodel_name resnet18 \
+                --dataset ${dataset} --evaluate \
+                -b 32 --segment_count 64 --optimizer Ranger \
+                --sampler_type TSNFrameSampler \
                 --pretrained imagenet -j 4 --dataset_type DeepfakeFaceVideo \
                 --resume ${CKPT}
         done
