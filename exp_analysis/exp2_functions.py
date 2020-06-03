@@ -96,7 +96,7 @@ def make_one_heatvol(vid, annot_list, resc_factor_x, resc_factor_y, keep_annot_s
 #         print("x,y,f,s,idx",x,y,f,s,idx)
         row = int(np.round(y*resc_factor_y))
         col = int(np.round(x*resc_factor_x))
-        if row<0 or col<0 or row >= heatvol.shape[1] or col >= heatvol.shape[2]:
+        if row<0 or col<0 or row >= heatvol.shape[1] or col >= heatvol.shape[2] or idx >= heatvol.shape[0]:
             continue
         heatvol[idx,row,col]=1.0
 #         if keep_annot_shape:
@@ -150,7 +150,7 @@ def make_avg_heatvol(vid_url_and_annots,
     if loadvid:
         vid = load_video(vid_url, plot=True)
     else:
-        vid = np.zeros(299,360,360,3)
+        vid = np.zeros((299,360,360,3))
     
     resc_factor_x = vid.shape[2]/UI_VIDEO_FACTOR
     resc_factor_y = vid.shape[1]/UI_VIDEO_FACTOR
