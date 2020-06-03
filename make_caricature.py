@@ -175,13 +175,17 @@ def gcam_forward(
     return outputs, attn_maps
 
 
-def make_metadata():
+def make_metadata(glob_pattern='cari_Small_gradcam_amp5'):
     with open(target_file) as f:
         in_data = json.load(f)
 
-    print(in_data)
-    videos = glob.glob(os.path.join(outdir, '*_full_*'))
-    print(videos)
+    outname = glob_pattern + '.json'
+    if not glob_pattern.startswith('*'):
+        glob_pattern = '*' + glob_pattern
+    if not glob_pattern.endswith('*'):
+        glob_pattern += '*'
+
+    videos = glob.glob(os.path.join(outdir, glob_pattern))
     out_data = []
     for video in videos:
         filename = os.path.basename(video)
@@ -190,9 +194,10 @@ def make_metadata():
         label = 'fake' if target == 1 else 'real'
         out_data.append({'filename': filename, 'label': label})
 
-    print(out_data)
-    with open(os.path.join('mturk', 'cari_Small_full_amp5.json'), 'w') as f:
+    print(len(out_data))
+    with open(os.path.join('mturk', outname), 'w') as f:
         json.dump(out_data, f, indent=2)
+
 
 
 # make_metadata()
@@ -341,4 +346,4 @@ def process(i, frames, frames_orig, names, basemodel_name, size, amp, mode):
 
 if __name__ == "__main__":
     i = int(sys.argv[1])
-    make_caricatures(i, datadir, outdir, mode='gradcam')
+    make_caricatures(i, datadir, outdir, amp=10, mode='gradcam')
