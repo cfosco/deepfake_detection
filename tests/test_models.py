@@ -27,7 +27,7 @@ BATCH_SIZE = 4
 TEST_VIDEO_FILE = os.path.join(dir_path, 'data', 'aassnaulhq.mp4')
 TEST_VIDEO_FILE = os.path.join(dir_path, 'data', 'aayfryxljh.mp4')
 
-device = 'cpu' if torch.cuda.is_available() else 'cpu'
+device = 'cuda' if torch.cuda.is_available() else 'cpu'
 
 video = mmcv.VideoReader(TEST_VIDEO_FILE)
 
