@@ -481,7 +481,7 @@ def validate(val_loader, model, criterions, loss_weights, args, display=True):
             # Compute Cross Entropy loss between the predictions and targets
             # Compute KL Divergence loss and Correlation Coefficent loss between
             # human heat volumes and self attn maps.
-            bs = images.size(0)
+            bs = valid_attn.size(0)
             losses = {
                 'ce': loss_weights['ce'] * criterions['ce'](output, target),
                 'cc': loss_weights['cc'] * criterions['cc'](valid_heatvols, valid_attn),
