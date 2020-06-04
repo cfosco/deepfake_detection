@@ -218,14 +218,18 @@ def main_worker(gpu, ngpus_per_node, args):
     train_sampler = train_loader.sampler
 
     if args.evaluate:
-        train_args = vars(checkpoint.get('args'))
-        train_dataset = train_args['dataset']
+        if args.resume:
+            train_args = vars(checkpoint.get('args'))
+            train_dataset = train_args['dataset']
+        else:
+            train_args = {}
+            train_dataset = 'None'
         results_file = os.path.join(
             args.results_dir,
             f'Train_{train_dataset}_Eval_{args.dataset}_' + save_name + '.json',
         )
         print(f'Evaluating: {results_file}')
-        acc, loss = validate(val_loader, model, criterions, args)
+        acc, loss = validate(val_loader, model, criterions, loss_weights, args)
         with open(results_file, 'w') as f:
             json.dump(
                 {
@@ -234,7 +238,7 @@ def main_worker(gpu, ngpus_per_node, args):
                     'dataset': args.dataset,
                     'checkpoint_file': args.resume,
                     **vars(args),
-                    'train_args': vars(checkpoint.get('args')),
+                    'train_args': train_args,
                 },
                 f,
                 indent=4,
@@ -270,7 +274,9 @@ def main_worker(gpu, ngpus_per_node, args):
         history['loss'].append(train_loss)
 
         # Evaluate on validation set.
-        val_acc1, val_loss = validate(val_loader, model, criterions, args, display)
+        val_acc1, val_loss = validate(
+            val_loader, model, criterions, loss_weights, args, display
+        )
 
         history['val_acc'].append(val_acc1)
         history['val_loss'].append(val_loss)
@@ -424,7 +430,7 @@ def train(
 
             # logger.save()
 
-    return top1.avg, loss_meters.avg
+    return top1.avg, loss_meters['full'].avg
 
 
 def validate(val_loader, model, criterions, loss_weights, args, display=True):
@@ -445,25 +451,46 @@ def validate(val_loader, model, criterions, loss_weights, args, display=True):
         end = time.time()
         for i, (images, target, heatvols, volmask) in enumerate(val_loader):
 
+            # Real videos get zeroed attn mask (eventually, not currently)
             real_inds = (target == 0).nonzero()
             valid_heatvol_inds = volmask.nonzero()
-            all_inds = torch.unique(torch.cat(real_inds, valid_heatvol_inds))
+            # all_inds = torch.unique(torch.cat((real_inds, valid_heatvol_inds)))
+            all_inds = valid_heatvol_inds.squeeze()
+
+            # Not all videos have valid heatvols, so extract only those that do
             valid_heatvols = heatvols.index_select(0, all_inds)
 
             if args.gpu is not None:
                 images = images.cuda(args.gpu, non_blocking=True)
             target = target.cuda(args.gpu, non_blocking=True)
+            all_inds = all_inds.cuda(args.gpu, non_blocking=True)
             valid_heatvols = valid_heatvols.cuda(args.gpu, non_blocking=True)
 
-            # compute output
+            # compute output and retrieve self attn map
             output, attn = model(images)
+            # Compute loss for valid attn maps only
             valid_attn = attn.index_select(0, all_inds)
+            print(f'valid_attn: {valid_attn.shape}c')
 
-            losses = {'ce': loss_weights['ce'] * criterions['ce'](output, target)}
-            for name in ['kl', 'cc']:
-                losses[name] = loss_weights[name] * criterions[name](
-                    valid_heatvols, valid_attn
+            if valid_attn.size(0) != 0:
+                # Rescale heatvol to match the size of the attn vol.
+                valid_heatvols = nn.functional.interpolate(
+                    valid_heatvols, size=valid_attn.shape[-2:], mode='area'
                 )
+
+            # Compute Cross Entropy loss between the predictions and targets
+            # Compute KL Divergence loss and Correlation Coefficent loss between
+            # human heat volumes and self attn maps.
+            bs = images.size(0)
+            losses = {
+                'ce': loss_weights['ce'] * criterions['ce'](output, target),
+                'cc': loss_weights['cc'] * criterions['cc'](valid_heatvols, valid_attn),
+                'kl': loss_weights['kl']
+                * criterions['kl'](
+                    F.log_softmax(valid_attn.view(bs, -1), dim=-1),
+                    F.softmax(valid_heatvols.view(bs, -1), dim=-1),
+                ) if valid_attn.size(0) != 0 else torch.tensor(float('nan')),
+            }
             losses['full'] = sum(losses.values())
 
             # measure accuracy and record loss
@@ -483,7 +510,7 @@ def validate(val_loader, model, criterions, loss_weights, args, display=True):
             # TODO: this should also be done with the ProgressMeter
             print(' * Acc@1 {top1.avg:.3f}'.format(top1=top1))
 
-    return top1.avg, losses.avg
+    return top1.avg, loss_meters['full'].avg
 
 
 def save_checkpoint(state, is_best, filename='', suffix='checkpoint.pth.tar'):

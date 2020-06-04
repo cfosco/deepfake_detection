@@ -548,9 +548,9 @@ class HeatvolBatchSampler(torch.utils.data.Sampler):
 
     def __len__(self):
         if self.drop_last:
-            return len(self.sampler) // self.batch_size
+            return (len(self.sampler) // (self.batch_size - self.heatvols_per_batch))
         else:
-            return (len(self.sampler) + self.batch_size - 1) // self.batch_size
+            return ((len(self.sampler) + self.batch_size - 1) // (self.batch_size - self.heatvols_per_batch))
 
 
 class DeepfakeZipVideo(DeepfakeVideo):
