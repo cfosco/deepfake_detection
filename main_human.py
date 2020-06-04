@@ -379,50 +379,23 @@ def train(
         # compute output
         output, attn = model(images)
         valid_attn = attn.index_select(0, all_inds)
+
+        # Rescale heatvol to match the size of the attn vol.
         valid_heatvols = nn.functional.interpolate(
             valid_heatvols, size=valid_attn.shape[-2:], mode='area'
         )
-        # print(f'attn: {attn.shape}')
-        # print(f'valid_attn: {valid_attn.shape}')
-        # print(f'valid_heatvols: {valid_heatvols.shape}')
-        # print(f'valid_heatvols: {valid_heatvols.shape}')
-        # valid_attn = valid_attn - valid_attn.min()
-        # valid_attn = valid_attn / valid_attn.max()
 
-        # print('valid_heatvols')
-        # print(
-        #     valid_heatvols.min().tolist(),
-        #     valid_heatvols.mean().tolist(),
-        #     valid_heatvols.max().tolist(),
-        # )
-        # print('valid_att')
-        # print(
-        #     valid_attn.min().tolist(),
-        #     valid_attn.mean().tolist(),
-        #     valid_attn.max().tolist(),
-        # )
         bs = images.size(0)
         losses = {
             'ce': loss_weights['ce'] * criterions['ce'](output, target),
             'cc': loss_weights['cc'] * criterions['cc'](valid_heatvols, valid_attn),
             'kl': loss_weights['kl']
             * criterions['kl'](
-                # valid_attn,
-                # valid_heatvols
                 F.log_softmax(valid_attn.view(bs, -1), dim=-1),
                 F.softmax(valid_heatvols.view(bs, -1), dim=-1),
             ),
         }
-        # for name in ['kl', 'cc']:
-        # for name in ['c']:
-        # losses[name] = loss_weights[name] * criterions[name](
-        # scaled_valid_heatvols, valid_attn
-        # )
-        #
-        # losses['full'] = losses['ce'] + losses['kl']
-        # losses['full'] =  losses['kl']
         losses['full'] = sum(losses.values())
-        # print(losses)
 
         # measure accuracy and record loss
         acc1 = accuracy(output, target, topk=(1,))[0]
