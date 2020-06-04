@@ -362,12 +362,13 @@ def train(
         #         plt.imshow((im-im.min())/(im.max()-im.min()))
         #         plt.show()
 
-        # Real videos get zeroed attn mask
+        # Real videos get zeroed attn mask (eventually, not currently)
         real_inds = (target == 0).nonzero()
         valid_heatvol_inds = volmask.nonzero()
         # all_inds = torch.unique(torch.cat((real_inds, valid_heatvol_inds)))
         all_inds = valid_heatvol_inds.squeeze()
 
+        # Not all videos have valid heatvols, so extract only those that do
         valid_heatvols = heatvols.index_select(0, all_inds)
 
         if args.gpu is not None:
@@ -376,8 +377,9 @@ def train(
         all_inds = all_inds.cuda(args.gpu, non_blocking=True)
         valid_heatvols = valid_heatvols.cuda(args.gpu, non_blocking=True)
 
-        # compute output
+        # compute output and retrieve self attn map
         output, attn = model(images)
+        # Compute loss for valid attn maps only
         valid_attn = attn.index_select(0, all_inds)
 
         # Rescale heatvol to match the size of the attn vol.
@@ -385,6 +387,9 @@ def train(
             valid_heatvols, size=valid_attn.shape[-2:], mode='area'
         )
 
+        # Compute Cross Entropy loss between the predictions and targets
+        # Compute KL Divergence loss and Correlation Coefficent loss between
+        # human heat volumes and self attn maps.
         bs = images.size(0)
         losses = {
             'ce': loss_weights['ce'] * criterions['ce'](output, target),
