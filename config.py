@@ -244,7 +244,7 @@ def get_metadata(
     return {'root': root, 'metafile': metafile, 'blacklist_file': blacklist_file}
 
 
-def parse_args():
+def get_parser():
     parser = argparse.ArgumentParser(description='PyTorch Training')
     parser.add_argument('--dataset', type=str, default='DFDC')
     parser.add_argument(
@@ -397,6 +397,27 @@ def parse_args():
         'multi node data parallel training',
     )
 
+
+def add_human_parser(parser):
+    parser.add_argument('--ce_weight', type=float, default=1.0)
+    parser.add_argument('--kl_weight', type=float, default=10.0)
+    parser.add_argument('--cc_weight', type=float, default=-3.0)
+    return parser
+
+
+def parse_args():
+    parser = get_parser()
+    args = parser.parse_args()
+
+    if args.data_root is None:
+        args.data_root = DATA_ROOT
+    args.num_classes = num_classes_dict[args.dataset]
+    return args
+
+
+def parse_human_args():
+    parser = get_parser()
+    parser = add_human_parser(parser)
     args = parser.parse_args()
 
     if args.data_root is None:

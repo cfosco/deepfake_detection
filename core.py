@@ -35,6 +35,20 @@ torchvision_model_names.extend(['xception', 'mxresnet18', 'mxresnet50'])
 dir_path = os.path.dirname(os.path.realpath(__file__))
 
 
+class CorrCoefLoss:
+    def __init__(self, reduction='mean'):
+        self.reduction = reduction
+        self.reduction_func = self._get_reduction_func(reduction)
+
+    def _get_reduction_func(self, reduction):
+        return {'mean': torch.mean}.get(reduction, 'mean')
+
+    def __call__(self, output, target):
+        return self.reduction_func(
+            torch.cat([corrcoef_loss(x, y) for x, y in zip(output, target)])
+        )
+
+
 def corrcoef_loss(x, y):
     vx = x - torch.mean(x)
     vy = y - torch.mean(y)
