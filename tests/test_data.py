@@ -218,33 +218,34 @@ def test_get_heatvol_dataset(
     [
         ('DFDC', 'train', 16, 224, 'DeepfakeFaceHeatvolVideo', 'DeepfakeFaceSet'),
         ('DFDC', 'val', 16, 224, 'DeepfakeFaceHeatvolVideo', 'DeepfakeFaceSet'),
+        ('all', 'train', 16, 224, 'DeepfakeFaceHeatvolVideo', 'DeepfakeFaceSet'),
+        ('all', 'val', 16, 224, 'DeepfakeFaceHeatvolVideo', 'DeepfakeFaceSet'),
     ],
 )
 def test_get_heatvol_dataloader_video(
     name, split, num_frames, size, dataset_type, record_set_type
 ):
 
-    dataset = core.get_dataset(
-        name,
-        DATA_ROOT,
-        split=split,
-        num_frames=num_frames,
-        size=size,
-        dataset_type=dataset_type,
-        record_set_type=record_set_type,
-    )
-    sampler = torch.utils.data.RandomSampler(dataset)
-    batch_sampler = data.HeatvolBatchSampler(
-        sampler, BATCH_SIZE, False, dataset.heatvol_inds,
-    )
-    dataloader = core.get_dataloader(
+    # dataset = core.get_dataset(
+    #     name,
+    #     DATA_ROOT,
+    #     split=split,
+    #     num_frames=num_frames,
+    #     size=size,
+    #     dataset_type=dataset_type,
+    #     record_set_type=record_set_type,
+    # )
+    # sampler = torch.utils.data.RandomSampler(dataset)
+    # batch_sampler = data.HeatvolBatchSampler(
+    #     sampler, BATCH_SIZE, False, dataset.heatvol_inds,
+    # )
+    dataloader = core.get_heatvol_dataloader(
         name,
         DATA_ROOT,
         batch_size=BATCH_SIZE,
         split=split,
         num_frames=num_frames,
         size=size,
-        batch_sampler=batch_sampler,
         dataset_type=dataset_type,
         record_set_type=record_set_type,
     )
@@ -252,7 +253,7 @@ def test_get_heatvol_dataloader_video(
     for i, (frames, label, heatvol, volmask) in enumerate(dataloader):
         if not (i < MAX_ITERS):
             break
-        print(i, frames.shape, label, heatvol.shape, volmask)
+        # print(i, frames.shape, label, heatvol.shape, volmask)
         assert all(label < cfg.num_classes_dict[name])
         assert frames.shape == torch.Size((BATCH_SIZE, 3, num_frames, size, size))
 

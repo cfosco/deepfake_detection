@@ -433,6 +433,8 @@ class DeepfakeFaceHeatvolVideo(DeepfakeFaceVideo):
             # Assume default location
             basedir = os.path.dirname(root)
             heatvols_root = os.path.join(basedir, 'heatvols')
+            if not os.path.exists(heatvols_root):
+                return
             heatvol_files = [f for f in os.listdir(heatvols_root) if f.endswith(pt_ext)]
             heatvol_names = [os.path.splitext(f)[0] for f in heatvol_files]
 

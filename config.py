@@ -136,6 +136,9 @@ def get_metadata(
             'DeepfakeZipFaceVideo': defaultdict(
                 lambda: os.path.join(data_root, 'FaceForensics'), {}
             ),
+            'DeepfakeFaceHeatvolVideo': defaultdict(
+                lambda: os.path.join(data_root, 'FaceForensics'), {}
+            ),
         },
         'CelebDF': {
             'DeepfakeVideo': defaultdict(
@@ -150,6 +153,9 @@ def get_metadata(
             'DeepfakeZipFaceVideo': defaultdict(
                 lambda: os.path.join(data_root, 'CelebDF/facenet_videos'), {}
             ),
+            'DeepfakeFaceHeatvolVideo': defaultdict(
+                lambda: os.path.join(data_root, 'CelebDF/facenet_videos'), {}
+            ),
         },
         'YouTubeDeepfakes': {
             'DeepfakeVideo': defaultdict(
@@ -162,6 +168,9 @@ def get_metadata(
                 lambda: os.path.join(data_root, 'YouTubeDeepfakes/facenet_videos'), {}
             ),
             'DeepfakeZipFaceVideo': defaultdict(
+                lambda: os.path.join(data_root, 'YouTubeDeepfakes/facenet_videos'), {}
+            ),
+            'DeepfakeFaceHeatvolVideo': defaultdict(
                 lambda: os.path.join(data_root, 'YouTubeDeepfakes/facenet_videos'), {}
             ),
         },
@@ -184,6 +193,7 @@ def get_metadata(
             'DeepfakeZipVideo': defaultdict(lambda: data_root, {}),
             'DeepfakeFaceVideo': defaultdict(lambda: data_root, {}),
             'DeepfakeZipFaceVideo': defaultdict(lambda: data_root, {}),
+            'DeepfakeFaceHeatvolVideo': defaultdict(lambda: data_root, {},),
         },
     }
     #     print(name, dataset_type, resolution, root_dirs[name])
@@ -229,6 +239,7 @@ def get_metadata(
         'all': {
             'DeepfakeSet': defaultdict(lambda: data_root, {}),
             'DeepfakeFaceSet': defaultdict(lambda: data_root, {}),
+            'DeepfakeFaceHeatvolVideo': defaultdict(lambda: data_root, {},),
         },
     }
     metafile = metafiles[name][record_set_type][resolution]

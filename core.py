@@ -581,6 +581,8 @@ def get_dataset(
         )
 
     segment_count = num_frames if segment_count is None else segment_count
+    # if dataset_type == 'DeepfakeFaceHeatvolVideo' and (name != 'DFDC'):
+    # dataset_type = 'DeepfakeFaceVideo'
 
     metadata = cfg.get_metadata(
         name,
@@ -791,8 +793,15 @@ def get_heatvol_dataloader(
         sampler = RandomSampler(dataset)
     else:
         sampler = SequentialSampler(dataset)
+
+    if hasattr(dataset, 'heatvol_inds'):
+        heatvol_inds = dataset.heatvol_inds
+    else:
+        dfdc_dataset = [d for d in dataset.datasets if hasattr(d, 'heatvol_inds')][0]
+        heatvol_inds = dfdc_dataset.heatvol_inds
+
     batch_sampler = data.HeatvolBatchSampler(
-        sampler, batch_size, drop_last, dataset.heatvol_inds,
+        sampler, batch_size, drop_last, heatvol_inds,
     )
     loader_sampler = (
         DistributedSampler(dataset) if (distributed and split == 'train') else None
