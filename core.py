@@ -9,7 +9,7 @@ import torch.nn as nn
 import torchvision
 import torchvision.models as torchvision_models
 from torch.nn import init
-from torch.utils.data import DataLoader
+from torch.utils.data import DataLoader, SequentialSampler, RandomSampler
 from torch.utils.data.distributed import DistributedSampler
 
 import config as cfg
@@ -733,6 +733,111 @@ def get_dataloaders(
         shuffle = len(splits) * [shuffle]
     dataloaders = {
         split: get_dataloader(
+            name,
+            data_root=root,
+            split=split,
+            size=size,
+            resolution=resolution,
+            dataset_type=dataset_type,
+            batch_size=batch_size,
+            batch_sampler=batch_sampler,
+            num_workers=num_workers,
+            shuffle=shuffle[i],
+            load_in_mem=load_in_mem,
+            pin_memory=pin_memory,
+            drop_last=drop_last,
+            distributed=distributed,
+            normalize=normalize,
+            rescale=rescale,
+            **kwargs,
+        )
+        for i, split in enumerate(splits)
+    }
+    return dataloaders
+
+
+def get_heatvol_dataloader(
+    name,
+    data_root=None,
+    split='train',
+    num_frames=16,
+    size=224,
+    resolution=256,
+    dataset_type='DeepfakeFrame',
+    sampler_type='TSNFrameSampler',
+    record_set_type='DeepfakeSet',
+    batch_size=64,
+    num_workers=8,
+    shuffle=True,
+    load_in_mem=False,
+    pin_memory=True,
+    drop_last=False,
+    distributed=False,
+    segment_count=None,
+    normalize=True,
+    rescale=True,
+    **kwargs,
+):
+    dataset = get_dataset(
+        name,
+        data_root,
+        split=split,
+        num_frames=num_frames,
+        size=size,
+        dataset_type=dataset_type,
+        record_set_type=record_set_type,
+    )
+    if split == 'train':
+        sampler = RandomSampler(dataset)
+    else:
+        sampler = SequentialSampler(dataset)
+    batch_sampler = data.HeatvolBatchSampler(
+        sampler, batch_size, drop_last, dataset.heatvol_inds,
+    )
+    loader_sampler = (
+        DistributedSampler(dataset) if (distributed and split == 'train') else None
+    )
+    if batch_sampler is not None:
+        batch_size = 1
+        shuffle = False
+        loader_sampler = None
+        drop_last = False
+
+    return DataLoader(
+        dataset,
+        batch_size=batch_size,
+        sampler=loader_sampler,
+        batch_sampler=batch_sampler,
+        shuffle=(loader_sampler is None and shuffle),
+        num_workers=num_workers,
+        pin_memory=pin_memory,
+        drop_last=drop_last,
+    )
+
+
+def get_heatvol_dataloaders(
+    name,
+    root,
+    dataset_type='ImageFolder',
+    size=224,
+    resolution=256,
+    batch_size=32,
+    num_workers=12,
+    shuffle=[True, False],
+    batch_sampler=None,
+    distributed=False,
+    load_in_mem=False,
+    pin_memory=True,
+    drop_last=False,
+    splits=['train', 'val'],
+    normalize=True,
+    rescale=True,
+    **kwargs,
+):
+    if not isinstance(shuffle, list):
+        shuffle = len(splits) * [shuffle]
+    dataloaders = {
+        split: get_heatvol_dataloader(
             name,
             data_root=root,
             split=split,
