@@ -400,7 +400,7 @@ def get_parser():
 
 
 def add_human_parser(parser):
-    parser.add_argument('--ce_weight', type=float, default=2)
+    parser.add_argument('--ce_weight', type=float, default=1.5)
     parser.add_argument('--kl_weight', type=float, default=1.0)
     parser.add_argument('--cc_weight', type=float, default=-0.3)
     return parser

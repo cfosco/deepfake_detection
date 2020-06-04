@@ -14,6 +14,7 @@ import torch.nn as nn
 import torch.nn.parallel
 import torch.utils.data
 import torch.utils.data.distributed
+import torch.nn.functional as F
 
 import config as cfg
 import core
@@ -75,7 +76,7 @@ def main_worker(gpu, ngpus_per_node, args):
     os.makedirs(args.logs_dir, exist_ok=True)
     os.makedirs(args.results_dir, exist_ok=True)
 
-    save_name = core.name_from_args(args)
+    save_name = 'HumanHeatvol_' + core.name_from_args(args)
     print(f'Starting: {save_name}')
 
     args.log_file = os.path.join(args.logs_dir, save_name + '.json')
@@ -144,7 +145,7 @@ def main_worker(gpu, ngpus_per_node, args):
     # Define loss function (criterion) and optimizer
     criterions = {
         'ce': nn.CrossEntropyLoss().cuda(args.gpu),
-        'kl': nn.KLDivLoss().cuda(args.gpu),
+        'kl': nn.KLDivLoss(reduction='batchmean').cuda(args.gpu),
         'cc': core.CorrCoefLoss(),
     }
 
@@ -154,6 +155,7 @@ def main_worker(gpu, ngpus_per_node, args):
         'cc': args.cc_weight,
     }
 
+    print(loss_weights)
     optimizer = core.get_optimizer(
         model,
         args.optimizer,
@@ -360,31 +362,73 @@ def train(
         #         plt.imshow((im-im.min())/(im.max()-im.min()))
         #         plt.show()
 
+        # Real videos get zeroed attn mask
         real_inds = (target == 0).nonzero()
         valid_heatvol_inds = volmask.nonzero()
-        all_inds = torch.unique(torch.cat(real_inds, valid_heatvol_inds))
+        # all_inds = torch.unique(torch.cat((real_inds, valid_heatvol_inds)))
+        all_inds = valid_heatvol_inds.squeeze()
+
         valid_heatvols = heatvols.index_select(0, all_inds)
 
         if args.gpu is not None:
             images = images.cuda(args.gpu, non_blocking=True)
         target = target.cuda(args.gpu, non_blocking=True)
+        all_inds = all_inds.cuda(args.gpu, non_blocking=True)
         valid_heatvols = valid_heatvols.cuda(args.gpu, non_blocking=True)
 
         # compute output
         output, attn = model(images)
         valid_attn = attn.index_select(0, all_inds)
+        valid_heatvols = nn.functional.interpolate(
+            valid_heatvols, size=valid_attn.shape[-2:], mode='area'
+        )
+        # print(f'attn: {attn.shape}')
+        # print(f'valid_attn: {valid_attn.shape}')
+        # print(f'valid_heatvols: {valid_heatvols.shape}')
+        # print(f'valid_heatvols: {valid_heatvols.shape}')
+        # valid_attn = valid_attn - valid_attn.min()
+        # valid_attn = valid_attn / valid_attn.max()
 
-        losses = {'ce': loss_weights['ce'] * criterions['ce'](output, target)}
-        for name in ['kl', 'cc']:
-            losses[name] = loss_weights[name] * criterions[name](
-                valid_heatvols, valid_attn
-            )
+        # print('valid_heatvols')
+        # print(
+        #     valid_heatvols.min().tolist(),
+        #     valid_heatvols.mean().tolist(),
+        #     valid_heatvols.max().tolist(),
+        # )
+        # print('valid_att')
+        # print(
+        #     valid_attn.min().tolist(),
+        #     valid_attn.mean().tolist(),
+        #     valid_attn.max().tolist(),
+        # )
+        bs = images.size(0)
+        losses = {
+            'ce': loss_weights['ce'] * criterions['ce'](output, target),
+            'cc': loss_weights['cc'] * criterions['cc'](valid_heatvols, valid_attn),
+            'kl': loss_weights['kl']
+            * criterions['kl'](
+                # valid_attn,
+                # valid_heatvols
+                F.log_softmax(valid_attn.view(bs, -1), dim=-1),
+                F.softmax(valid_heatvols.view(bs, -1), dim=-1),
+            ),
+        }
+        # for name in ['kl', 'cc']:
+        # for name in ['c']:
+        # losses[name] = loss_weights[name] * criterions[name](
+        # scaled_valid_heatvols, valid_attn
+        # )
+        #
+        # losses['full'] = losses['ce'] + losses['kl']
+        # losses['full'] =  losses['kl']
         losses['full'] = sum(losses.values())
+        # print(losses)
 
         # measure accuracy and record loss
         acc1 = accuracy(output, target, topk=(1,))[0]
         for name, loss in losses.items():
-            loss_meters[name].update(loss.item(), images.size(0))
+            if not torch.isnan(loss):
+                loss_meters[name].update(loss.item(), images.size(0))
         top1.update(acc1, images.size(0))
 
         # compute gradient and do SGD step

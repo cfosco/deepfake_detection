@@ -35,29 +35,6 @@ torchvision_model_names.extend(['xception', 'mxresnet18', 'mxresnet50'])
 dir_path = os.path.dirname(os.path.realpath(__file__))
 
 
-class CorrCoefLoss:
-    def __init__(self, reduction='mean'):
-        self.reduction = reduction
-        self.reduction_func = self._get_reduction_func(reduction)
-
-    def _get_reduction_func(self, reduction):
-        return {'mean': torch.mean}.get(reduction, 'mean')
-
-    def __call__(self, output, target):
-        return self.reduction_func(
-            torch.cat([corrcoef_loss(x, y) for x, y in zip(output, target)])
-        )
-
-
-def corrcoef_loss(x, y):
-    vx = x - torch.mean(x)
-    vy = y - torch.mean(y)
-    cost = torch.sum(vx * vy) / (
-        torch.sqrt(torch.sum(vx ** 2)) * torch.sqrt(torch.sum(vy ** 2))
-    )
-    return cost
-
-
 def get_optimizer(model, optimizer_name='SGD', lr=0.001, **kwargs):
     optim_func = getattr(optim, optimizer_name)
     func_kwargs, _ = utils.split_kwargs_by_func(optim_func, kwargs)
@@ -968,3 +945,175 @@ def train_gandataset(
             progress.display(i)
 
     return top1.avg, losses.avg
+
+
+class CorrCoefLoss:
+    def __init__(self, reduction='mean'):
+        self.reduction = reduction
+        self.reduction_func = self._get_reduction_func(reduction)
+
+    def _get_reduction_func(self, reduction):
+        return {'mean': torch.mean}.get(reduction, 'mean')
+
+    def __call__(self, output, target):
+        return self.reduction_func(
+            torch.tensor([corrcoef_loss(x, y) for x, y in zip(output, target)])
+        )
+
+
+def corrcoef_loss(x, y):
+    vx = x - torch.mean(x)
+    vy = y - torch.mean(y)
+    cost = torch.sum(vx * vy) / (
+        torch.sqrt(torch.sum(vx ** 2)) * torch.sqrt(torch.sum(vy ** 2))
+    )
+    return cost
+
+
+def pearsonr(x, y):
+    """
+    Mimics `scipy.stats.pearsonr`
+
+    Arguments
+    ---------
+    x : 1D torch.Tensor
+    y : 1D torch.Tensor
+
+    Returns
+    -------
+    r_val : float
+        pearsonr correlation coefficient between x and y
+
+    Scipy docs ref:
+        https://docs.scipy.org/doc/scipy/reference/generated/scipy.stats.pearsonr.html
+
+    Scipy code ref:
+        https://github.com/scipy/scipy/blob/v0.19.0/scipy/stats/stats.py#L2975-L3033
+    Example:
+        >>> x = np.random.randn(100)
+        >>> y = np.random.randn(100)
+        >>> sp_corr = scipy.stats.pearsonr(x, y)[0]
+        >>> th_corr = pearsonr(torch.from_numpy(x), torch.from_numpy(y))
+        >>> np.allclose(sp_corr, th_corr)
+    """
+    mean_x = torch.mean(x)
+    mean_y = torch.mean(y)
+    xm = x.sub(mean_x)
+    ym = y.sub(mean_y)
+    r_num = xm.dot(ym)
+    r_den = torch.norm(xm, 2) * torch.norm(ym, 2)
+    r_val = r_num / r_den
+    return r_val
+
+
+def batched_pearsonr(x, y, batch_first=True):
+    r"""Computes Pearson Correlation Coefficient across rows.
+    Pearson Correlation Coefficient (also known as Linear Correlation
+    Coefficient or Pearson's :math:`\rho`) is computed as:
+    .. math::
+        \rho = \frac {E[(X-\mu_X)(Y-\mu_Y)]} {\sigma_X\sigma_Y}
+    If inputs are matrices, then then we assume that we are given a
+    mini-batch of sequences, and the correlation coefficient is
+    computed for each sequence independently and returned as a vector. If
+    `batch_fist` is `True`, then we assume that every row represents a
+    sequence in the mini-batch, otherwise we assume that batch information
+    is in the columns.
+    Warning:
+        We do not account for the multi-dimensional case. This function has
+        been tested only for the 2D case, either in `batch_first==True` or in
+        `batch_first==False` mode. In the multi-dimensional case,
+        it is possible that the values returned will be meaningless.
+    Args:
+        x (torch.Tensor): input tensor
+        y (torch.Tensor): target tensor
+        batch_first (bool, optional): controls if batch dimension is first.
+            Default: `True`
+    Returns:
+        torch.Tensor: correlation coefficient between `x` and `y`
+    Note:
+        :math:`\sigma_X` is computed using **PyTorch** builtin
+        **Tensor.std()**, which by default uses Bessel correction:
+        .. math::
+            \sigma_X=\displaystyle\frac{1}{N-1}\sum_{i=1}^N({x_i}-\bar{x})^2
+        We therefore account for this correction in the computation of the
+        covariance by multiplying it with :math:`\frac{1}{N-1}`.
+    Shape:
+        - Input: :math:`(N, M)` for correlation between matrices,
+          or :math:`(M)` for correlation between vectors
+        - Target: :math:`(N, M)` or :math:`(M)`. Must be identical to input
+        - Output: :math:`(N, 1)` for correlation between matrices,
+          or :math:`(1)` for correlation between vectors
+    Examples:
+        >>> import torch
+        >>> _ = torch.manual_seed(0)
+        >>> input = torch.rand(3, 5)
+        >>> target = torch.rand(3, 5)
+        >>> output = pearsonr(input, target)
+        >>> print('Pearson Correlation between input and target is {0}'.format(output[:, 0]))
+        Pearson Correlation between input and target is tensor([ 0.2991, -0.8471,  0.9138])
+    """  # noqa: E501
+    assert x.shape == y.shape
+
+    if batch_first:
+        dim = -1
+    else:
+        dim = 0
+
+    centered_x = x - x.mean(dim=dim, keepdim=True)
+    centered_y = y - y.mean(dim=dim, keepdim=True)
+
+    covariance = (centered_x * centered_y).sum(dim=dim, keepdim=True)
+
+    bessel_corrected_covariance = covariance / (x.shape[dim] - 1)
+
+    x_std = x.std(dim=dim, keepdim=True)
+    y_std = y.std(dim=dim, keepdim=True)
+
+    corr = bessel_corrected_covariance / (x_std * y_std)
+
+    return corr
+
+
+def corrcoef(x):
+    """
+    Mimics `np.corrcoef`
+
+    Arguments
+    ---------
+    x : 2D torch.Tensor
+
+    Returns
+    -------
+    c : torch.Tensor
+        if x.size() = (5, 100), then return val will be of size (5,5)
+
+    Numpy docs ref:
+        https://docs.scipy.org/doc/numpy/reference/generated/numpy.corrcoef.html
+    Numpy code ref:
+        https://github.com/numpy/numpy/blob/v1.12.0/numpy/lib/function_base.py#L2933-L3013
+
+    Example:
+        >>> x = np.random.randn(5,120)
+        # result is a (5,5) matrix of correlations between rows
+        >>> np_corr = np.corrcoef(x)
+        >>> th_corr = corrcoef(torch.from_numpy(x))
+        >>> np.allclose(np_corr, th_corr.numpy())
+        # [out]: True
+    """
+    # calculate covariance matrix of rows
+    mean_x = torch.mean(x, 1)
+    xm = x.sub(mean_x.expand_as(x))
+    c = xm.mm(xm.t())
+    c = c / (x.size(1) - 1)
+
+    # normalize covariance matrix
+    d = torch.diag(c)
+    stddev = torch.pow(d, 0.5)
+    c = c.div(stddev.expand_as(c))
+    c = c.div(stddev.expand_as(c).t())
+
+    # clamp between -1 and 1
+    # probably not necessary but numpy does it
+    c = torch.clamp(c, -1.0, 1.0)
+
+    return c
