@@ -166,6 +166,34 @@ def main_worker(gpu, ngpus_per_node, args):
 
     scheduler = core.get_scheduler(optimizer, args.scheduler)
 
+    # optionally initial model with some weight (e.g. for finetuning)
+    if args.init_weights:
+        if os.path.isfile(args.init_weights):
+            print("=> Initializing from checkpoint '{}'".format(args.init_weights))
+            if args.gpu is None:
+                checkpoint = torch.load(args.init_weights)
+            else:
+                # Map model to be loaded to specified single gpu.
+                # loc = 'cuda:{}'.format(args.gpu)
+                loc = 'cpu'
+                checkpoint = torch.load(args.init_weights, map_location=loc)
+            # if args.gpu is not None:
+            #     best_acc1 may be from a checkpoint from a different GPU
+            #     best_acc1 = best_acc1.to(args.gpu)
+            model.load_state_dict(checkpoint['state_dict'])
+            try:
+                optimizer.load_state_dict(checkpoint['optimizer'])
+            except Exception:
+                pass
+            print(
+                "=> Initialized from checkpoint '{}' (epoch {})".format(
+                    args.init_weights, checkpoint['epoch']
+                )
+            )
+        else:
+            print("=> no checkpoint found at '{}'".format(args.init_weights))
+        torch.cuda.empty_cache()
+
     # optionally resume from a checkpoint
     if args.resume:
         if os.path.isfile(args.resume):
