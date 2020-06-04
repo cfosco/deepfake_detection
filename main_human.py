@@ -400,13 +400,17 @@ def train(
         losses = {
             'ce': loss_weights['ce'] * criterions['ce'](output, target),
             'cc': loss_weights['cc'] * criterions['cc'](valid_heatvols, valid_attn),
-            'kl': loss_weights['kl']
-            * criterions['kl'](
-                F.log_softmax(valid_attn.view(bs, -1), dim=-1),
-                F.softmax(valid_heatvols.view(bs, -1), dim=-1),
-
-            ),
         }
+        if valid_attn.nelement() != 0:
+            losses['kl'] = (
+                loss_weights['kl']
+                * criterions['kl'](
+                    F.log_softmax(valid_attn.view(bs, -1), dim=-1),
+                    F.softmax(valid_heatvols.view(bs, -1), dim=-1),
+                )
+                if valid_attn.size(0) != 0
+                else torch.tensor(float('nan'))
+            )
         losses['full'] = sum(losses.values())
 
         # measure accuracy and record loss
@@ -486,14 +490,17 @@ def validate(val_loader, model, criterions, loss_weights, args, display=True):
             losses = {
                 'ce': loss_weights['ce'] * criterions['ce'](output, target),
                 'cc': loss_weights['cc'] * criterions['cc'](valid_heatvols, valid_attn),
-                'kl': loss_weights['kl']
-                * criterions['kl'](
-                    F.log_softmax(valid_attn.view(bs, -1), dim=-1),
-                    F.softmax(valid_heatvols.view(bs, -1), dim=-1),
-                )
-                if valid_attn.size(0) != 0
-                else torch.tensor(float('nan')),
             }
+            if valid_attn.nelement() != 0:
+                losses['kl'] = (
+                    loss_weights['kl']
+                    * criterions['kl'](
+                        F.log_softmax(valid_attn.view(bs, -1), dim=-1),
+                        F.softmax(valid_heatvols.view(bs, -1), dim=-1),
+                    )
+                    if valid_attn.size(0) != 0
+                    else torch.tensor(float('nan'))
+                )
             losses['full'] = sum(losses.values())
 
             # measure accuracy and record loss
