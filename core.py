@@ -35,6 +35,15 @@ torchvision_model_names.extend(['xception', 'mxresnet18', 'mxresnet50'])
 dir_path = os.path.dirname(os.path.realpath(__file__))
 
 
+def corrcoef_loss(x, y):
+    vx = x - torch.mean(x)
+    vy = y - torch.mean(y)
+    cost = torch.sum(vx * vy) / (
+        torch.sqrt(torch.sum(vx ** 2)) * torch.sqrt(torch.sum(vy ** 2))
+    )
+    return cost
+
+
 def get_optimizer(model, optimizer_name='SGD', lr=0.001, **kwargs):
     optim_func = getattr(optim, optimizer_name)
     func_kwargs, _ = utils.split_kwargs_by_func(optim_func, kwargs)
