@@ -388,11 +388,11 @@ def train(
         # Compute loss for valid attn maps only
         valid_attn = attn.index_select(0, all_inds)
 
-        # Rescale heatvol to match the size of the attn vol.
-        valid_heatvols = nn.functional.interpolate(
-            valid_heatvols, size=valid_attn.shape[-2:], mode='area'
-        )
-
+        if valid_attn.size(0) != 0:
+            # Rescale heatvol to match the size of the attn vol.
+            valid_heatvols = nn.functional.interpolate(
+                valid_heatvols, size=valid_attn.shape[-2:], mode='area'
+            )
         # Compute Cross Entropy loss between the predictions and targets
         # Compute KL Divergence loss and Correlation Coefficent loss between
         # human heat volumes and self attn maps.
@@ -404,6 +404,7 @@ def train(
             * criterions['kl'](
                 F.log_softmax(valid_attn.view(bs, -1), dim=-1),
                 F.softmax(valid_heatvols.view(bs, -1), dim=-1),
+
             ),
         }
         losses['full'] = sum(losses.values())
@@ -489,7 +490,9 @@ def validate(val_loader, model, criterions, loss_weights, args, display=True):
                 * criterions['kl'](
                     F.log_softmax(valid_attn.view(bs, -1), dim=-1),
                     F.softmax(valid_heatvols.view(bs, -1), dim=-1),
-                ) if valid_attn.size(0) != 0 else torch.tensor(float('nan')),
+                )
+                if valid_attn.size(0) != 0
+                else torch.tensor(float('nan')),
             }
             losses['full'] = sum(losses.values())
 
