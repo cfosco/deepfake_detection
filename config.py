@@ -396,12 +396,13 @@ def get_parser():
         'fastest way to use PyTorch for either single node or '
         'multi node data parallel training',
     )
+    return parser
 
 
 def add_human_parser(parser):
-    parser.add_argument('--ce_weight', type=float, default=1.0)
-    parser.add_argument('--kl_weight', type=float, default=10.0)
-    parser.add_argument('--cc_weight', type=float, default=-3.0)
+    parser.add_argument('--ce_weight', type=float, default=2)
+    parser.add_argument('--kl_weight', type=float, default=1.0)
+    parser.add_argument('--cc_weight', type=float, default=-0.3)
     return parser
 
 
