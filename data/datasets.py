@@ -546,7 +546,7 @@ class HeatvolBatchSampler(torch.utils.data.Sampler):
                     self.curr_heatvol_idx = 0
         return heatvol_inds
 
-    def __len(self):
+    def __len__(self):
         if self.drop_last:
             return len(self.sampler) // self.batch_size
         else:
