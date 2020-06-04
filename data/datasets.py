@@ -6,7 +6,7 @@ import tempfile
 import zipfile
 from collections import defaultdict
 from pathlib import Path
-from typing import Callable, Optional, Tuple, Union
+from typing import Callable, List, Optional, Tuple, Union
 
 import cv2
 import numpy as np
@@ -14,10 +14,11 @@ import torch
 import torch.utils.data as data
 from numpy.random import randint
 from PIL import Image
+from torch._six import int_classes as _int_classes
 
 from torchvideo.datasets import VideoDataset
 from torchvideo.internal.readers import _get_videofile_frame_count
-from torchvideo.samplers import FrameSampler, _default_sampler
+from torchvideo.samplers import FrameSampler, _default_sampler, frame_idx_to_list
 from torchvideo.transforms import PILVideoToTensor
 
 from . import transforms
@@ -139,14 +140,17 @@ class DeepfakeSet:
                     if not record.has_face_data:
                         continue
 
-                if name not in self.blacklist and os.path.basename(name) not in self.blacklist:
+                if (
+                    name not in self.blacklist
+                    and os.path.basename(name) not in self.blacklist
+                ):
                     self.records.append(record)
                     self.records_dict[part].append(record)
                 else:
                     self.blacklist_records.append(record)
 
-        for b in self.blacklist_records:
-            assert b not in self.records
+        # for b in self.blacklist_records:
+        # assert b not in self.records
 
     def __getitem__(self, idx: int) -> Union[DeepfakeRecord, DeepfakeFaceRecord]:
         return self.records[idx]
@@ -157,7 +161,9 @@ class DeepfakeSet:
 
 class DeepfakeFaceSet(DeepfakeSet):
     def __init__(self, metafile, blacklist_file=None):
-        super().__init__(metafile, blacklist_file=blacklist_file, record_func=DeepfakeFaceRecord)
+        super().__init__(
+            metafile, blacklist_file=blacklist_file, record_func=DeepfakeFaceRecord
+        )
 
     def __getitem__(self, idx: int) -> DeepfakeFaceRecord:
         return self.records[idx]
@@ -257,7 +263,9 @@ class DeepfakeFaceFrame(DeepfakeFrame):
             target_transform = int
         self.target_transform = target_transform
 
-    def _get_face_frames(self, index: int) -> Union[torch.Tensor, Tuple[torch.Tensor, int]]:
+    def _get_face_frames(
+        self, index: int
+    ) -> Union[torch.Tensor, Tuple[torch.Tensor, int]]:
         # TODO
         record = self.record_set[index]
         frame_path = os.path.join(self.root, record.path)
@@ -291,8 +299,12 @@ class DeepfakeFaceFrame(DeepfakeFrame):
             frame_path = os.path.join(frame_path, record.face_names[face_num])
         frames = list(self._load_frames(frame_path, frame_inds))
         if self.crop_faces:
-            face_coords = [record.face_locations[str(face_num)][idx] for idx in frame_inds]
-            frames = [self._crop_frame(f, c, record.size) for f, c in zip(frames, face_coords)]
+            face_coords = [
+                record.face_locations[str(face_num)][idx] for idx in frame_inds
+            ]
+            frames = [
+                self._crop_frame(f, c, record.size) for f, c in zip(frames, face_coords)
+            ]
         label = record.label
 
         if self.transform is not None:
@@ -395,6 +407,152 @@ class DeepfakeFaceVideo(DeepfakeVideo):
         return frames, label
 
 
+class DeepfakeFaceHeatvolVideo(DeepfakeFaceVideo):
+
+    max_heatvol_len: int = 90
+    default_heatvol_size: int = 360
+
+    def __init__(
+        self,
+        root: Union[str, Path],
+        record_set: DeepfakeSet,
+        sampler: FrameSampler = _default_sampler(),
+        transform: Optional[Callable] = None,
+        target_transform: Optional[Callable] = None,
+        frame_counter: Optional[Callable[[Path], int]] = None,
+        heatvols_root: Optional[Union[str, Path]] = None,
+        pt_ext: str = '.pt',
+        heatvol_freq: int = 10,
+    ) -> None:
+        super().__init__(
+            root, record_set, sampler, transform, target_transform, frame_counter
+        )
+        self.heatvol_freq = heatvol_freq
+        self.heatvol_inds: List[int] = []
+        if heatvols_root is None:
+            # Assume default location
+            basedir = os.path.dirname(root)
+            heatvols_root = os.path.join(basedir, 'heatvols')
+            heatvol_files = [f for f in os.listdir(heatvols_root) if f.endswith(pt_ext)]
+            heatvol_names = [os.path.splitext(f)[0] for f in heatvol_files]
+
+            for i, record in enumerate(self.record_set):
+                name = os.path.splitext(record.filename)[0]
+                if name in heatvol_names:
+                    record.heatvol_path = os.path.join(heatvols_root, name + pt_ext)
+                    self.heatvol_inds.append(i)
+
+    # def _find_heatvols(self):
+
+    def __getitem__(self, index: int):
+        valid_heatvol = index in self.heatvol_inds
+        record = self.record_set[index]
+        video_dir = os.path.join(self.root, record.face_path)
+        face_num = np.random.choice(record.face_nums)
+        video_path = os.path.join(video_dir, record.face_names[face_num] + '.mp4')
+        num_face_frames = (
+            self.max_heatvol_len if valid_heatvol else record.num_face_frames[face_num]
+        )
+        frame_inds = self.sampler.sample(num_face_frames)
+        frames = list(self._load_frames(video_path, frame_inds))
+        label = record.label
+        if valid_heatvol:
+            heatvol = torch.load(record.heatvol_path).index_select(
+                0, torch.tensor(frame_idx_to_list(frame_inds))
+            )
+        else:
+            heatvol = torch.zeros(
+                len(frames), self.default_heatvol_size, self.default_heatvol_size
+            )
+
+        if self.transform is not None:
+            frames = self.transform(frames)
+        if self.target_transform is not None:
+            label = self.target_transform(label)
+
+        return frames, label, heatvol, int(valid_heatvol)
+
+
+class HeatvolBatchSampler(torch.utils.data.Sampler):
+    r"""Wraps another sampler to yield a mini-batch of indices.
+    Args:
+        sampler (Sampler or Iterable): Base sampler. Can be any iterable object
+            with ``__len__`` implemented.
+        batch_size (int): Size of mini-batch.
+        drop_last (bool): If ``True``, the sampler will drop the last batch if
+            its size would be less than ``batch_size``
+    Example:
+        >>> list(BatchSampler(SequentialSampler(range(10)), batch_size=3, drop_last=False))
+        [[0, 1, 2], [3, 4, 5], [6, 7, 8], [9]]
+        >>> list(BatchSampler(SequentialSampler(range(10)), batch_size=3, drop_last=True))
+        [[0, 1, 2], [3, 4, 5], [6, 7, 8]]
+    """
+
+    def __init__(
+        self,
+        sampler,
+        batch_size,
+        drop_last,
+        heatvol_inds,
+        heatvols_per_batch=1,
+        random_heatvol=True,
+    ):
+        # Since collections.abc.Iterable does not check for `__getitem__`, which
+        # is one way for an object to be an iterable, we don't do an `isinstance`
+        # check here.
+        if (
+            not isinstance(batch_size, _int_classes)
+            or isinstance(batch_size, bool)
+            or batch_size <= 0
+        ):
+            raise ValueError(
+                "batch_size should be a positive integer value, "
+                "but got batch_size={}".format(batch_size)
+            )
+        if not isinstance(drop_last, bool):
+            raise ValueError(
+                "drop_last should be a boolean value, but got "
+                "drop_last={}".format(drop_last)
+            )
+        self.sampler = sampler
+        self.batch_size = batch_size
+        self.drop_last = drop_last
+        self.heatvol_inds = heatvol_inds
+        self.heatvols_per_batch = heatvols_per_batch
+        self.random_heatvol = random_heatvol
+        self.num_heatvols = len(heatvol_inds)
+        self.curr_heatvol_idx = 0
+
+    def __iter__(self):
+        batch = []
+        for idx in self.sampler:
+            batch.append(idx)
+            if len(batch) == (self.batch_size - self.heatvols_per_batch):
+                batch.extend(self._get_heatvol_inds())
+                yield batch
+                batch = []
+        if len(batch) > 0 and not self.drop_last:
+            yield batch
+
+    def _get_heatvol_inds(self):
+        if self.random_heatvol:
+            heatvol_inds = [np.random.choice(self.heatvol_inds) for i in range(self.heatvols_per_batch)]
+        else:
+            heatvol_inds = []
+            for _ in range(self.heatvols_per_batch):
+                heatvol_inds.append(self.curr_heatvol_idx)
+                self.curr_heatvol_idx += 1
+                if self.curr_heatvol_idx == self.num_heatvols:
+                    self.curr_heatvol_idx = 0
+        return heatvol_inds
+
+    def __len(self):
+        if self.drop_last:
+            return len(self.sampler) // self.batch_size
+        else:
+            return (len(self.sampler) + self.batch_size - 1) // self.batch_size
+
+
 class DeepfakeZipVideo(DeepfakeVideo):
 
     zip_ext = '.zip'
@@ -463,11 +621,21 @@ def read_frames(video, fps=30, step=1):
 
 
 class VideoFolder(torch.utils.data.Dataset):
-    def __init__(self, root, step=2, transform=None, target_file=None, default_target=0, load_as='pil'):
+    def __init__(
+        self,
+        root,
+        step=2,
+        transform=None,
+        target_file=None,
+        default_target=0,
+        load_as='pil',
+    ):
         self.root = root
         self.step = step
         self.load_as = load_as
-        self.videos_filenames = sorted([f for f in os.listdir(root) if f.endswith('.mp4')])
+        self.videos_filenames = sorted(
+            [f for f in os.listdir(root) if f.endswith('.mp4')]
+        )
         if transform is None:
             transform = transforms.VideoToTensor(rescale=False)
         self.transform = transform
@@ -507,11 +675,15 @@ class VideoFolder(torch.utils.data.Dataset):
 
 
 class VideoZipFile(VideoFolder):
-    def __init__(self, filename, step=2, transform=None, target_file=None, default_target=0):
+    def __init__(
+        self, filename, step=2, transform=None, target_file=None, default_target=0
+    ):
         self.filename = filename
         self.step = step
         with zipfile.ZipFile(filename) as z:
-            self.videos_filenames = sorted([f for f in z.namelist() if f.endswith('.mp4')])
+            self.videos_filenames = sorted(
+                [f for f in z.namelist() if f.endswith('.mp4')]
+            )
 
         if transform is None:
             transform = transforms.VideoToTensor(rescale=False)
@@ -678,7 +850,9 @@ class VideoDataset(data.Dataset):
         Returns:
             TYPE: Description.
         """
-        average_duration = (record.num_frames - self.new_length + 1) * 1.0 / self.num_frames
+        average_duration = (
+            (record.num_frames - self.new_length + 1) * 1.0 / self.num_frames
+        )
         if average_duration > 0:
             offsets = np.multiply(
                 list(range(self.num_frames)), average_duration
@@ -695,14 +869,18 @@ class VideoDataset(data.Dataset):
     def _get_val_indices(self, record):
         if record.num_frames > self.num_frames + self.new_length - 1:
             tick = (record.num_frames - self.new_length + 1) * 1.0 / self.num_frames
-            offsets = np.array([int(tick / 2.0 + tick * x) for x in range(self.num_frames)])
+            offsets = np.array(
+                [int(tick / 2.0 + tick * x) for x in range(self.num_frames)]
+            )
         else:
             offsets = np.zeros((self.num_frames,))
         return offsets + 1
 
     def _get_test_indices(self, record):
         tick = (record.num_frames - self.new_length + 1) * 1.0 / self.num_frames
-        offsets = np.array([int(tick / 2.0 + tick * x) for x in range(self.num_segments)])
+        offsets = np.array(
+            [int(tick / 2.0 + tick * x) for x in range(self.num_segments)]
+        )
         return offsets + 1
 
     def __getitem__(self, index):

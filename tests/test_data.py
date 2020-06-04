@@ -10,7 +10,7 @@ from .. import data
 
 
 DATA_ROOT = cfg.DATA_ROOT
-MAX_ITERS = 4
+MAX_ITERS = 40
 BATCH_SIZE = 4
 
 SKIP_FRAME = True
@@ -27,31 +27,31 @@ else:
 
 
 @pytest.mark.skipif(SKIP_VIDEO, reason='Data not present')
-@pytest.mark.parametrize('name, split, num_frames, size, dataset_type, record_set_type', [
-    ('DFDC', 'train', 16, 224, 'DeepfakeVideo', 'DeepfakeSet'),
-    ('DFDC', 'val', 16, 224, 'DeepfakeVideo', 'DeepfakeSet'),
-    ('DFDC', 'train', 16, 224, 'DeepfakeFaceVideo', 'DeepfakeFaceSet'),
-    ('DFDC', 'val', 16, 224, 'DeepfakeFaceVideo', 'DeepfakeFaceSet'),
-
-    ('FaceForensics', 'train', 16, 224, 'DeepfakeVideo', 'DeepfakeSet'),
-    ('FaceForensics', 'val', 16, 224, 'DeepfakeVideo', 'DeepfakeSet'),
-    ('FaceForensics', 'train', 16, 224, 'DeepfakeFaceVideo', 'DeepfakeFaceSet'),
-    ('FaceForensics', 'val', 16, 224, 'DeepfakeFaceVideo', 'DeepfakeFaceSet'),
-
-    ('CelebDF', 'train', 16, 224, 'DeepfakeVideo', 'DeepfakeSet'),
-    ('CelebDF', 'val', 16, 224, 'DeepfakeVideo', 'DeepfakeSet'),
-    ('CelebDF', 'train', 16, 224, 'DeepfakeFaceVideo', 'DeepfakeFaceSet'),
-    ('CelebDF', 'val', 16, 224, 'DeepfakeFaceVideo', 'DeepfakeFaceSet'),
-
-    ('YouTubeDeepfakes', 'train', 16, 224, 'DeepfakeVideo', 'DeepfakeSet'),
-    ('YouTubeDeepfakes', 'val', 16, 224, 'DeepfakeVideo', 'DeepfakeSet'),
-    ('YouTubeDeepfakes', 'train', 16, 224, 'DeepfakeFaceVideo', 'DeepfakeFaceSet'),
-    ('YouTubeDeepfakes', 'val', 16, 224, 'DeepfakeFaceVideo', 'DeepfakeFaceSet'),
-
-])
+@pytest.mark.parametrize(
+    'name, split, num_frames, size, dataset_type, record_set_type',
+    [
+        ('DFDC', 'train', 16, 224, 'DeepfakeVideo', 'DeepfakeSet'),
+        ('DFDC', 'val', 16, 224, 'DeepfakeVideo', 'DeepfakeSet'),
+        ('DFDC', 'train', 16, 224, 'DeepfakeFaceVideo', 'DeepfakeFaceSet'),
+        ('DFDC', 'val', 16, 224, 'DeepfakeFaceVideo', 'DeepfakeFaceSet'),
+        ('FaceForensics', 'train', 16, 224, 'DeepfakeVideo', 'DeepfakeSet'),
+        ('FaceForensics', 'val', 16, 224, 'DeepfakeVideo', 'DeepfakeSet'),
+        ('FaceForensics', 'train', 16, 224, 'DeepfakeFaceVideo', 'DeepfakeFaceSet'),
+        ('FaceForensics', 'val', 16, 224, 'DeepfakeFaceVideo', 'DeepfakeFaceSet'),
+        ('CelebDF', 'train', 16, 224, 'DeepfakeVideo', 'DeepfakeSet'),
+        ('CelebDF', 'val', 16, 224, 'DeepfakeVideo', 'DeepfakeSet'),
+        ('CelebDF', 'train', 16, 224, 'DeepfakeFaceVideo', 'DeepfakeFaceSet'),
+        ('CelebDF', 'val', 16, 224, 'DeepfakeFaceVideo', 'DeepfakeFaceSet'),
+        ('YouTubeDeepfakes', 'train', 16, 224, 'DeepfakeVideo', 'DeepfakeSet'),
+        ('YouTubeDeepfakes', 'val', 16, 224, 'DeepfakeVideo', 'DeepfakeSet'),
+        ('YouTubeDeepfakes', 'train', 16, 224, 'DeepfakeFaceVideo', 'DeepfakeFaceSet'),
+        ('YouTubeDeepfakes', 'val', 16, 224, 'DeepfakeFaceVideo', 'DeepfakeFaceSet'),
+    ],
+)
 def test_dataset_video(name, split, num_frames, size, dataset_type, record_set_type):
-    metadata = cfg.get_metadata(name, split=split, dataset_type=dataset_type,
-                                data_root=DATA_ROOT)
+    metadata = cfg.get_metadata(
+        name, split=split, dataset_type=dataset_type, data_root=DATA_ROOT
+    )
     print(metadata)
     root = metadata['root']
     metafile = metadata['metafile']
@@ -71,15 +71,21 @@ def test_dataset_video(name, split, num_frames, size, dataset_type, record_set_t
 
 
 @pytest.mark.skipif(SKIP_VIDEO_ZIP, reason='Data not present')
-@pytest.mark.parametrize('name, split, num_frames, size, dataset_type, record_set_type', [
-    ('DFDC', 'train', 16, 224, 'DeepfakeZipVideo', 'DeepfakeSet'),
-    ('DFDC', 'val', 16, 224, 'DeepfakeZipVideo', 'DeepfakeSet'),
-    ('DFDC', 'train', 16, 224, 'DeepfakeZipFaceVideo', 'DeepfakeFaceSet'),
-    ('DFDC', 'val', 16, 224, 'DeepfakeZipFaceVideo', 'DeepfakeFaceSet'),
-])
-def test_dataset_video_zip(name, split, num_frames, size, dataset_type, record_set_type):
-    metadata = cfg.get_metadata(name, split=split, dataset_type=dataset_type,
-                                data_root=DATA_ROOT)
+@pytest.mark.parametrize(
+    'name, split, num_frames, size, dataset_type, record_set_type',
+    [
+        ('DFDC', 'train', 16, 224, 'DeepfakeZipVideo', 'DeepfakeSet'),
+        ('DFDC', 'val', 16, 224, 'DeepfakeZipVideo', 'DeepfakeSet'),
+        ('DFDC', 'train', 16, 224, 'DeepfakeZipFaceVideo', 'DeepfakeFaceSet'),
+        ('DFDC', 'val', 16, 224, 'DeepfakeZipFaceVideo', 'DeepfakeFaceSet'),
+    ],
+)
+def test_dataset_video_zip(
+    name, split, num_frames, size, dataset_type, record_set_type
+):
+    metadata = cfg.get_metadata(
+        name, split=split, dataset_type=dataset_type, data_root=DATA_ROOT
+    )
     print(metadata)
     root = metadata['root']
     metafile = metadata['metafile']
@@ -98,17 +104,21 @@ def test_dataset_video_zip(name, split, num_frames, size, dataset_type, record_s
 
 
 @pytest.mark.skipif(SKIP_FRAME, reason='Data not present')
-@pytest.mark.parametrize('name, split, num_frames, size, dataset_type, record_set_type', [
-    ('DFDC', 'train', 16, 224, 'DeepfakeFrame', 'DeepfakeSet'),
-    ('DFDC', 'val', 16, 224, 'DeepfakeFrame', 'DeepfakeSet'),
-    ('DFDC', 'train', 16, 224, 'DeepfakeFaceFrame', 'DeepfakeFaceSet'),
-    ('DFDC', 'val', 16, 224, 'DeepfakeFaceFrame', 'DeepfakeFaceSet'),
-    ('DFDC', 'train', 16, 224, 'DeepfakeFaceCropFrame', 'DeepfakeFaceSet'),
-    ('DFDC', 'val', 16, 224, 'DeepfakeFaceCropFrame', 'DeepfakeFaceSet'),
-])
+@pytest.mark.parametrize(
+    'name, split, num_frames, size, dataset_type, record_set_type',
+    [
+        ('DFDC', 'train', 16, 224, 'DeepfakeFrame', 'DeepfakeSet'),
+        ('DFDC', 'val', 16, 224, 'DeepfakeFrame', 'DeepfakeSet'),
+        ('DFDC', 'train', 16, 224, 'DeepfakeFaceFrame', 'DeepfakeFaceSet'),
+        ('DFDC', 'val', 16, 224, 'DeepfakeFaceFrame', 'DeepfakeFaceSet'),
+        ('DFDC', 'train', 16, 224, 'DeepfakeFaceCropFrame', 'DeepfakeFaceSet'),
+        ('DFDC', 'val', 16, 224, 'DeepfakeFaceCropFrame', 'DeepfakeFaceSet'),
+    ],
+)
 def test_dataset_frame(name, split, num_frames, size, dataset_type, record_set_type):
-    metadata = cfg.get_metadata(name, split=split, dataset_type=dataset_type,
-                                data_root=DATA_ROOT)
+    metadata = cfg.get_metadata(
+        name, split=split, dataset_type=dataset_type, data_root=DATA_ROOT
+    )
     print(metadata)
     root = metadata['root']
     metafile = metadata['metafile']
@@ -127,37 +137,43 @@ def test_dataset_frame(name, split, num_frames, size, dataset_type, record_set_t
 
 
 @pytest.mark.skipif(SKIP_VIDEO, reason='Data not present')
-@pytest.mark.parametrize('name, split, num_frames, size, dataset_type, record_set_type', [
-    ('DFDC', 'train', 16, 224, 'DeepfakeVideo', 'DeepfakeSet'),
-    ('DFDC', 'val', 16, 224, 'DeepfakeVideo', 'DeepfakeSet'),
-    ('DFDC', 'train', 16, 224, 'DeepfakeFaceVideo', 'DeepfakeFaceSet'),
-    ('DFDC', 'val', 16, 224, 'DeepfakeFaceVideo', 'DeepfakeFaceSet'),
-
-    ('FaceForensics', 'train', 16, 224, 'DeepfakeVideo', 'DeepfakeSet'),
-    ('FaceForensics', 'val', 16, 224, 'DeepfakeVideo', 'DeepfakeSet'),
-    ('FaceForensics', 'train', 16, 224, 'DeepfakeFaceVideo', 'DeepfakeFaceSet'),
-    ('FaceForensics', 'val', 16, 224, 'DeepfakeFaceVideo', 'DeepfakeFaceSet'),
-
-    ('CelebDF', 'train', 16, 224, 'DeepfakeVideo', 'DeepfakeSet'),
-    ('CelebDF', 'val', 16, 224, 'DeepfakeVideo', 'DeepfakeSet'),
-    ('CelebDF', 'train', 16, 224, 'DeepfakeFaceVideo', 'DeepfakeFaceSet'),
-    ('CelebDF', 'val', 16, 224, 'DeepfakeFaceVideo', 'DeepfakeFaceSet'),
-
-    ('YouTubeDeepfakes', 'train', 16, 224, 'DeepfakeVideo', 'DeepfakeSet'),
-    ('YouTubeDeepfakes', 'val', 16, 224, 'DeepfakeVideo', 'DeepfakeSet'),
-    ('YouTubeDeepfakes', 'train', 16, 224, 'DeepfakeFaceVideo', 'DeepfakeFaceSet'),
-    ('YouTubeDeepfakes', 'val', 16, 224, 'DeepfakeFaceVideo', 'DeepfakeFaceSet'),
-
-    ('all', 'train', 16, 224, 'DeepfakeVideo', 'DeepfakeSet'),
-    ('all', 'val', 16, 224, 'DeepfakeVideo', 'DeepfakeSet'),
-    ('all', 'train', 16, 224, 'DeepfakeFaceVideo', 'DeepfakeFaceSet'),
-    ('all', 'val', 16, 224, 'DeepfakeFaceVideo', 'DeepfakeFaceSet'),
-
-])
-def test_get_dataset_video(name, split, num_frames, size, dataset_type, record_set_type):
-    dataset = core.get_dataset(name, DATA_ROOT,
-                               split=split, num_frames=num_frames, size=size,
-                               dataset_type=dataset_type, record_set_type=record_set_type)
+@pytest.mark.parametrize(
+    'name, split, num_frames, size, dataset_type, record_set_type',
+    [
+        ('DFDC', 'train', 16, 224, 'DeepfakeVideo', 'DeepfakeSet'),
+        ('DFDC', 'val', 16, 224, 'DeepfakeVideo', 'DeepfakeSet'),
+        ('DFDC', 'train', 16, 224, 'DeepfakeFaceVideo', 'DeepfakeFaceSet'),
+        ('DFDC', 'val', 16, 224, 'DeepfakeFaceVideo', 'DeepfakeFaceSet'),
+        ('FaceForensics', 'train', 16, 224, 'DeepfakeVideo', 'DeepfakeSet'),
+        ('FaceForensics', 'val', 16, 224, 'DeepfakeVideo', 'DeepfakeSet'),
+        ('FaceForensics', 'train', 16, 224, 'DeepfakeFaceVideo', 'DeepfakeFaceSet'),
+        ('FaceForensics', 'val', 16, 224, 'DeepfakeFaceVideo', 'DeepfakeFaceSet'),
+        ('CelebDF', 'train', 16, 224, 'DeepfakeVideo', 'DeepfakeSet'),
+        ('CelebDF', 'val', 16, 224, 'DeepfakeVideo', 'DeepfakeSet'),
+        ('CelebDF', 'train', 16, 224, 'DeepfakeFaceVideo', 'DeepfakeFaceSet'),
+        ('CelebDF', 'val', 16, 224, 'DeepfakeFaceVideo', 'DeepfakeFaceSet'),
+        ('YouTubeDeepfakes', 'train', 16, 224, 'DeepfakeVideo', 'DeepfakeSet'),
+        ('YouTubeDeepfakes', 'val', 16, 224, 'DeepfakeVideo', 'DeepfakeSet'),
+        ('YouTubeDeepfakes', 'train', 16, 224, 'DeepfakeFaceVideo', 'DeepfakeFaceSet'),
+        ('YouTubeDeepfakes', 'val', 16, 224, 'DeepfakeFaceVideo', 'DeepfakeFaceSet'),
+        ('all', 'train', 16, 224, 'DeepfakeVideo', 'DeepfakeSet'),
+        ('all', 'val', 16, 224, 'DeepfakeVideo', 'DeepfakeSet'),
+        ('all', 'train', 16, 224, 'DeepfakeFaceVideo', 'DeepfakeFaceSet'),
+        ('all', 'val', 16, 224, 'DeepfakeFaceVideo', 'DeepfakeFaceSet'),
+    ],
+)
+def test_get_dataset_video(
+    name, split, num_frames, size, dataset_type, record_set_type
+):
+    dataset = core.get_dataset(
+        name,
+        DATA_ROOT,
+        split=split,
+        num_frames=num_frames,
+        size=size,
+        dataset_type=dataset_type,
+        record_set_type=record_set_type,
+    )
     print(f'Dataset {name}-{split} has len: {len(dataset)}')
     for i, (frames, label) in enumerate(dataset):
         if not (i < MAX_ITERS):
@@ -167,17 +183,102 @@ def test_get_dataset_video(name, split, num_frames, size, dataset_type, record_s
         assert frames.shape == torch.Size((3, num_frames, size, size))
 
 
+@pytest.mark.skipif(SKIP_VIDEO, reason='Data not present')
+@pytest.mark.parametrize(
+    'name, split, num_frames, size, dataset_type, record_set_type',
+    [
+        ('DFDC', 'train', 16, 224, 'DeepfakeFaceHeatvolVideo', 'DeepfakeFaceSet'),
+        ('DFDC', 'val', 16, 224, 'DeepfakeFaceHeatvolVideo', 'DeepfakeFaceSet'),
+    ],
+)
+def test_get_heatvol_dataset(
+    name, split, num_frames, size, dataset_type, record_set_type
+):
+    dataset = core.get_dataset(
+        name,
+        DATA_ROOT,
+        split=split,
+        num_frames=num_frames,
+        size=size,
+        dataset_type=dataset_type,
+        record_set_type=record_set_type,
+    )
+    print(f'Dataset {name}-{split} has len: {len(dataset)}')
+    for i, (frames, label, heatvol, volmask) in enumerate(dataset):
+        if not (i < MAX_ITERS):
+            break
+        print(i, frames.shape, label, heatvol.shape, volmask)
+        assert label < cfg.num_classes_dict[name]
+        assert frames.shape == torch.Size((3, num_frames, size, size))
+
+
+@pytest.mark.skipif(SKIP_VIDEO, reason='Data not present')
+@pytest.mark.parametrize(
+    'name, split, num_frames, size, dataset_type, record_set_type',
+    [
+        ('DFDC', 'train', 16, 224, 'DeepfakeFaceHeatvolVideo', 'DeepfakeFaceSet'),
+        ('DFDC', 'val', 16, 224, 'DeepfakeFaceHeatvolVideo', 'DeepfakeFaceSet'),
+    ],
+)
+def test_get_heatvol_dataloader_video(
+    name, split, num_frames, size, dataset_type, record_set_type
+):
+
+    dataset = core.get_dataset(
+        name,
+        DATA_ROOT,
+        split=split,
+        num_frames=num_frames,
+        size=size,
+        dataset_type=dataset_type,
+        record_set_type=record_set_type,
+    )
+    sampler = torch.utils.data.RandomSampler(dataset)
+    batch_sampler = data.HeatvolBatchSampler(
+        sampler, BATCH_SIZE, False, dataset.heatvol_inds,
+    )
+    dataloader = core.get_dataloader(
+        name,
+        DATA_ROOT,
+        batch_size=BATCH_SIZE,
+        split=split,
+        num_frames=num_frames,
+        size=size,
+        batch_sampler=batch_sampler,
+        dataset_type=dataset_type,
+        record_set_type=record_set_type,
+    )
+    print(f'Dataset {name}-{split} has len: {len(dataloader.dataset)}')
+    for i, (frames, label, heatvol, volmask) in enumerate(dataloader):
+        if not (i < MAX_ITERS):
+            break
+        print(i, frames.shape, label, heatvol.shape, volmask)
+        assert all(label < cfg.num_classes_dict[name])
+        assert frames.shape == torch.Size((BATCH_SIZE, 3, num_frames, size, size))
+
+
 @pytest.mark.skipif(SKIP_VIDEO_ZIP, reason='Data not present')
-@pytest.mark.parametrize('name, split, num_frames, size, dataset_type, record_set_type', [
-    ('DFDC', 'train', 16, 224, 'DeepfakeZipVideo', 'DeepfakeSet'),
-    ('DFDC', 'val', 16, 224, 'DeepfakeZipVideo', 'DeepfakeSet'),
-    ('DFDC', 'train', 16, 224, 'DeepfakeZipFaceVideo', 'DeepfakeFaceSet'),
-    ('DFDC', 'val', 16, 224, 'DeepfakeZipFaceVideo', 'DeepfakeFaceSet'),
-])
-def test_get_dataset_video_zip(name, split, num_frames, size, dataset_type, record_set_type):
-    dataset = core.get_dataset(name, DATA_ROOT,
-                               split=split, num_frames=num_frames, size=size,
-                               dataset_type=dataset_type, record_set_type=record_set_type)
+@pytest.mark.parametrize(
+    'name, split, num_frames, size, dataset_type, record_set_type',
+    [
+        ('DFDC', 'train', 16, 224, 'DeepfakeZipVideo', 'DeepfakeSet'),
+        ('DFDC', 'val', 16, 224, 'DeepfakeZipVideo', 'DeepfakeSet'),
+        ('DFDC', 'train', 16, 224, 'DeepfakeZipFaceVideo', 'DeepfakeFaceSet'),
+        ('DFDC', 'val', 16, 224, 'DeepfakeZipFaceVideo', 'DeepfakeFaceSet'),
+    ],
+)
+def test_get_dataset_video_zip(
+    name, split, num_frames, size, dataset_type, record_set_type
+):
+    dataset = core.get_dataset(
+        name,
+        DATA_ROOT,
+        split=split,
+        num_frames=num_frames,
+        size=size,
+        dataset_type=dataset_type,
+        record_set_type=record_set_type,
+    )
 
     for i, (frames, label) in enumerate(dataset):
         if not (i < MAX_ITERS):
@@ -188,18 +289,29 @@ def test_get_dataset_video_zip(name, split, num_frames, size, dataset_type, reco
 
 
 @pytest.mark.skipif(SKIP_FRAME, reason='Data not present')
-@pytest.mark.parametrize('name, split, num_frames, size, dataset_type, record_set_type', [
-    ('DFDC', 'train', 16, 224, 'DeepfakeFrame', 'DeepfakeSet'),
-    ('DFDC', 'val', 16, 224, 'DeepfakeFrame', 'DeepfakeSet'),
-    ('DFDC', 'train', 16, 224, 'DeepfakeFaceFrame', 'DeepfakeFaceSet'),
-    ('DFDC', 'val', 16, 224, 'DeepfakeFaceFrame', 'DeepfakeFaceSet'),
-    ('DFDC', 'train', 16, 224, 'DeepfakeFaceCropFrame', 'DeepfakeFaceSet'),
-    ('DFDC', 'val', 16, 224, 'DeepfakeFaceCropFrame', 'DeepfakeFaceSet'),
-])
-def test_get_dataset_frame(name, split, num_frames, size, dataset_type, record_set_type):
-    dataset = core.get_dataset(name, DATA_ROOT,
-                               split=split, num_frames=num_frames, size=size,
-                               dataset_type=dataset_type, record_set_type=record_set_type)
+@pytest.mark.parametrize(
+    'name, split, num_frames, size, dataset_type, record_set_type',
+    [
+        ('DFDC', 'train', 16, 224, 'DeepfakeFrame', 'DeepfakeSet'),
+        ('DFDC', 'val', 16, 224, 'DeepfakeFrame', 'DeepfakeSet'),
+        ('DFDC', 'train', 16, 224, 'DeepfakeFaceFrame', 'DeepfakeFaceSet'),
+        ('DFDC', 'val', 16, 224, 'DeepfakeFaceFrame', 'DeepfakeFaceSet'),
+        ('DFDC', 'train', 16, 224, 'DeepfakeFaceCropFrame', 'DeepfakeFaceSet'),
+        ('DFDC', 'val', 16, 224, 'DeepfakeFaceCropFrame', 'DeepfakeFaceSet'),
+    ],
+)
+def test_get_dataset_frame(
+    name, split, num_frames, size, dataset_type, record_set_type
+):
+    dataset = core.get_dataset(
+        name,
+        DATA_ROOT,
+        split=split,
+        num_frames=num_frames,
+        size=size,
+        dataset_type=dataset_type,
+        record_set_type=record_set_type,
+    )
     for i, (frames, label) in enumerate(dataset):
         if not (i < MAX_ITERS):
             break
@@ -209,37 +321,44 @@ def test_get_dataset_frame(name, split, num_frames, size, dataset_type, record_s
 
 
 @pytest.mark.skipif(SKIP_VIDEO, reason='Data not present')
-@pytest.mark.parametrize('name, split, num_frames, size, dataset_type, record_set_type', [
-    ('DFDC', 'train', 16, 224, 'DeepfakeVideo', 'DeepfakeSet'),
-    ('DFDC', 'val', 16, 224, 'DeepfakeVideo', 'DeepfakeSet'),
-    ('DFDC', 'train', 16, 224, 'DeepfakeFaceVideo', 'DeepfakeFaceSet'),
-    ('DFDC', 'val', 16, 224, 'DeepfakeFaceVideo', 'DeepfakeFaceSet'),
-
-    ('FaceForensics', 'train', 16, 224, 'DeepfakeVideo', 'DeepfakeSet'),
-    ('FaceForensics', 'val', 16, 224, 'DeepfakeVideo', 'DeepfakeSet'),
-    ('FaceForensics', 'train', 16, 224, 'DeepfakeFaceVideo', 'DeepfakeFaceSet'),
-    ('FaceForensics', 'val', 16, 224, 'DeepfakeFaceVideo', 'DeepfakeFaceSet'),
-
-    ('CelebDF', 'train', 16, 224, 'DeepfakeVideo', 'DeepfakeSet'),
-    ('CelebDF', 'val', 16, 224, 'DeepfakeVideo', 'DeepfakeSet'),
-    ('CelebDF', 'train', 16, 224, 'DeepfakeFaceVideo', 'DeepfakeFaceSet'),
-    ('CelebDF', 'val', 16, 224, 'DeepfakeFaceVideo', 'DeepfakeFaceSet'),
-
-    ('YouTubeDeepfakes', 'train', 16, 224, 'DeepfakeVideo', 'DeepfakeSet'),
-    ('YouTubeDeepfakes', 'val', 16, 224, 'DeepfakeVideo', 'DeepfakeSet'),
-    ('YouTubeDeepfakes', 'train', 16, 224, 'DeepfakeFaceVideo', 'DeepfakeFaceSet'),
-    ('YouTubeDeepfakes', 'val', 16, 224, 'DeepfakeFaceVideo', 'DeepfakeFaceSet'),
-
-    ('all', 'train', 16, 224, 'DeepfakeVideo', 'DeepfakeSet'),
-    ('all', 'val', 16, 224, 'DeepfakeVideo', 'DeepfakeSet'),
-    ('all', 'train', 16, 224, 'DeepfakeFaceVideo', 'DeepfakeFaceSet'),
-    ('all', 'val', 16, 224, 'DeepfakeFaceVideo', 'DeepfakeFaceSet'),
-
-])
-def test_get_dataloader_video(name, split, num_frames, size, dataset_type, record_set_type):
-    dataloader = core.get_dataloader(name, DATA_ROOT, batch_size=BATCH_SIZE,
-                                     split=split, num_frames=num_frames, size=size,
-                                     dataset_type=dataset_type, record_set_type=record_set_type)
+@pytest.mark.parametrize(
+    'name, split, num_frames, size, dataset_type, record_set_type',
+    [
+        ('DFDC', 'train', 16, 224, 'DeepfakeVideo', 'DeepfakeSet'),
+        ('DFDC', 'val', 16, 224, 'DeepfakeVideo', 'DeepfakeSet'),
+        ('DFDC', 'train', 16, 224, 'DeepfakeFaceVideo', 'DeepfakeFaceSet'),
+        ('DFDC', 'val', 16, 224, 'DeepfakeFaceVideo', 'DeepfakeFaceSet'),
+        ('FaceForensics', 'train', 16, 224, 'DeepfakeVideo', 'DeepfakeSet'),
+        ('FaceForensics', 'val', 16, 224, 'DeepfakeVideo', 'DeepfakeSet'),
+        ('FaceForensics', 'train', 16, 224, 'DeepfakeFaceVideo', 'DeepfakeFaceSet'),
+        ('FaceForensics', 'val', 16, 224, 'DeepfakeFaceVideo', 'DeepfakeFaceSet'),
+        ('CelebDF', 'train', 16, 224, 'DeepfakeVideo', 'DeepfakeSet'),
+        ('CelebDF', 'val', 16, 224, 'DeepfakeVideo', 'DeepfakeSet'),
+        ('CelebDF', 'train', 16, 224, 'DeepfakeFaceVideo', 'DeepfakeFaceSet'),
+        ('CelebDF', 'val', 16, 224, 'DeepfakeFaceVideo', 'DeepfakeFaceSet'),
+        ('YouTubeDeepfakes', 'train', 16, 224, 'DeepfakeVideo', 'DeepfakeSet'),
+        ('YouTubeDeepfakes', 'val', 16, 224, 'DeepfakeVideo', 'DeepfakeSet'),
+        ('YouTubeDeepfakes', 'train', 16, 224, 'DeepfakeFaceVideo', 'DeepfakeFaceSet'),
+        ('YouTubeDeepfakes', 'val', 16, 224, 'DeepfakeFaceVideo', 'DeepfakeFaceSet'),
+        ('all', 'train', 16, 224, 'DeepfakeVideo', 'DeepfakeSet'),
+        ('all', 'val', 16, 224, 'DeepfakeVideo', 'DeepfakeSet'),
+        ('all', 'train', 16, 224, 'DeepfakeFaceVideo', 'DeepfakeFaceSet'),
+        ('all', 'val', 16, 224, 'DeepfakeFaceVideo', 'DeepfakeFaceSet'),
+    ],
+)
+def test_get_dataloader_video(
+    name, split, num_frames, size, dataset_type, record_set_type
+):
+    dataloader = core.get_dataloader(
+        name,
+        DATA_ROOT,
+        batch_size=BATCH_SIZE,
+        split=split,
+        num_frames=num_frames,
+        size=size,
+        dataset_type=dataset_type,
+        record_set_type=record_set_type,
+    )
     print(f'Dataset {name}-{split} has len: {len(dataloader.dataset)}')
     for i, (frames, label) in enumerate(dataloader):
         if not (i < MAX_ITERS):
@@ -250,16 +369,28 @@ def test_get_dataloader_video(name, split, num_frames, size, dataset_type, recor
 
 
 @pytest.mark.skipif(SKIP_VIDEO_ZIP, reason='Data not present')
-@pytest.mark.parametrize('name, split, num_frames, size, dataset_type, record_set_type', [
-    ('DFDC', 'train', 16, 224, 'DeepfakeZipVideo', 'DeepfakeSet'),
-    ('DFDC', 'val', 16, 224, 'DeepfakeZipVideo', 'DeepfakeSet'),
-    ('DFDC', 'train', 16, 224, 'DeepfakeZipFaceVideo', 'DeepfakeFaceSet'),
-    ('DFDC', 'val', 16, 224, 'DeepfakeZipFaceVideo', 'DeepfakeFaceSet'),
-])
-def test_get_dataloader_video_zip(name, split, num_frames, size, dataset_type, record_set_type):
-    dataloader = core.get_dataloader(name, DATA_ROOT, batch_size=BATCH_SIZE,
-                                     split=split, num_frames=num_frames, size=size,
-                                     dataset_type=dataset_type, record_set_type=record_set_type)
+@pytest.mark.parametrize(
+    'name, split, num_frames, size, dataset_type, record_set_type',
+    [
+        ('DFDC', 'train', 16, 224, 'DeepfakeZipVideo', 'DeepfakeSet'),
+        ('DFDC', 'val', 16, 224, 'DeepfakeZipVideo', 'DeepfakeSet'),
+        ('DFDC', 'train', 16, 224, 'DeepfakeZipFaceVideo', 'DeepfakeFaceSet'),
+        ('DFDC', 'val', 16, 224, 'DeepfakeZipFaceVideo', 'DeepfakeFaceSet'),
+    ],
+)
+def test_get_dataloader_video_zip(
+    name, split, num_frames, size, dataset_type, record_set_type
+):
+    dataloader = core.get_dataloader(
+        name,
+        DATA_ROOT,
+        batch_size=BATCH_SIZE,
+        split=split,
+        num_frames=num_frames,
+        size=size,
+        dataset_type=dataset_type,
+        record_set_type=record_set_type,
+    )
 
     for i, (frames, label) in enumerate(dataloader):
         if not (i < MAX_ITERS):
@@ -270,18 +401,30 @@ def test_get_dataloader_video_zip(name, split, num_frames, size, dataset_type, r
 
 
 @pytest.mark.skipif(SKIP_FRAME, reason='Data not present')
-@pytest.mark.parametrize('name, split, num_frames, size, dataset_type, record_set_type', [
-    ('DFDC', 'train', 16, 224, 'DeepfakeFrame', 'DeepfakeSet'),
-    ('DFDC', 'val', 16, 224, 'DeepfakeFrame', 'DeepfakeSet'),
-    ('DFDC', 'train', 16, 224, 'DeepfakeFaceFrame', 'DeepfakeFaceSet'),
-    ('DFDC', 'val', 16, 224, 'DeepfakeFaceFrame', 'DeepfakeFaceSet'),
-    ('DFDC', 'train', 16, 224, 'DeepfakeFaceCropFrame', 'DeepfakeFaceSet'),
-    ('DFDC', 'val', 16, 224, 'DeepfakeFaceCropFrame', 'DeepfakeFaceSet'),
-])
-def test_get_dataloader_frame(name, split, num_frames, size, dataset_type, record_set_type):
-    dataloader = core.get_dataloader(name, DATA_ROOT, batch_size=BATCH_SIZE,
-                                     split=split, num_frames=num_frames, size=size,
-                                     dataset_type=dataset_type, record_set_type=record_set_type)
+@pytest.mark.parametrize(
+    'name, split, num_frames, size, dataset_type, record_set_type',
+    [
+        ('DFDC', 'train', 16, 224, 'DeepfakeFrame', 'DeepfakeSet'),
+        ('DFDC', 'val', 16, 224, 'DeepfakeFrame', 'DeepfakeSet'),
+        ('DFDC', 'train', 16, 224, 'DeepfakeFaceFrame', 'DeepfakeFaceSet'),
+        ('DFDC', 'val', 16, 224, 'DeepfakeFaceFrame', 'DeepfakeFaceSet'),
+        ('DFDC', 'train', 16, 224, 'DeepfakeFaceCropFrame', 'DeepfakeFaceSet'),
+        ('DFDC', 'val', 16, 224, 'DeepfakeFaceCropFrame', 'DeepfakeFaceSet'),
+    ],
+)
+def test_get_dataloader_frame(
+    name, split, num_frames, size, dataset_type, record_set_type
+):
+    dataloader = core.get_dataloader(
+        name,
+        DATA_ROOT,
+        batch_size=BATCH_SIZE,
+        split=split,
+        num_frames=num_frames,
+        size=size,
+        dataset_type=dataset_type,
+        record_set_type=record_set_type,
+    )
     for i, (frames, label) in enumerate(dataloader):
         if not (i < MAX_ITERS):
             break
@@ -290,9 +433,17 @@ def test_get_dataloader_frame(name, split, num_frames, size, dataset_type, recor
         assert frames.shape == torch.Size((BATCH_SIZE, 3, num_frames, size, size))
 
 
-@pytest.mark.parametrize('video_dir, step', [
-    (os.path.join(cfg.DATA_ROOT, 'DeepfakeDetection', 'videos', 'dfdc_train_part_0'), 2),
-])
+@pytest.mark.parametrize(
+    'video_dir, step',
+    [
+        (
+            os.path.join(
+                cfg.DATA_ROOT, 'DeepfakeDetection', 'videos', 'dfdc_train_part_0'
+            ),
+            2,
+        ),
+    ],
+)
 def test_videofolder_dataset(video_dir, step):
     dataset = data.VideoFolder(video_dir, step=step)
     for i, (name, frames, target) in enumerate(dataset):
@@ -301,9 +452,17 @@ def test_videofolder_dataset(video_dir, step):
         print(i, frames.shape, target)
 
 
-@pytest.mark.parametrize('filename, step', [
-    (os.path.join(cfg.DATA_ROOT, 'DeepfakeDetection', 'videos', 'dfdc_train_part_00.zip'), 2),
-])
+@pytest.mark.parametrize(
+    'filename, step',
+    [
+        (
+            os.path.join(
+                cfg.DATA_ROOT, 'DeepfakeDetection', 'videos', 'dfdc_train_part_00.zip'
+            ),
+            2,
+        ),
+    ],
+)
 def test_videozipfile(filename, step):
     dataset = data.VideoZipFile(filename, step=step)
     for i, (name, frames, target) in enumerate(dataset):

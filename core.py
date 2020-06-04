@@ -660,6 +660,7 @@ def get_dataloader(
     dataset_type='DeepfakeFrame',
     sampler_type='TSNFrameSampler',
     record_set_type='DeepfakeSet',
+    batch_sampler=None,
     batch_size=64,
     num_workers=8,
     shuffle=True,
@@ -691,10 +692,17 @@ def get_dataloader(
     loader_sampler = (
         DistributedSampler(dataset) if (distributed and split == 'train') else None
     )
+    if batch_sampler is not None:
+        batch_size = 1
+        shuffle = False
+        loader_sampler = None
+        drop_last = False
+
     return DataLoader(
         dataset,
         batch_size=batch_size,
         sampler=loader_sampler,
+        batch_sampler=batch_sampler,
         shuffle=(loader_sampler is None and shuffle),
         num_workers=num_workers,
         pin_memory=pin_memory,
@@ -711,6 +719,7 @@ def get_dataloaders(
     batch_size=32,
     num_workers=12,
     shuffle=[True, False],
+    batch_sampler=None,
     distributed=False,
     load_in_mem=False,
     pin_memory=True,
@@ -731,6 +740,7 @@ def get_dataloaders(
             resolution=resolution,
             dataset_type=dataset_type,
             batch_size=batch_size,
+            batch_sampler=batch_sampler,
             num_workers=num_workers,
             shuffle=shuffle[i],
             load_in_mem=load_in_mem,

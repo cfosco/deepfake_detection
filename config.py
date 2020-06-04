@@ -107,6 +107,9 @@ def get_metadata(
             'DeepfakeFaceVideo': defaultdict(
                 lambda: os.path.join(data_root, 'DeepfakeDetection/facenet_videos'), {}
             ),
+            'DeepfakeFaceHeatvolVideo': defaultdict(
+                lambda: os.path.join(data_root, 'DeepfakeDetection/facenet_videos'), {},
+            ),
             'DeepfakeZipFaceVideo': defaultdict(
                 lambda: os.path.join(data_root, 'DeepfakeDetection/facenet_videos'), {}
             ),
