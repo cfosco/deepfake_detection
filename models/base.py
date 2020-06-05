@@ -20,6 +20,14 @@ class Detector(torch.nn.Module):
     def input_size(self):
         return self.model.input_size
 
+    @property
+    def mean(self):
+        return self.model.mean
+
+    @property
+    def std(self):
+        return self.model.std
+
 
 class FrameDetector(Detector):
 

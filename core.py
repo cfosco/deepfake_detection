@@ -467,7 +467,15 @@ def get_basemodel(
     init_name: Optional[str] = None,
     **kwargs,
 ):
-    if model_name in ['mxresnet18', 'mxresnet50', 'samxresnet18', 'samxresnet50', 'mxresnet34']:
+    if model_name in [
+        'mxresnet18',
+        'mxresnet50',
+        'samxresnet18',
+        'samxresnet50',
+        'mxresnet34',
+        'meso_inception4',
+        'meso4',
+    ]:
         model_func = getattr(deepfake_models, model_name)
     else:
         model_func = getattr(models, model_name)
@@ -538,6 +546,8 @@ def get_dataset(
     segment_count=None,
     normalize=True,
     rescale=True,
+    mean=[0.485, 0.456, 0.406],
+    std=[0.229, 0.224, 0.225],
     **kwargs,
 ):
 
@@ -557,6 +567,8 @@ def get_dataset(
                     segment_count=segment_count,
                     normalize=normalize,
                     rescale=rescale,
+                    mean=mean,
+                    std=std,
                     **kwargs,
                 )
                 for n in name
@@ -577,6 +589,8 @@ def get_dataset(
             segment_count=segment_count,
             normalize=normalize,
             rescale=rescale,
+            mean=mean,
+            std=std,
             **kwargs,
         )
 
@@ -605,7 +619,12 @@ def get_dataset(
         'record_set': record_set,
         'sampler': sampler,
         'transform': data.get_transform(
-            split=split, size=size, normalize=normalize, rescale=rescale
+            split=split,
+            size=size,
+            normalize=normalize,
+            rescale=rescale,
+            mean=mean,
+            std=std,
         ),
         **kwargs,
     }
@@ -673,6 +692,8 @@ def get_dataloader(
     segment_count=None,
     normalize=True,
     rescale=True,
+    mean=[0.485, 0.456, 0.406],
+    std=[0.229, 0.224, 0.225],
     **kwargs,
 ):
 
@@ -689,6 +710,8 @@ def get_dataloader(
         record_set_type=record_set_type,
         normalize=normalize,
         rescale=rescale,
+        mean=mean,
+        std=std,
         **kwargs,
     )
     loader_sampler = (

@@ -4,15 +4,23 @@ from .base import (
     Detector,
     FrameDetector,
     GradCamCaricatureModel,
-    SeriesManipulatorDetector,
-    SeriesManipulatorAttnDetector,
-    ResManipulatorDetector,
     ResManipulatorAttnDetector,
+    ResManipulatorDetector,
+    SeriesManipulatorAttnDetector,
+    SeriesManipulatorDetector,
     VideoDetector,
 )
 from .deep_motion_mag.network import MagNet, Manipulator
 from .face_extraction import MTCNN, FaceModel
-from .mxresnet import MXResNet, mxresnet18, mxresnet50, samxresnet18, samxresnet50, mxresnet34
+from .mesonet import Meso4, MesoInception4, meso4, meso_inception4
+from .mxresnet import (
+    MXResNet,
+    mxresnet18,
+    mxresnet34,
+    mxresnet50,
+    samxresnet18,
+    samxresnet50,
+)
 from .utils import Normalize
 from .xception import Xception, xception
 
@@ -39,4 +47,8 @@ __all__ = [
     'mxresnet18',
     'mxresnet34',
     'MXResNet',
+    'Meso4',
+    'MesoInception4',
+    'meso4',
+    'meso_inception4',
 ]

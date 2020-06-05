@@ -105,6 +105,8 @@ def main_worker(gpu, ngpus_per_node, args):
         init_name=args.init,
     )
     input_size = model.input_size[-1]
+    input_mean = model.mean
+    input_std = model.std
     args.normalize = core.do_normalize(model)
     args.rescale = core.do_rescale(model)
 
@@ -206,11 +208,13 @@ def main_worker(gpu, ngpus_per_node, args):
         batch_size=args.batch_size,
         num_workers=args.num_workers,
         distributed=args.distributed,
-        size=input_size,
         clip_length=args.clip_length,
         frame_step=args.frame_step,
         normalize=args.normalize,
         rescale=args.rescale,
+        size=input_size,
+        mean=input_mean,
+        std=input_std,
     )
     train_loader, val_loader = dataloaders['train'], dataloaders['val']
     train_sampler = train_loader.sampler
@@ -218,7 +222,10 @@ def main_worker(gpu, ngpus_per_node, args):
     if args.evaluate:
         train_args = vars(checkpoint.get('args'))
         train_dataset = train_args['dataset']
-        results_file = os.path.join(args.results_dir, f'Train_{train_dataset}_Eval_{args.dataset}_' + save_name + '.json')
+        results_file = os.path.join(
+            args.results_dir,
+            f'Train_{train_dataset}_Eval_{args.dataset}_' + save_name + '.json',
+        )
         print(f'Evaluating: {results_file}')
         acc, loss = validate(val_loader, model, criterion, args)
         with open(results_file, 'w') as f:
@@ -332,12 +339,11 @@ def train(train_loader, model, criterion, optimizer, logger, epoch, args, displa
         data_time.update(time.time() - end)
         itr += 1
 
-
         # DEBUG
-#         import matplotlib.pyplot as plt
-#         im = images[0][:,0].permute(1,2,0)
-#         plt.imshow((im-im.min())/(im.max()-im.min()))
-#         plt.show()
+        #         import matplotlib.pyplot as plt
+        #         im = images[0][:,0].permute(1,2,0)
+        #         plt.imshow((im-im.min())/(im.max()-im.min()))
+        #         plt.show()
 
         if args.gpu is not None:
             images = images.cuda(args.gpu, non_blocking=True)
