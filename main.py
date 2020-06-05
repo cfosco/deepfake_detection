@@ -175,6 +175,16 @@ def main_worker(gpu, ngpus_per_node, args):
                 optimizer.load_state_dict(checkpoint['optimizer'])
             except Exception:
                 pass
+            try:
+                scheduler.load_state_dict(checkpoint['scheduler'])
+            except Exception:
+                print(f'Could not load scheduler state_dict for {args.scheduler}')
+            try:
+                scheduler.step(checkpoint['epoch'])
+                print(f'setting scheduler learning rate to: {scheduler.get_lr()}')
+            except Exception:
+                pass
+
             print(
                 "=> loaded checkpoint '{}' (epoch {})".format(
                     args.resume, checkpoint['epoch']
@@ -283,6 +293,7 @@ def main_worker(gpu, ngpus_per_node, args):
                     'state_dict': model.state_dict(),
                     'best_acc1': best_acc1,
                     'optimizer': optimizer.state_dict(),
+                    'scheduler': scheduler.state_dict(),
                     'history': history,
                     'args': args,
                 },
