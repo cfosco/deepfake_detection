@@ -1,14 +1,13 @@
-import argparse
-import math
-import os
-
 import torch
 import torch.nn as nn
-import torch.nn.functional as F
-import torchvision
 
 
 class Meso4(nn.Module):
+
+    mean = [0.5] * 3
+    std = [0.5] * 3
+    input_size = [3, 256, 256]
+
     def __init__(self, num_classes=2):
         super(Meso4, self).__init__()
         self.num_classes = num_classes
