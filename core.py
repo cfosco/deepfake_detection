@@ -467,7 +467,7 @@ def get_basemodel(
     init_name: Optional[str] = None,
     **kwargs,
 ):
-    if model_name in ['mxresnet18', 'mxresnet50', 'samxresnet18', 'samxresnet50']:
+    if model_name in ['mxresnet18', 'mxresnet50', 'samxresnet18', 'samxresnet50', 'mxresnet34']:
         model_func = getattr(deepfake_models, model_name)
     else:
         model_func = getattr(models, model_name)
