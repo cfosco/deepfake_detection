@@ -12,7 +12,7 @@ from .base import (
 )
 from .deep_motion_mag.network import MagNet, Manipulator
 from .face_extraction import MTCNN, FaceModel
-from .mxresnet import MXResNet, mxresnet18, mxresnet50, samxresnet18, samxresnet50
+from .mxresnet import MXResNet, mxresnet18, mxresnet50, samxresnet18, samxresnet50, mxresnet34
 from .utils import Normalize
 from .xception import Xception, xception
 
@@ -37,5 +37,6 @@ __all__ = [
     'ResManipulatorAttnDetector',
     'mxresnet50',
     'mxresnet18',
+    'mxresnet34',
     'MXResNet',
 ]
