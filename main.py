@@ -107,6 +107,7 @@ def main_worker(gpu, ngpus_per_node, args):
     input_size = model.input_size[-1]
     input_mean = model.mean
     input_std = model.std
+    resolution = 299 if 'meso' in args.basemodel_name else 256
     args.normalize = core.do_normalize(model)
     args.rescale = core.do_rescale(model)
 
@@ -213,6 +214,7 @@ def main_worker(gpu, ngpus_per_node, args):
         normalize=args.normalize,
         rescale=args.rescale,
         size=input_size,
+        resolution=resolution,
         mean=input_mean,
         std=input_std,
     )
