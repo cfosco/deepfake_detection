@@ -14,16 +14,17 @@ import pretorched
 import pretorched.visualizers as vutils
 from data import VideoFolder, transforms
 from pretorched.models import utils as mutils
+import argparse
 
 device = 'cuda' if torch.cuda.is_available() else 'cpu'
 
 data_root = os.environ.get('DATA_ROOT', '')
 datadir = os.path.join(data_root, 'DeepfakeDetection', 'test_facenet_videos')
 target_file = os.path.join(data_root, 'DeepfakeDetection', 'test_targets.json')
-outdir = 'notebooks/caricatures'
+# outdir = 'notebooks/caricatures'
 
 CHECKPOINTS = {
-    'resnet18': 'weights/FrameDetector_resnet18_all_TSNFrameSampler_seg_count-16_init-imagenet-ortho_optim-Ranger_lr-0.001_sched-CosineAnnealingLR_bs-64_best.pth.tar'
+    'resnet18': '../best_weights/FrameDetector_resnet18_all_TSNFrameSampler_seg_count-16_init-imagenet-ortho_optim-Ranger_lr-0.001_sched-CosineAnnealingLR_bs-64_best.pth.tar'
 }
 
 
@@ -204,9 +205,8 @@ def make_metadata(glob_pattern='cari_Small_gradcam_amp5'):
 
 
 def make_caricatures(
-    idx,
-    video_dir,
-    out_dir,
+    datadir,
+    outdir,
     amp=5,
     mode='full',
     size='Small',
@@ -238,16 +238,15 @@ def make_caricatures(
     #     drop_last=False,
     # )
 
-    # for i, ((names, frames, target), (_, frames_orig, _)) in enumerate(
-    # zip(dataset, dataset_orig)
-    # ):
-    names, frames, target = dataset[idx]
-    names, frames_orig, target = dataset_orig[idx]
-    names = [names]
-    frames = frames.unsqueeze(0)
-    frames_orig = frames_orig.unsqueeze(0)
-    print(f'Processing [{i} / {len(dataset)}]: {", ".join(names)}')
-    process(i, frames, frames_orig, names, basemodel_name, size, amp, mode)
+    for i, ((names, frames, target), (_, frames_orig, _)) in enumerate(
+    zip(dataset, dataset_orig)):
+        # names, frames, target = dataset[idx]
+        # names, frames_orig, target = dataset_orig[idx]
+        names = [names]
+        frames = frames.unsqueeze(0)
+        frames_orig = frames_orig.unsqueeze(0)
+        print(f'Processing [{i} / {len(dataset)}]: {", ".join(names)}')
+        process(i, frames, frames_orig, names, basemodel_name, size, amp, mode, outdir)
     del frames
     del frames_orig
     del names
@@ -255,7 +254,18 @@ def make_caricatures(
     torch.cuda.empty_cache()
 
 
-def process(i, frames, frames_orig, names, basemodel_name, size, amp, mode):
+def make_caricatures_single(input, outdir, amp=5, mode='full', size='Small', batch_size=1):
+    '''Generates caicatures for a single video in mp4 format'''
+
+    os.makedirs(outdir, exist_ok=True)
+    transform = transforms.get_transform(split='val', normalize=False, rescale=False)
+
+    tmp_frames = extract_frames(input)
+
+    dataset = VideoFolder(tmp_frames, step=1, transform=transform)
+
+
+def process(i, frames, frames_orig, names, basemodel_name, size, amp, mode, outdir):
     model = core.get_model(f'SeriesPretrainedFrozen{size}ManipulatorDetector')
 
     device = f'cuda'
@@ -345,5 +355,23 @@ def process(i, frames, frames_orig, names, basemodel_name, size, amp, mode):
 
 
 if __name__ == "__main__":
-    i = int(sys.argv[1])
-    make_caricatures(i, datadir, outdir, amp=10, mode='gradcam')
+
+    # catch arguments
+    parser = argparse.ArgumentParser()
+    parser.add_argument('--input', type=str, default='./deepfake_videos')
+    parser.add_argument('--outdir', type=str, default='./caricatures')
+    parser.add_argument('--basemodel', type=str, default='resnet18')
+    parser.add_argument('--amp', type=int, default=10)
+    parser.add_argument('--mode', type=str, default='gradcam')
+    parser.add_argument('--idx', type=int, default=None)
+
+    args = parser.parse_args()
+
+    if args.input is None:
+        raise ValueError('Must specify input directory or file')
+
+    elif os.path.isdir(args.input):
+        make_caricatures(args.input, args.outdir, amp=10, mode="gradcam")
+
+    elif os.path.isfile(args.input):
+        make_caricatures(args.input, args.outdir, amp=10, mode="gradcam", is_single_video=True)
