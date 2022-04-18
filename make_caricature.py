@@ -290,7 +290,9 @@ def process_gcam(model, gcam_model, frames, frames_orig, names, device, size, am
 
     normalize_attn = True
     frames = model.detector_model.norm(frames)
+    input("Press Enter to continue...")
     do_mag, attn_map = gcam_forward(gcam_model, frames)
+    input("Post gcam_forward")
     attn_map.detach_()
     attn_map = attn_map.cpu()
     del gcam_model
@@ -326,63 +328,65 @@ def process_gcam(model, gcam_model, frames, frames_orig, names, device, size, am
     
     # Save caricatures and heatmaps
     for n, (name, c) in enumerate(zip(names, cari)):
+        c = c.permute(1, 2, 3, 0)
+
         save_caricature_to_video(c, size, mode, amp, outdir, name)
 
         if attn_map is not None:
             save_heatmap(attn_map[n], c, size, mode, amp, outdir, name)
 
-def process(model, frames, frames_orig, names, device, size, amp, mode, outdir):
+# def process(model, frames, frames_orig, names, device, size, amp, mode, outdir):
 
-    frames = frames.to(device)
+#     frames = frames.to(device)
 
-    do_mag = True
-    attn_map = None
-    model.zero_grad()
-    if mode.lower() == 'gradcam':
-        normalize_attn = True
-        gcam_model = vutils.grad_cam.GradCAM(model.detector_model.model)
-        frames = model.detector_model.norm(frames)
-        do_mag, attn_map = gcam_forward(gcam_model, frames)
-        attn_map.detach_()
-        attn_map = attn_map.cpu()
-        del gcam_model
+#     do_mag = True
+#     attn_map = None
+#     model.zero_grad()
+#     if mode.lower() == 'gradcam':
+#         normalize_attn = True
+#         gcam_model = vutils.grad_cam.GradCAM(model.detector_model.model)
+#         frames = model.detector_model.norm(frames)
+#         do_mag, attn_map = gcam_forward(gcam_model, frames)
+#         attn_map.detach_()
+#         attn_map = attn_map.cpu()
+#         del gcam_model
 
-    with torch.no_grad():
-        if mode == 'attn':
-            normalize_attn = True
-            out, attn_map = model.detector_model(frames)
+#     with torch.no_grad():
+#         if mode == 'attn':
+#             normalize_attn = True
+#             out, attn_map = model.detector_model(frames)
 
-        del frames
-        torch.cuda.empty_cache()
-        frames_orig = frames_orig.to(device)
-        torch.cuda.empty_cache()
-        a = torch.tensor(amp, requires_grad=False)
+#         del frames
+#         torch.cuda.empty_cache()
+#         frames_orig = frames_orig.to(device)
+#         torch.cuda.empty_cache()
+#         a = torch.tensor(amp, requires_grad=False)
 
-        # NOTE: Cannot use a batch size larger than 1!
-        if len(do_mag) == 1:
-            do_mag = do_mag[0]
+#         # NOTE: Cannot use a batch size larger than 1!
+#         if len(do_mag) == 1:
+#             do_mag = do_mag[0]
 
-        if do_mag:
-            print('doing mag')
-            cari = model.manipulate(
-                frames_orig, amp=a, attn_map=attn_map, normalize_attn=normalize_attn,
-            )
-        else:
-            print('skipping mag')
-            cari = frames_orig
-        del model
-        cari = cari.cpu()
-        del frames_orig
-        torch.cuda.empty_cache()
+#         if do_mag:
+#             print('doing mag')
+#             cari = model.manipulate(
+#                 frames_orig, amp=a, attn_map=attn_map, normalize_attn=normalize_attn,
+#             )
+#         else:
+#             print('skipping mag')
+#             cari = frames_orig
+#         del model
+#         cari = cari.cpu()
+#         del frames_orig
+#         torch.cuda.empty_cache()
 
     
-    # Save caricatures and heatmaps
-    for n, (name, c) in enumerate(zip(names, cari)):
-        c = c.permute(1, 2, 3, 0)
-        save_caricature_to_video(c, size, mode, amp, outdir, name)
+#     # Save caricatures and heatmaps
+#     for n, (name, c) in enumerate(zip(names, cari)):
+#         c = c.permute(1, 2, 3, 0)
+#         save_caricature_to_video(c, size, mode, amp, outdir, name)
 
-        if attn_map is not None:
-            save_heatmap(attn_map[n], c, size, mode, amp, outdir, name)
+#         if attn_map is not None:
+#             save_heatmap(attn_map[n], c, size, mode, amp, outdir, name)
         
 
 
@@ -409,7 +413,7 @@ def save_heatmap(am, c, size, mode, amp, outdir, name):
         f'{name.replace(".mp4", "")}_heatmap_{size}_{mode}_amp{amp}' + '.mp4'
     )
 
-    print("a and c shapes:" + str(am.shape) + str(c.shape))
+    print("am and c shapes:" + str(am.shape) + str(c.shape))
 
     heatmap = [
         vutils.grad_cam.apply_heatmap(a, cc)
@@ -420,7 +424,6 @@ def save_heatmap(am, c, size, mode, amp, outdir, name):
         heatmap, heatmap_outfile,
     )
     del heatmap
-    del a
     del c
     del am
 
