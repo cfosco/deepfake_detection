@@ -290,9 +290,9 @@ def process_gcam(model, gcam_model, frames, frames_orig, names, device, size, am
 
     normalize_attn = True
     frames = model.detector_model.norm(frames)
-    input("Press Enter to continue...")
+    # input("Press Enter to continue...")
     do_mag, attn_map = gcam_forward(gcam_model, frames)
-    input("Post gcam_forward")
+    # input("Post gcam_forward")
     attn_map.detach_()
     attn_map = attn_map.cpu()
     del gcam_model
